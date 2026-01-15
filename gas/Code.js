@@ -771,15 +771,26 @@ function belle_runPipelineBatch_v0() {
   } catch (e) {
     reasons.push("ERROR: " + String(e && e.message ? e.message : e).slice(0, 200));
   } finally {
-    if (
+    if (summary.reviewAdded > 0 && summary.ocrProcessed === 0) {
+      summary.reason = "REVIEW_ADDED_ONLY";
+    } else if (
       summary.queuedAdded === 0 &&
       summary.ocrProcessed === 0 &&
       summary.reviewAdded === 0 &&
       summary.exportedRows === 0
     ) {
-      reasons.push("NO_WORK");
+      summary.reason = "NO_WORK";
+    } else if (reasons.indexOf("OCR_NO_PROGRESS") >= 0) {
+      summary.reason = "OCR_NO_PROGRESS";
+    } else if (reasons.indexOf("HIT_MAX_OCR_ITEMS_PER_BATCH") >= 0) {
+      summary.reason = "HIT_MAX_OCR_ITEMS_PER_BATCH";
+    } else if (reasons.indexOf("TIME_BUDGET_EXCEEDED") >= 0) {
+      summary.reason = "TIME_BUDGET_EXCEEDED";
+    } else if (reasons.length > 0) {
+      summary.reason = reasons.join(";");
+    } else {
+      summary.reason = "OK";
     }
-    summary.reason = reasons.length > 0 ? reasons.join(";") : "OK";
     summary.endedAt = new Date().toISOString();
     Logger.log(summary);
     lock.releaseLock();
@@ -804,10 +815,17 @@ function onOpen() {
 }
 
 function belle_ui_exportReviewToCsv() {
+  let ui = null;
+  try {
+    ui = SpreadsheetApp.getUi();
+  } catch (e) {
+    Logger.log("UI_NOT_AVAILABLE: run belle_exportYayoiCsvFromReview_test instead");
+    return { ok: false, reason: "UI_NOT_AVAILABLE" };
+  }
+
   const props = PropertiesService.getScriptProperties();
   const strictExport = belle_parseBool(props.getProperty("BELLE_STRICT_EXPORT"), false);
   const needsReview = belle_review_countNeedsReview();
-  const ui = SpreadsheetApp.getUi();
 
   if (strictExport && needsReview > 0) {
     ui.alert("Export blocked", "NEEDS_REVIEW rows: " + needsReview, ui.ButtonSet.OK);

@@ -288,7 +288,10 @@ function belle_exportYayoiCsvFromReview(options) {
   const sheetId = props.getProperty("BELLE_SHEET_ID");
   const reviewSheetName = props.getProperty("BELLE_REVIEW_SHEET_NAME") || "REVIEW_YAYOI";
   const outputFolderId = props.getProperty("BELLE_OUTPUT_FOLDER_ID") || props.getProperty("BELLE_DRIVE_FOLDER_ID");
-  const strictExport = belle_parseBool(props.getProperty("BELLE_STRICT_EXPORT"), false);
+  const strictOverride = options && typeof options.strictExport === "boolean" ? options.strictExport : null;
+  const strictExport = strictOverride !== null
+    ? strictOverride
+    : belle_parseBool(props.getProperty("BELLE_STRICT_EXPORT"), false);
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
   const batchMaxRows = Number(props.getProperty("BELLE_EXPORT_BATCH_MAX_ROWS") || "5000");
@@ -297,11 +300,31 @@ function belle_exportYayoiCsvFromReview(options) {
 
   const ss = SpreadsheetApp.openById(sheetId);
   const sh = ss.getSheetByName(reviewSheetName);
-  if (!sh) return { ok: false, exportedRows: 0, reason: "REVIEW_SHEET_NOT_FOUND" };
+  if (!sh) {
+    const res = {
+      ok: false,
+      exportedRows: 0,
+      exportedFiles: 0,
+      heldForReview: 0,
+      strictBlocked: false,
+      csvFileId: "",
+      message: "REVIEW_SHEET_NOT_FOUND"
+    };
+    Logger.log(res);
+    return res;
+  }
 
   const lastRow = sh.getLastRow();
   if (lastRow < 2) {
-    const res = { ok: true, exportedRows: 0, heldForReview: 0, strictBlocked: false, csvFileId: "" };
+    const res = {
+      ok: true,
+      exportedRows: 0,
+      exportedFiles: 0,
+      heldForReview: 0,
+      strictBlocked: false,
+      csvFileId: "",
+      message: "NO_ROWS"
+    };
     Logger.log(res);
     return res;
   }
@@ -381,7 +404,8 @@ function belle_exportYayoiCsvFromReview(options) {
       exportedFiles: 0,
       heldForReview: needsReview,
       strictBlocked: true,
-      csvFileId: ""
+      csvFileId: "",
+      message: "STRICT_BLOCKED"
     };
     Logger.log(res);
     return res;
@@ -394,7 +418,8 @@ function belle_exportYayoiCsvFromReview(options) {
       exportedFiles: 0,
       heldForReview: needsReview,
       strictBlocked: false,
-      csvFileId: ""
+      csvFileId: "",
+      message: "NO_READY_ROWS"
     };
     Logger.log(res);
     return res;
@@ -427,8 +452,13 @@ function belle_exportYayoiCsvFromReview(options) {
     exportedFiles: 1,
     heldForReview: needsReview,
     strictBlocked: false,
-    csvFileId: csvFileId
+    csvFileId: csvFileId,
+    message: "EXPORTED"
   };
   Logger.log(result);
   return result;
+}
+
+function belle_exportYayoiCsvFromReview_test() {
+  return belle_exportYayoiCsvFromReview({});
 }

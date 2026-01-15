@@ -51,3 +51,7 @@
 1. Runner does Queue -> OCR -> Review only (no auto CSV export)
 2. Fix rows with review_status=NEEDS_REVIEW in REVIEW_YAYOI
 3. Export from Review via menu (PARTIAL or STRICT)
+
+## Manual export (editor)
+1. Run belle_exportYayoiCsvFromReview_test from the editor
+2. UI menu works only for container-bound spreadsheets
