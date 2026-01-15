@@ -23,3 +23,9 @@ GASをローカル開発し、Git管理しながら **誤push/誤deploy** を防ぐ。
 
 ## 切替（推奨）
 - dev/stg/prod それぞれの .clasp.json を configs/clasp/ に保存し、作業時にコピーする。
+
+## Push前チェック（prod禁止）
+1. `clasp status` で対象 scriptId が **dev** のものか確認する
+2. `.clasp.json` が Git 管理外であることを確認する（`git status` に出ないこと）
+3. `configs/clasp/*.clasp.json` を Git に入れていないことを確認する
+4. deploy コマンド（`clasp deploy`）は v0 では実行禁止

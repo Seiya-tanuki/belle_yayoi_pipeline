@@ -7,3 +7,7 @@ node_modules/
 .clasp.json
 .clasp.*.json
 .clasp.local.json
+
+# clasp config backups (DO NOT COMMIT)
+configs/clasp/*.clasp.json
+configs/clasp/*.json
