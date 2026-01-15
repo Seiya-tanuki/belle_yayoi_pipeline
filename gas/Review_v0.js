@@ -498,3 +498,101 @@ function belle_exportYayoiCsvFromReview(options) {
 function belle_exportYayoiCsvFromReview_test() {
   return belle_exportYayoiCsvFromReview({});
 }
+
+function belle_backfillReviewReasonsJa() {
+  const props = PropertiesService.getScriptProperties();
+  const sheetId = props.getProperty("BELLE_SHEET_ID");
+  const reviewSheetName = props.getProperty("BELLE_REVIEW_SHEET_NAME") || "REVIEW_YAYOI";
+  if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
+
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sh = ss.getSheetByName(reviewSheetName);
+  if (!sh) return { ok: false, updated: 0, skipped: 0, reason: "REVIEW_SHEET_NOT_FOUND" };
+
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return { ok: true, updated: 0, skipped: 0, reason: "NO_ROWS" };
+
+  const headerRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const map = belle_review_getHeaderMap(headerRow);
+  const idxStatus = map["review_status"];
+  const idxReason = map["review_reason"];
+  const idxReasonCode = map["review_reason_code"];
+  const idxMerchant = map["merchant"];
+  const idxFileName = map["source_file_name"];
+  const idxBucket = map["tax_rate_bucket"];
+
+  if (idxStatus === undefined || idxReason === undefined || idxReasonCode === undefined) {
+    return { ok: false, updated: 0, skipped: 0, reason: "MISSING_REQUIRED_COLUMNS" };
+  }
+
+  const values = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
+  const reasonCol = [];
+  const codeCol = [];
+  let updated = 0;
+  let skipped = 0;
+  const englishRe = /^[A-Z_]+(?::|$)/;
+
+  for (let i = 0; i < values.length; i++) {
+    const row = values[i];
+    const status = String(row[idxStatus] || "");
+    const reason = String(row[idxReason] || "");
+    const reasonCode = String(row[idxReasonCode] || "");
+
+    reasonCol.push([row[idxReason]]);
+    codeCol.push([row[idxReasonCode]]);
+
+    if (status !== "NEEDS_REVIEW") {
+      skipped++;
+      continue;
+    }
+
+    const reasonIsEnglish = englishRe.test(reason);
+    const codeIsEnglish = englishRe.test(reasonCode);
+    if (!reasonIsEnglish && !codeIsEnglish && reasonCode) {
+      skipped++;
+      continue;
+    }
+    if (!reasonIsEnglish && !codeIsEnglish && !reasonCode) {
+      skipped++;
+      continue;
+    }
+
+    const source = codeIsEnglish ? reasonCode : reason;
+    const parts = source.split(":");
+    const base = String(parts[0] || "").trim();
+    const detail = parts.length > 1 ? parts.slice(1).join(":").trim() : "";
+    if (!base) {
+      skipped++;
+      continue;
+    }
+
+    const merchant = idxMerchant !== undefined ? String(row[idxMerchant] || "") : "";
+    const fileName = idxFileName !== undefined ? String(row[idxFileName] || "") : "";
+    const bucket = idxBucket !== undefined ? String(row[idxBucket] || "") : "";
+
+    const ja = belle_reviewReasonJa(base, {
+      detail: detail,
+      merchant: merchant,
+      file_name: fileName,
+      tax_rate_bucket: bucket
+    });
+    const codeValue = detail ? base + ":" + detail : base;
+
+    reasonCol[i] = [ja];
+    codeCol[i] = [codeValue];
+    updated++;
+  }
+
+  if (updated > 0) {
+    sh.getRange(2, idxReason + 1, reasonCol.length, 1).setValues(reasonCol);
+    sh.getRange(2, idxReasonCode + 1, codeCol.length, 1).setValues(codeCol);
+  }
+
+  const result = { ok: true, updated: updated, skipped: skipped };
+  Logger.log(result);
+  return result;
+}
+
+function belle_backfillReviewReasonsJa_test() {
+  return belle_backfillReviewReasonsJa();
+}
