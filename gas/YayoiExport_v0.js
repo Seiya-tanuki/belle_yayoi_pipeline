@@ -31,25 +31,72 @@ function belle_yayoi_sumLineItemsByRate(parsed, rate) {
   return count > 0 ? sum : null;
 }
 
-function belle_yayoi_getGrossForRate(parsed, rate, allowTotal) {
+function belle_yayoi_determineSingleRate(parsed) {
+  const taxRatePrinted = parsed && parsed.tax_meta ? parsed.tax_meta.tax_rate_printed : null;
+  if (taxRatePrinted === 8 || taxRatePrinted === 10) {
+    return { rate: taxRatePrinted, reason: "TAX_RATE_PRINTED" };
+  }
+
+  if (!parsed || !Array.isArray(parsed.line_items)) {
+    return { rate: null, reason: "NO_LINE_ITEMS" };
+  }
+
+  const rates = {};
+  let knownCount = 0;
+  let unknownCount = 0;
+  for (let i = 0; i < parsed.line_items.length; i++) {
+    const item = parsed.line_items[i];
+    if (!item) continue;
+    if (item.tax_rate === 8 || item.tax_rate === 10) {
+      rates[item.tax_rate] = true;
+      knownCount++;
+    } else {
+      unknownCount++;
+    }
+  }
+
+  const keys = Object.keys(rates);
+  if (keys.length === 1) {
+    return { rate: Number(keys[0]), reason: "LINE_ITEMS_SINGLE_RATE" };
+  }
+  if (knownCount === 0) {
+    return { rate: null, reason: "NO_RATE_IN_TAX_META_OR_LINE_ITEMS" };
+  }
+  if (unknownCount > 0) {
+    return { rate: null, reason: "MIXED_OR_UNKNOWN_LINE_ITEM_RATES" };
+  }
+  return { rate: null, reason: "MIXED_LINE_ITEM_RATES" };
+}
+
+function belle_yayoi_getGrossForRate(parsed, rate, isSingleRate, taxInOut) {
   const tb = parsed && parsed.tax_breakdown;
   const bucket = tb && (rate === 10 ? tb.rate_10 : tb.rate_8);
+
+  if (isSingleRate) {
+    const total = belle_yayoi_isNumber(parsed.receipt_total_jpy);
+    if (total !== null) return { gross: total, reason: "RECEIPT_TOTAL" };
+    const sum = belle_yayoi_sumLineItemsByRate(parsed, rate);
+    if (sum !== null) return { gross: sum, reason: "LINE_ITEMS_SUM" };
+    return { gross: null, reason: "NO_GROSS_SINGLE_RATE" };
+  }
+
   const gross = bucket ? belle_yayoi_isNumber(bucket.gross_amount_jpy) : null;
-  if (gross !== null) return gross;
+  if (gross !== null) return { gross: gross, reason: "BUCKET_GROSS" };
 
   const taxable = bucket ? belle_yayoi_isNumber(bucket.taxable_amount_jpy) : null;
   const tax = bucket ? belle_yayoi_isNumber(bucket.tax_jpy) : null;
-  if (taxable !== null && tax !== null) return taxable + tax;
 
-  const sum = belle_yayoi_sumLineItemsByRate(parsed, rate);
-  if (sum !== null) return sum;
-
-  if (allowTotal) {
-    const total = belle_yayoi_isNumber(parsed.receipt_total_jpy);
-    if (total !== null) return total;
+  if (taxInOut === "inclusive") {
+    if (taxable !== null) return { gross: taxable, reason: "INCLUSIVE_TAXABLE_AS_GROSS" };
+  }
+  if (taxInOut === "exclusive") {
+    if (taxable !== null && tax !== null) return { gross: taxable + tax, reason: "EXCLUSIVE_TAXABLE_PLUS_TAX" };
   }
 
-  return null;
+  const sum = belle_yayoi_sumLineItemsByRate(parsed, rate);
+  if (sum !== null) return { gross: sum, reason: "LINE_ITEMS_SUM" };
+
+  return { gross: null, reason: "NO_GROSS_MULTI_RATE" };
 }
 
 function belle_yayoi_getDebitTaxKubun(rate, dateStr) {

@@ -46,3 +46,6 @@ Add these Script Properties (optional unless noted):
 1. BELLE_CSV_ENCODING (optional; SHIFT_JIS or UTF8, default SHIFT_JIS)
 2. BELLE_CSV_EOL (optional; CRLF or LF, default CRLF)
 3. BELLE_INVOICE_SUFFIX_MODE (optional; AUTO or OFF, default OFF)
+
+## Export Skip Log (v0)
+1. BELLE_SKIP_LOG_SHEET_NAME (optional; default EXPORT_SKIP_LOG)

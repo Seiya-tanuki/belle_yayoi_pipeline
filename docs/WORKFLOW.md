@@ -37,3 +37,7 @@
 1. Default is SHIFT_JIS + CRLF
 2. Use BELLE_CSV_ENCODING / BELLE_CSV_EOL to override
 3. Set BELLE_INVOICE_SUFFIX_MODE=AUTO to append invoice suffix
+
+## Yayoi CSV export (v0) - force export
+1. Use belle_exportYayoiCsvFromDoneRows_force_test for dev-only re-export
+2. This ignores IMPORT_LOG and may create duplicate CSV files

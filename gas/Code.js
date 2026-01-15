@@ -378,17 +378,49 @@ function belle_processQueueOnce_test() {
 }
 
 /**
+ * Append skip details to a sheet (append-only).
+ */
+function belle_appendSkipLogRows(ss, sheetName, details, exportedAtIso) {
+  if (!details || details.length === 0) return 0;
+  let sh = ss.getSheetByName(sheetName);
+  if (!sh) sh = ss.insertSheet(sheetName);
+
+  const header = ["exported_at_iso","file_id","file_name","reason"];
+  const lastRow = sh.getLastRow();
+  if (lastRow === 0) {
+    sh.appendRow(header);
+  } else {
+    const headerRow = sh.getRange(1, 1, 1, header.length).getValues()[0];
+    for (let i = 0; i < header.length; i++) {
+      if (String(headerRow[i] || "") !== header[i]) {
+        throw new Error("INVALID_SKIP_LOG_HEADER: mismatch at col " + (i + 1));
+      }
+    }
+  }
+
+  const rows = [];
+  for (let i = 0; i < details.length; i++) {
+    const d = details[i] || {};
+    rows.push([exportedAtIso, d.file_id || "", d.file_name || "", d.reason || ""]);
+  }
+  sh.getRange(sh.getLastRow() + 1, 1, rows.length, header.length).setValues(rows);
+  return rows.length;
+}
+
+/**
  * Export DONE rows to Yayoi CSV and save to Drive.
  * - No header in CSV
  * - Append-only for IMPORT_LOG
  */
-function belle_exportYayoiCsvFromDoneRows() {
+function belle_exportYayoiCsvFromDoneRows(options) {
+  const ignoreImportLog = options && options.ignoreImportLog === true;
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
   const defaultSheetName = props.getProperty("BELLE_SHEET_NAME");
   const queueSheetName = props.getProperty("BELLE_QUEUE_SHEET_NAME") || defaultSheetName;
   const outputFolderId = props.getProperty("BELLE_OUTPUT_FOLDER_ID") || props.getProperty("BELLE_DRIVE_FOLDER_ID");
   const logSheetName = props.getProperty("BELLE_IMPORT_LOG_SHEET_NAME") || "IMPORT_LOG";
+  const skipLogSheetName = props.getProperty("BELLE_SKIP_LOG_SHEET_NAME") || "EXPORT_SKIP_LOG";
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
   const invoiceSuffixMode = String(props.getProperty("BELLE_INVOICE_SUFFIX_MODE") || "OFF").toUpperCase();
@@ -437,12 +469,14 @@ function belle_exportYayoiCsvFromDoneRows() {
     }
 
     const loggedIds = new Set();
-    const logRows = logSheet.getLastRow();
-    if (logRows >= 2) {
-      const vals = logSheet.getRange(2, 1, logRows - 1, 1).getValues();
-      for (let i = 0; i < vals.length; i++) {
-        const v = vals[i][0];
-        if (v) loggedIds.add(String(v));
+    if (!ignoreImportLog) {
+      const logRows = logSheet.getLastRow();
+      if (logRows >= 2) {
+        const vals = logSheet.getRange(2, 1, logRows - 1, 1).getValues();
+        for (let i = 0; i < vals.length; i++) {
+          const v = vals[i][0];
+          if (v) loggedIds.add(String(v));
+        }
       }
     }
 
@@ -450,6 +484,7 @@ function belle_exportYayoiCsvFromDoneRows() {
     const csvRows = [];
     const exportedFileIds = new Set();
     const skipped = [];
+    const skippedDetails = [];
     const errors = [];
 
     for (let i = 0; i < values.length; i++) {
@@ -462,9 +497,14 @@ function belle_exportYayoiCsvFromDoneRows() {
 
       if (!fileId) continue;
       if (status !== "DONE") continue;
-      if (loggedIds.has(fileId)) continue;
+      if (!ignoreImportLog && loggedIds.has(fileId)) {
+        skipped.push({ fileId: fileId, reason: "ALREADY_EXPORTED" });
+        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "ALREADY_EXPORTED" });
+        continue;
+      }
       if (!ocrJson) {
         errors.push({ fileId: fileId, reason: "EMPTY_OCR_JSON" });
+        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "EMPTY_OCR_JSON" });
         continue;
       }
 
@@ -473,12 +513,14 @@ function belle_exportYayoiCsvFromDoneRows() {
         parsed = JSON.parse(ocrJson);
       } catch (e) {
         errors.push({ fileId: fileId, reason: "INVALID_OCR_JSON" });
+        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "INVALID_OCR_JSON" });
         continue;
       }
 
       const date = belle_yayoi_formatDate(parsed.transaction_date);
       if (!date) {
         errors.push({ fileId: fileId, reason: "MISSING_DATE" });
+        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "MISSING_DATE" });
         continue;
       }
 
@@ -490,50 +532,76 @@ function belle_exportYayoiCsvFromDoneRows() {
       let memo = (driveUrl + " " + fileId).trim();
       if (memo.length > 200) memo = memo.slice(0, 200);
 
-      const taxRatePrinted = parsed.tax_meta && parsed.tax_meta.tax_rate_printed;
+      const taxInOut = parsed.tax_meta ? parsed.tax_meta.tax_in_out : null;
       const hasMultiple = parsed.tax_breakdown && typeof parsed.tax_breakdown.has_multiple_rates === "boolean"
         ? parsed.tax_breakdown.has_multiple_rates
         : null;
-      let singleRate = null;
-      if (hasMultiple === false && (taxRatePrinted === 8 || taxRatePrinted === 10)) {
-        singleRate = taxRatePrinted;
+      const isMultiRate = hasMultiple === true;
+      let singleRateInfo = null;
+      if (!isMultiRate) {
+        singleRateInfo = belle_yayoi_determineSingleRate(parsed);
+        if (!singleRateInfo.rate) {
+          skippedDetails.push({
+            file_id: fileId,
+            file_name: fileName,
+            reason: "UNKNOWN_SINGLE_RATE: " + singleRateInfo.reason
+          });
+          continue;
+        }
       }
 
-      const gross10 = belle_yayoi_getGrossForRate(parsed, 10, singleRate === 10);
-      const gross8 = belle_yayoi_getGrossForRate(parsed, 8, singleRate === 8);
+      const gross10Info = belle_yayoi_getGrossForRate(parsed, 10, !isMultiRate && singleRateInfo.rate === 10, taxInOut);
+      const gross8Info = belle_yayoi_getGrossForRate(parsed, 8, !isMultiRate && singleRateInfo.rate === 8, taxInOut);
 
       const rowsForFile = [];
-      if (gross10 !== null && gross10 > 0) {
+      const missingReasons = [];
+      if (!isMultiRate && singleRateInfo.rate !== 10) {
+        missingReasons.push("SINGLE_RATE_IS_" + singleRateInfo.rate + "_NO_RATE_10");
+      } else if (gross10Info.gross === null) {
+        missingReasons.push("NO_GROSS_RATE_10: " + gross10Info.reason);
+      }
+
+      if (gross10Info.gross !== null && gross10Info.gross > 0 && (!isMultiRate ? singleRateInfo.rate === 10 : true)) {
         const kubun = belle_yayoi_getDebitTaxKubun(10, parsed.transaction_date);
         if (kubun) {
           rowsForFile.push(belle_yayoi_buildRow({
             date: date,
             debitTaxKubun: kubun,
-            gross: String(gross10),
+            gross: String(gross10Info.gross),
             summary: summary,
             memo: memo
           }));
         } else {
           skipped.push({ fileId: fileId, reason: "UNKNOWN_TAX_KUBUN_10" });
+          skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "UNKNOWN_TAX_KUBUN_10" });
         }
       }
-      if (gross8 !== null && gross8 > 0) {
+      if (!isMultiRate && singleRateInfo.rate !== 8) {
+        missingReasons.push("SINGLE_RATE_IS_" + singleRateInfo.rate + "_NO_RATE_8");
+      } else if (gross8Info.gross === null) {
+        missingReasons.push("NO_GROSS_RATE_8: " + gross8Info.reason);
+      }
+
+      if (gross8Info.gross !== null && gross8Info.gross > 0 && (!isMultiRate ? singleRateInfo.rate === 8 : true)) {
         const kubun = belle_yayoi_getDebitTaxKubun(8, parsed.transaction_date);
         if (kubun) {
           rowsForFile.push(belle_yayoi_buildRow({
             date: date,
             debitTaxKubun: kubun,
-            gross: String(gross8),
+            gross: String(gross8Info.gross),
             summary: summary,
             memo: memo
           }));
         } else {
           skipped.push({ fileId: fileId, reason: "UNKNOWN_TAX_KUBUN_8" });
+          skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "UNKNOWN_TAX_KUBUN_8" });
         }
       }
 
       if (rowsForFile.length === 0) {
         skipped.push({ fileId: fileId, reason: "NO_GROSS_BY_RATE" });
+        const reason = missingReasons.length > 0 ? missingReasons.join(" | ") : "NO_GROSS_BY_RATE";
+        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: reason });
         continue;
       }
 
@@ -543,13 +611,16 @@ function belle_exportYayoiCsvFromDoneRows() {
       exportedFileIds.add(fileId);
     }
 
+    const exportedAtIso = new Date().toISOString();
     if (csvRows.length === 0) {
+      belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, exportedAtIso);
       const result = {
         ok: true,
         exportedRows: 0,
         reason: "NO_EXPORT_ROWS",
         skipped: skipped.length,
-        errors: errors.length
+        errors: errors.length,
+        skippedDetails: skippedDetails
       };
       Logger.log(result);
       return result;
@@ -568,11 +639,13 @@ function belle_exportYayoiCsvFromDoneRows() {
     }
     const file = folder.createFile(blob);
     const csvFileId = file.getId();
-    const nowIso = new Date().toISOString();
+    const nowIso = exportedAtIso;
 
     exportedFileIds.forEach(function(id) {
       logSheet.appendRow([id, nowIso, csvFileId]);
     });
+
+    belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, exportedAtIso);
 
     const result = {
       ok: true,
@@ -580,7 +653,8 @@ function belle_exportYayoiCsvFromDoneRows() {
       exportedFiles: exportedFileIds.size,
       csvFileId: csvFileId,
       skipped: skipped.length,
-      errors: errors.length
+      errors: errors.length,
+      skippedDetails: skippedDetails
     };
     Logger.log(result);
     return result;
@@ -594,4 +668,12 @@ function belle_exportYayoiCsvFromDoneRows() {
  */
 function belle_exportYayoiCsvFromDoneRows_test() {
   return belle_exportYayoiCsvFromDoneRows();
+}
+
+/**
+ * Manual force test runner (dev only).
+ * This ignores IMPORT_LOG and re-exports DONE rows.
+ */
+function belle_exportYayoiCsvFromDoneRows_force_test() {
+  return belle_exportYayoiCsvFromDoneRows({ ignoreImportLog: true });
 }
