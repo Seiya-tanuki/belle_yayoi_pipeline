@@ -56,3 +56,10 @@ Add these Script Properties (optional unless noted):
 3. BELLE_RUN_DO_QUEUE (optional; default true)
 4. BELLE_RUN_DO_OCR (optional; default true)
 5. BELLE_RUN_DO_EXPORT (optional; default true)
+
+## Review (v0.2)
+1. BELLE_REVIEW_SHEET_NAME (optional; default REVIEW_YAYOI)
+2. BELLE_REVIEW_LOG_SHEET_NAME (optional; default REVIEW_LOG)
+3. BELLE_STRICT_EXPORT (optional; default false)
+4. BELLE_EXPORT_BATCH_MAX_ROWS (optional; default 5000)
+5. BELLE_RUN_DO_EXPORT (optional; default false)

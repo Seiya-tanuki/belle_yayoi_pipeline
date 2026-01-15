@@ -701,13 +701,14 @@ function belle_runPipelineBatch_v0() {
   const maxOcrItems = Number(props.getProperty("BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH") || "5");
   const doQueue = belle_parseBool(props.getProperty("BELLE_RUN_DO_QUEUE"), true);
   const doOcr = belle_parseBool(props.getProperty("BELLE_RUN_DO_OCR"), true);
-  const doExport = belle_parseBool(props.getProperty("BELLE_RUN_DO_EXPORT"), true);
+  const doExport = belle_parseBool(props.getProperty("BELLE_RUN_DO_EXPORT"), false);
 
   const startedAt = new Date().toISOString();
   const summary = {
     queuedAdded: 0,
     ocrProcessed: 0,
     ocrErrors: 0,
+    reviewAdded: 0,
     exportedRows: 0,
     exportedFiles: 0,
     skipped: 0,
@@ -716,6 +717,7 @@ function belle_runPipelineBatch_v0() {
     endedAt: ""
   };
 
+  const reasons = [];
   const lock = LockService.getScriptLock();
   lock.waitLock(30000);
 
@@ -734,16 +736,29 @@ function belle_runPipelineBatch_v0() {
         const r = belle_processQueueOnce({ skipLock: true });
         const processed = r && r.processed ? r.processed : 0;
         if (processed === 0) {
-          summary.reason = summary.reason || "OCR_NO_PROGRESS";
+          reasons.push("OCR_NO_PROGRESS");
           break;
         }
         summary.ocrProcessed += processed;
         summary.ocrErrors += r && r.errorsCount ? r.errorsCount : 0;
         loops++;
       }
-      if (Date.now() >= deadlineMs) {
-        summary.reason = summary.reason || "TIME_LIMIT";
+      if (loops >= maxOcrItems && summary.ocrProcessed > 0) {
+        reasons.push("HIT_MAX_OCR_ITEMS_PER_BATCH");
       }
+      if (Date.now() >= deadlineMs) {
+        reasons.push("TIME_BUDGET_EXCEEDED");
+      }
+    }
+
+    if (Date.now() < deadlineMs) {
+      const r = belle_buildReviewFromDoneQueue();
+      if (r && r.reviewAdded) summary.reviewAdded += r.reviewAdded;
+      if (summary.ocrProcessed > 0 && summary.reviewAdded === 0) {
+        reasons.push("REVIEW_NO_NEW_ROWS");
+      }
+    } else {
+      reasons.push("TIME_BUDGET_EXCEEDED");
     }
 
     if (doExport) {
@@ -751,11 +766,20 @@ function belle_runPipelineBatch_v0() {
       if (e && e.exportedRows) summary.exportedRows += e.exportedRows;
       if (e && e.exportedFiles) summary.exportedFiles += e.exportedFiles;
       if (e && e.skipped) summary.skipped += e.skipped;
-      if (e && e.reason && !summary.reason) summary.reason = e.reason;
+      if (e && e.reason) reasons.push(e.reason);
     }
   } catch (e) {
-    summary.reason = "ERROR: " + String(e && e.message ? e.message : e).slice(0, 200);
+    reasons.push("ERROR: " + String(e && e.message ? e.message : e).slice(0, 200));
   } finally {
+    if (
+      summary.queuedAdded === 0 &&
+      summary.ocrProcessed === 0 &&
+      summary.reviewAdded === 0 &&
+      summary.exportedRows === 0
+    ) {
+      reasons.push("NO_WORK");
+    }
+    summary.reason = reasons.length > 0 ? reasons.join(";") : "OK";
     summary.endedAt = new Date().toISOString();
     Logger.log(summary);
     lock.releaseLock();
@@ -769,4 +793,43 @@ function belle_runPipelineBatch_v0() {
  */
 function belle_runPipelineBatch_v0_test() {
   return belle_runPipelineBatch_v0();
+}
+
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  ui.createMenu("Belle")
+    .addItem("Run Batch Now", "belle_runPipelineBatch_v0_test")
+    .addItem("Export Yayoi CSV", "belle_ui_exportReviewToCsv")
+    .addToUi();
+}
+
+function belle_ui_exportReviewToCsv() {
+  const props = PropertiesService.getScriptProperties();
+  const strictExport = belle_parseBool(props.getProperty("BELLE_STRICT_EXPORT"), false);
+  const needsReview = belle_review_countNeedsReview();
+  const ui = SpreadsheetApp.getUi();
+
+  if (strictExport && needsReview > 0) {
+    ui.alert("Export blocked", "NEEDS_REVIEW rows: " + needsReview, ui.ButtonSet.OK);
+    return;
+  }
+
+  if (!strictExport && needsReview > 0) {
+    const res = ui.alert(
+      "Review pending",
+      "NEEDS_REVIEW rows: " + needsReview + "\nExport READY rows only?",
+      ui.ButtonSet.OK_CANCEL
+    );
+    if (res !== ui.Button.OK) return;
+  }
+
+  const result = belle_exportYayoiCsvFromReview();
+  const msg = [
+    "exportedRows=" + result.exportedRows,
+    "exportedFiles=" + result.exportedFiles,
+    "heldForReview=" + result.heldForReview,
+    "strictBlocked=" + result.strictBlocked,
+    "csvFileId=" + (result.csvFileId || "")
+  ].join("\n");
+  ui.alert("Export result", msg, ui.ButtonSet.OK);
 }

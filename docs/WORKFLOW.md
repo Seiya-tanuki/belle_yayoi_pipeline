@@ -46,3 +46,8 @@
 1. Use time-driven trigger every 5 minutes
 2. Recommended: BELLE_RUN_MAX_SECONDS=240
 3. Recommended: BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH=5
+
+## Review flow (v0.2)
+1. Runner does Queue -> OCR -> Review only (no auto CSV export)
+2. Fix rows with review_status=NEEDS_REVIEW in REVIEW_YAYOI
+3. Export from Review via menu (PARTIAL or STRICT)
