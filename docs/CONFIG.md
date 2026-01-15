@@ -49,3 +49,10 @@ Add these Script Properties (optional unless noted):
 
 ## Export Skip Log (v0)
 1. BELLE_SKIP_LOG_SHEET_NAME (optional; default EXPORT_SKIP_LOG)
+
+## Runner batch (v0)
+1. BELLE_RUN_MAX_SECONDS (optional; default 240)
+2. BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH (optional; default 5)
+3. BELLE_RUN_DO_QUEUE (optional; default true)
+4. BELLE_RUN_DO_OCR (optional; default true)
+5. BELLE_RUN_DO_EXPORT (optional; default true)

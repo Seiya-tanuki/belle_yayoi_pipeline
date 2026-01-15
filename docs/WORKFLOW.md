@@ -41,3 +41,8 @@
 ## Yayoi CSV export (v0) - force export
 1. Use belle_exportYayoiCsvFromDoneRows_force_test for dev-only re-export
 2. This ignores IMPORT_LOG and may create duplicate CSV files
+
+## Runner trigger (v0)
+1. Use time-driven trigger every 5 minutes
+2. Recommended: BELLE_RUN_MAX_SECONDS=240
+3. Recommended: BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH=5

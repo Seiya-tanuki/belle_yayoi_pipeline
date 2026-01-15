@@ -264,7 +264,7 @@ function belle_callGeminiOcr(imageBlob) {
  * - G: ocr_json
  * - H: ocr_error
  */
-function belle_processQueueOnce() {
+function belle_processQueueOnce(options) {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
   const defaultSheetName = props.getProperty("BELLE_SHEET_NAME");
@@ -272,8 +272,9 @@ function belle_processQueueOnce() {
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
   if (!queueSheetName) throw new Error("Missing Script Property: BELLE_SHEET_NAME (or BELLE_QUEUE_SHEET_NAME)");
 
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
+  const useLock = !(options && options.skipLock === true);
+  const lock = useLock ? LockService.getScriptLock() : null;
+  if (useLock) lock.waitLock(30000);
 
   try {
     const cfg = belle_getGeminiConfig();
@@ -303,6 +304,7 @@ function belle_processQueueOnce() {
     let processed = 0;
     let scanned = 0;
     const processedRows = [];
+    let errorsCount = 0;
 
     for (let i = 0; i < values.length; i++) {
       if (processed >= cfg.maxItems) break;
@@ -353,6 +355,7 @@ function belle_processQueueOnce() {
         sh.getRange(sheetRow, 1).setValue("ERROR");
         processedRows.push(sheetRow);
         processed++;
+        errorsCount++;
       }
     }
 
@@ -361,12 +364,13 @@ function belle_processQueueOnce() {
       processed: processed,
       scanned: scanned,
       maxItems: cfg.maxItems,
-      processedRows: processedRows
+      processedRows: processedRows,
+      errorsCount: errorsCount
     };
     Logger.log(result);
     return result;
   } finally {
-    lock.releaseLock();
+    if (lock) lock.releaseLock();
   }
 }
 
@@ -414,6 +418,7 @@ function belle_appendSkipLogRows(ss, sheetName, details, exportedAtIso) {
  */
 function belle_exportYayoiCsvFromDoneRows(options) {
   const ignoreImportLog = options && options.ignoreImportLog === true;
+  const useLock = !(options && options.skipLock === true);
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
   const defaultSheetName = props.getProperty("BELLE_SHEET_NAME");
@@ -428,8 +433,8 @@ function belle_exportYayoiCsvFromDoneRows(options) {
   if (!queueSheetName) throw new Error("Missing Script Property: BELLE_SHEET_NAME (or BELLE_QUEUE_SHEET_NAME)");
   if (!outputFolderId) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
 
-  const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
+  const lock = useLock ? LockService.getScriptLock() : null;
+  if (useLock) lock.waitLock(30000);
 
   try {
     const ss = SpreadsheetApp.openById(sheetId);
@@ -659,7 +664,7 @@ function belle_exportYayoiCsvFromDoneRows(options) {
     Logger.log(result);
     return result;
   } finally {
-    lock.releaseLock();
+    if (lock) lock.releaseLock();
   }
 }
 
@@ -676,4 +681,92 @@ function belle_exportYayoiCsvFromDoneRows_test() {
  */
 function belle_exportYayoiCsvFromDoneRows_force_test() {
   return belle_exportYayoiCsvFromDoneRows({ ignoreImportLog: true });
+}
+
+function belle_parseBool(value, defaultValue) {
+  if (value === null || value === undefined || value === "") return defaultValue;
+  const s = String(value).toLowerCase();
+  if (s === "true" || s === "1" || s === "yes") return true;
+  if (s === "false" || s === "0" || s === "no") return false;
+  return defaultValue;
+}
+
+/**
+ * Runner: queue -> ocr -> export (batch).
+ * Uses ScriptLock and stops by time or item limits.
+ */
+function belle_runPipelineBatch_v0() {
+  const props = PropertiesService.getScriptProperties();
+  const maxSeconds = Number(props.getProperty("BELLE_RUN_MAX_SECONDS") || "240");
+  const maxOcrItems = Number(props.getProperty("BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH") || "5");
+  const doQueue = belle_parseBool(props.getProperty("BELLE_RUN_DO_QUEUE"), true);
+  const doOcr = belle_parseBool(props.getProperty("BELLE_RUN_DO_OCR"), true);
+  const doExport = belle_parseBool(props.getProperty("BELLE_RUN_DO_EXPORT"), true);
+
+  const startedAt = new Date().toISOString();
+  const summary = {
+    queuedAdded: 0,
+    ocrProcessed: 0,
+    ocrErrors: 0,
+    exportedRows: 0,
+    exportedFiles: 0,
+    skipped: 0,
+    reason: "",
+    startedAt: startedAt,
+    endedAt: ""
+  };
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(30000);
+
+  try {
+    const startMs = Date.now();
+    const deadlineMs = startMs + Math.max(1, maxSeconds) * 1000;
+
+    if (doQueue) {
+      const q = belle_queueFolderFilesToSheet();
+      summary.queuedAdded += q && q.queued ? q.queued : 0;
+    }
+
+    if (doOcr) {
+      let loops = 0;
+      while (loops < maxOcrItems && Date.now() < deadlineMs) {
+        const r = belle_processQueueOnce({ skipLock: true });
+        const processed = r && r.processed ? r.processed : 0;
+        if (processed === 0) {
+          summary.reason = summary.reason || "OCR_NO_PROGRESS";
+          break;
+        }
+        summary.ocrProcessed += processed;
+        summary.ocrErrors += r && r.errorsCount ? r.errorsCount : 0;
+        loops++;
+      }
+      if (Date.now() >= deadlineMs) {
+        summary.reason = summary.reason || "TIME_LIMIT";
+      }
+    }
+
+    if (doExport) {
+      const e = belle_exportYayoiCsvFromDoneRows({ skipLock: true });
+      if (e && e.exportedRows) summary.exportedRows += e.exportedRows;
+      if (e && e.exportedFiles) summary.exportedFiles += e.exportedFiles;
+      if (e && e.skipped) summary.skipped += e.skipped;
+      if (e && e.reason && !summary.reason) summary.reason = e.reason;
+    }
+  } catch (e) {
+    summary.reason = "ERROR: " + String(e && e.message ? e.message : e).slice(0, 200);
+  } finally {
+    summary.endedAt = new Date().toISOString();
+    Logger.log(summary);
+    lock.releaseLock();
+  }
+
+  return summary;
+}
+
+/**
+ * Manual test runner (dev only).
+ */
+function belle_runPipelineBatch_v0_test() {
+  return belle_runPipelineBatch_v0();
 }
