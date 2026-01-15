@@ -27,3 +27,16 @@
    - BELLE_SHEET_ID
    - BELLE_DRIVE_FOLDER_ID
    - BELLE_GEMINI_API_KEY（必要なら）
+
+## Gemini OCR (v0)
+Add these Script Properties (do not commit secrets):
+1. BELLE_GEMINI_API_KEY
+2. BELLE_GEMINI_MODEL
+3. BELLE_GEMINI_SLEEP_MS (optional, default 500)
+4. BELLE_MAX_ITEMS_PER_RUN (optional, default 1)
+5. BELLE_QUEUE_SHEET_NAME (optional; defaults to BELLE_SHEET_NAME)
+
+## Yayoi CSV Export (v0)
+Add these Script Properties (optional unless noted):
+1. BELLE_OUTPUT_FOLDER_ID (optional; defaults to BELLE_DRIVE_FOLDER_ID)
+2. BELLE_IMPORT_LOG_SHEET_NAME (optional; default IMPORT_LOG)

@@ -21,3 +21,14 @@
 2. stg/prod への push/deploy は人間が手動で実行
 3. Sheets/Drive 操作は原則 append-only（削除や上書きの関数は禁止）
 4. 設定値（ID類）は Script Properties に保存し、コードから参照
+
+## OCR execution (v0)
+1. Queue files: belle_queueFolderFilesToSheet_test (Drive -> Sheet QUEUED)
+2. Process queue: belle_processQueueOnce_test (QUEUED -> DONE/ERROR, writes ocr_json/ocr_error)
+3. v0 processes images only; PDFs are marked SKIPPED.
+4. Updates are limited to columns A, G, H on existing rows; no deletes.
+
+## Yayoi CSV export (v0)
+1. Ensure DONE rows exist with valid ocr_json
+2. Run belle_exportYayoiCsvFromDoneRows_test
+3. A headerless CSV is saved to Drive; IMPORT_LOG prevents duplicate outputs

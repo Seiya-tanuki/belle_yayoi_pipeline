@@ -7,6 +7,8 @@ node_modules/
 .clasp.json
 .clasp.*.json
 .clasp.local.json
+# gas backups
+gas/Code.js.bak.*
 
 # clasp config backups (DO NOT COMMIT)
 configs/clasp/*.clasp.json
