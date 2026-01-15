@@ -1,0 +1,71 @@
+{
+  "currency": "JPY",
+  "document_type": "receipt",
+  "transaction_date": "2021-12-07",
+  "date_basis": "issue_date",
+  "merchant": "メンテセルフ三橋給油所",
+  "receipt_total_jpy": 5000,
+  "tax_total_jpy": 455,
+  "qualified_invoice": {
+    "registration_number": null,
+    "confidence": 1.0,
+    "issues": [
+      {
+        "code": "NOT_FOUND",
+        "message": "登録番号が見つかりません"
+      }
+    ]
+  },
+  "tax_meta": {
+    "tax_rate_printed": 10,
+    "tax_in_out": "inclusive",
+    "confidence": 0.8,
+    "issues": [
+      {
+        "code": "AMBIGUOUS",
+        "message": "税率は読めるが内訳欄の形式が限定的"
+      }
+    ]
+  },
+  "tax_breakdown": {
+    "has_multiple_rates": false,
+    "rate_10": {
+      "taxable_amount_jpy": null,
+      "tax_jpy": 455,
+      "gross_amount_jpy": null,
+      "source_label": "内、消費税等(10.00%)",
+      "confidence": 1.0,
+      "issues": [
+        {
+          "code": "PARTIAL_FOUND",
+          "message": "税額のみ明記"
+        }
+      ]
+    },
+    "rate_8": {
+      "taxable_amount_jpy": null,
+      "tax_jpy": null,
+      "gross_amount_jpy": null,
+      "source_label": null,
+      "confidence": 0.0,
+      "issues": [
+        {
+          "code": "NOT_FOUND",
+          "message": "8%対象なし"
+        }
+      ]
+    }
+  },
+  "line_items": [
+    {
+      "description": "出光ゼアス",
+      "amount_jpy": 5000,
+      "tax_rate": 10,
+      "tax_rate_basis": "document",
+      "confidence": 1.0,
+      "issues": []
+    }
+  ],
+  "overall_confidence": 1.0,
+  "overall_issues": []
+}

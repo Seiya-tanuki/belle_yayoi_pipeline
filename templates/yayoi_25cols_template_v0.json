@@ -1,0 +1,127 @@
+[
+  {
+    "index": 1,
+    "name": "識別フラグ",
+    "default": "2000"
+  },
+  {
+    "index": 2,
+    "name": "伝票No.",
+    "default": ""
+  },
+  {
+    "index": 3,
+    "name": "決算",
+    "default": ""
+  },
+  {
+    "index": 4,
+    "name": "取引日付",
+    "default": "{date_yyyy/mm/dd}"
+  },
+  {
+    "index": 5,
+    "name": "借方勘定科目",
+    "default": "仮払金"
+  },
+  {
+    "index": 6,
+    "name": "借方補助科目",
+    "default": ""
+  },
+  {
+    "index": 7,
+    "name": "借方部門",
+    "default": ""
+  },
+  {
+    "index": 8,
+    "name": "借方税区分",
+    "default": "{debit_tax_kubun}"
+  },
+  {
+    "index": 9,
+    "name": "借方金額",
+    "default": "{gross_jpy}"
+  },
+  {
+    "index": 10,
+    "name": "借方税金額",
+    "default": ""
+  },
+  {
+    "index": 11,
+    "name": "貸方勘定科目",
+    "default": "現金"
+  },
+  {
+    "index": 12,
+    "name": "貸方補助科目",
+    "default": ""
+  },
+  {
+    "index": 13,
+    "name": "貸方部門",
+    "default": ""
+  },
+  {
+    "index": 14,
+    "name": "貸方税区分",
+    "default": "対象外"
+  },
+  {
+    "index": 15,
+    "name": "貸方金額",
+    "default": "{gross_jpy}"
+  },
+  {
+    "index": 16,
+    "name": "貸方税金額",
+    "default": ""
+  },
+  {
+    "index": 17,
+    "name": "摘要",
+    "default": "{merchant} {doc_type}"
+  },
+  {
+    "index": 18,
+    "name": "番号",
+    "default": ""
+  },
+  {
+    "index": 19,
+    "name": "期日",
+    "default": ""
+  },
+  {
+    "index": 20,
+    "name": "タイプ",
+    "default": "0"
+  },
+  {
+    "index": 21,
+    "name": "生成元",
+    "default": ""
+  },
+  {
+    "index": 22,
+    "name": "仕訳メモ",
+    "default": ""
+  },
+  {
+    "index": 23,
+    "name": "付箋1",
+    "default": ""
+  },
+  {
+    "index": 24,
+    "name": "付箋2",
+    "default": ""
+  },
+  {
+    "index": 25,
+    "name": "調整",
+    "default": "NO"
+  }
+]

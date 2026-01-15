@@ -1,0 +1,9 @@
+.DS_Store
+*.log
+*.tmp
+out/
+dist/
+node_modules/
+.clasp.json
+.clasp.*.json
+.clasp.local.json

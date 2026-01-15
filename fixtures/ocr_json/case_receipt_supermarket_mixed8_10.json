@@ -1,0 +1,52 @@
+{
+  "currency": "JPY",
+  "document_type": "receipt",
+  "transaction_date": "2026-01-14",
+  "date_basis": "issue_date",
+  "merchant": "イオンスタイル名古屋則武",
+  "receipt_total_jpy": 4292,
+  "tax_total_jpy": null,
+  "qualified_invoice": {
+    "registration_number": "T2040001000456",
+    "confidence": 1.0,
+    "issues": []
+  },
+  "tax_meta": {
+    "tax_rate_printed": "multiple",
+    "tax_in_out": "exclusive",
+    "confidence": 1.0,
+    "issues": []
+  },
+  "tax_breakdown": {
+    "has_multiple_rates": true,
+    "rate_10": {
+      "taxable_amount_jpy": 333,
+      "tax_jpy": 33,
+      "gross_amount_jpy": null,
+      "source_label": "外税10%対象額",
+      "confidence": 1.0,
+      "issues": [
+        {
+          "code": "PARTIAL_FOUND",
+          "message": "grossは明記なし"
+        }
+      ]
+    },
+    "rate_8": {
+      "taxable_amount_jpy": 3636,
+      "tax_jpy": 290,
+      "gross_amount_jpy": null,
+      "source_label": "外税8%対象額",
+      "confidence": 1.0,
+      "issues": [
+        {
+          "code": "PARTIAL_FOUND",
+          "message": "grossは明記なし"
+        }
+      ]
+    }
+  },
+  "line_items": [],
+  "overall_confidence": 1.0,
+  "overall_issues": []
+}

@@ -1,0 +1,21 @@
+{
+  "name": "belle_yayoi_pipeline_v0",
+  "version": "1.0.0",
+  "description": "このリポジトリは「Gemini OCR（JSON）→ 正規化 → 弥生会計インポート用CSV（25項目・ヘッダなし）」の変換ロジックを、コーディングエージェントにブレなく実装させるための**仕様ドキュメント集**です。",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "@types/google-apps-script": "^2.0.8",
+    "typescript": "^5.9.3"
+  }
+}

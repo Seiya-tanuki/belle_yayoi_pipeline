@@ -1,0 +1,57 @@
+{
+  "currency": "JPY",
+  "document_type": "statement",
+  "transaction_date": "2025-11-29",
+  "date_basis": "issue_date",
+  "merchant": "クインテッサホテル大垣",
+  "receipt_total_jpy": 32784,
+  "tax_total_jpy": 2980,
+  "qualified_invoice": {
+    "registration_number": "T7010401070337",
+    "confidence": 1.0,
+    "issues": []
+  },
+  "tax_meta": {
+    "tax_rate_printed": 10,
+    "tax_in_out": "inclusive",
+    "confidence": 0.9,
+    "issues": [
+      {
+        "code": "AMBIGUOUS",
+        "message": "内税/外税の明記は様式依存"
+      }
+    ]
+  },
+  "tax_breakdown": {
+    "has_multiple_rates": false,
+    "rate_10": {
+      "taxable_amount_jpy": null,
+      "tax_jpy": 2980,
+      "gross_amount_jpy": 32784,
+      "source_label": "10%対象",
+      "confidence": 1.0,
+      "issues": [
+        {
+          "code": "PARTIAL_FOUND",
+          "message": "taxableは明記なし"
+        }
+      ]
+    },
+    "rate_8": {
+      "taxable_amount_jpy": null,
+      "tax_jpy": null,
+      "gross_amount_jpy": null,
+      "source_label": null,
+      "confidence": 0.0,
+      "issues": [
+        {
+          "code": "NOT_FOUND",
+          "message": "8%対象なし"
+        }
+      ]
+    }
+  },
+  "line_items": [],
+  "overall_confidence": 1.0,
+  "overall_issues": []
+}
