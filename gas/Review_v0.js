@@ -6,6 +6,7 @@ function belle_review_getHeader() {
   const header = [
     "review_status",
     "review_reason",
+    "review_reason_code",
     "export_status",
     "exported_at_iso",
     "export_csv_file_id",
@@ -39,14 +40,22 @@ function belle_review_getOrCreateSheet(ss, name, header) {
   if (lastRow === 0) {
     sh.appendRow(header);
   } else {
-    const row = sh.getRange(1, 1, 1, header.length).getValues()[0];
+    const row = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
     for (let i = 0; i < header.length; i++) {
-      if (String(row[i] || "") !== header[i]) {
-        throw new Error("INVALID_REVIEW_HEADER: mismatch at col " + (i + 1));
+      if (header[i] === "review_reason_code") continue;
+      if (row.indexOf(header[i]) === -1) {
+        throw new Error("INVALID_REVIEW_HEADER: missing " + header[i]);
       }
+    }
+    if (row.indexOf("review_reason_code") === -1) {
+      sh.getRange(1, sh.getLastColumn() + 1).setValue("review_reason_code");
     }
   }
   return sh;
+}
+
+function belle_review_getHeaderRow(sh) {
+  return sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
 }
 
 function belle_review_getOrCreateLogSheet(ss, name) {
@@ -114,6 +123,8 @@ function belle_buildReviewFromDoneQueue() {
   if (!queue) throw new Error("Sheet not found: " + queueSheetName);
 
   const review = belle_review_getOrCreateSheet(ss, reviewSheetName, belle_review_getHeader());
+  const reviewHeaderRow = belle_review_getHeaderRow(review);
+  const reviewHeaderMap = belle_review_getHeaderMap(reviewHeaderRow);
   const reviewLog = belle_review_getOrCreateLogSheet(ss, reviewLogSheetName);
   const logSet = belle_review_loadLogSet(reviewLog);
 
@@ -183,27 +194,42 @@ function belle_buildReviewFromDoneQueue() {
       if (logSet.has(key)) continue;
 
       let reviewStatus = "";
-      const reasons = [];
+      const reasonCodes = [];
+      const reasonTexts = [];
       let grossVal = null;
       let debitKubun = "";
 
       if (bucket === "unknown") {
         reviewStatus = "NEEDS_REVIEW";
-        const reason = singleRateInfo && singleRateInfo.reason
-          ? "UNKNOWN_TAX_RATE: " + singleRateInfo.reason
+        const code = singleRateInfo && singleRateInfo.reason === "NO_RATE_IN_TAX_META_OR_LINE_ITEMS"
+          ? "UNKNOWN_SINGLE_RATE"
           : "UNKNOWN_TAX_RATE";
-        reasons.push(reason);
+        reasonCodes.push(code);
+        reasonTexts.push(belle_reviewReasonJa(code, {
+          file_name: fileName,
+          merchant: merchant,
+          detail: singleRateInfo ? singleRateInfo.reason : ""
+        }));
       } else {
         const grossInfo = belle_yayoi_getGrossForRate(parsed, bucket, hasMultiple !== true, taxInOut);
         grossVal = grossInfo.gross;
         if (grossVal === null) {
           reviewStatus = "NEEDS_REVIEW";
-          reasons.push("MISSING_GROSS: " + grossInfo.reason);
+          reasonCodes.push("GROSS_UNKNOWN");
+          reasonTexts.push(belle_reviewReasonJa("GROSS_UNKNOWN", {
+            file_name: fileName,
+            merchant: merchant,
+            detail: grossInfo.reason
+          }));
         }
         debitKubun = belle_yayoi_getDebitTaxKubun(bucket, parsed.transaction_date);
         if (!debitKubun) {
           reviewStatus = "NEEDS_REVIEW";
-          reasons.push("MISSING_DEBIT_TAX_KUBUN");
+          reasonCodes.push("MISSING_DEBIT_TAX_KUBUN");
+          reasonTexts.push(belle_reviewReasonJa("MISSING_DEBIT_TAX_KUBUN", {
+            file_name: fileName,
+            merchant: merchant
+          }));
         }
       }
 
@@ -216,24 +242,34 @@ function belle_buildReviewFromDoneQueue() {
         memo: memoAuto
       });
 
-      const reviewRow = [
-        reviewStatus,
-        reasons.join(";"),
-        "",
-        "",
-        "",
-        fileId,
-        fileName,
-        driveUrl,
-        date,
-        merchant,
-        String(bucket),
-        grossVal === null ? "" : grossVal,
-        debitKubun,
-        "",
-        memoAuto,
-        ""
-      ].concat(row25);
+      const reviewRow = new Array(reviewHeaderRow.length);
+      reviewRow[reviewHeaderMap["review_status"]] = reviewStatus;
+      reviewRow[reviewHeaderMap["review_reason"]] = reasonTexts.join(" / ");
+      if (reviewHeaderMap["review_reason_code"] !== undefined) {
+        reviewRow[reviewHeaderMap["review_reason_code"]] = reasonCodes.join(";");
+      }
+      reviewRow[reviewHeaderMap["export_status"]] = "";
+      reviewRow[reviewHeaderMap["exported_at_iso"]] = "";
+      reviewRow[reviewHeaderMap["export_csv_file_id"]] = "";
+      reviewRow[reviewHeaderMap["source_file_id"]] = fileId;
+      reviewRow[reviewHeaderMap["source_file_name"]] = fileName;
+      reviewRow[reviewHeaderMap["drive_url"]] = driveUrl;
+      reviewRow[reviewHeaderMap["transaction_date"]] = date;
+      reviewRow[reviewHeaderMap["merchant"]] = merchant;
+      reviewRow[reviewHeaderMap["tax_rate_bucket"]] = String(bucket);
+      reviewRow[reviewHeaderMap["amount_gross_jpy"]] = grossVal === null ? "" : grossVal;
+      reviewRow[reviewHeaderMap["debit_tax_kubun_auto"]] = debitKubun;
+      reviewRow[reviewHeaderMap["debit_tax_kubun_override"]] = "";
+      reviewRow[reviewHeaderMap["memo_auto"]] = memoAuto;
+      reviewRow[reviewHeaderMap["memo_override"]] = "";
+
+      for (let j = 0; j < 25; j++) {
+        const n = String(j + 1).padStart(2, "0");
+        const key = "yayoi_col_" + n;
+        if (reviewHeaderMap[key] !== undefined) {
+          reviewRow[reviewHeaderMap[key]] = row25[j];
+        }
+      }
 
       reviewRows.push(reviewRow);
       logRows.push([key, fileId, String(bucket), nowIso]);
