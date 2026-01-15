@@ -55,3 +55,9 @@
 ## Manual export (editor)
 1. Run belle_exportYayoiCsvFromReview_test from the editor
 2. UI menu works only for container-bound spreadsheets
+
+## Review UI/State (v0.2)
+1. REVIEW_STATE is internal truth; do not edit
+2. REVIEW_UI is the only editable sheet for users
+3. Legacy REVIEW_YAYOI is not used (do not edit)
+4. Manual export: run belle_exportYayoiCsvFromReview_test from editor

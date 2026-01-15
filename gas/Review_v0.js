@@ -2,35 +2,64 @@
 
 // NOTE: Keep comments ASCII only.
 
-function belle_review_getHeader() {
-  const header = [
-    "review_status",
-    "review_reason",
-    "review_reason_code",
-    "export_status",
-    "exported_at_iso",
-    "export_csv_file_id",
+function belle_review_state_header() {
+  return [
+    "review_key",
     "source_file_id",
     "source_file_name",
     "drive_url",
     "transaction_date",
     "merchant",
-    "tax_rate_bucket",
-    "amount_gross_jpy",
+    "receipt_total_jpy",
+    "tax_rate_bucket_auto",
+    "tax_rate_bucket_override",
     "debit_tax_kubun_auto",
     "debit_tax_kubun_override",
     "memo_auto",
-    "memo_override"
+    "memo_override",
+    "review_status",
+    "review_reason_code",
+    "review_reason",
+    "export_status",
+    "exported_at_iso",
+    "export_csv_file_id",
+    "amount_gross_jpy"
   ];
-  for (let i = 1; i <= 25; i++) {
-    const n = String(i).padStart(2, "0");
-    header.push("yayoi_col_" + n);
-  }
-  return header;
 }
 
-function belle_review_getLogHeader() {
-  return ["key", "source_file_id", "tax_rate_bucket", "created_at_iso"];
+function belle_review_ui_header() {
+  return [
+    "review_key",
+    "source_file_name",
+    "drive_url",
+    "transaction_date",
+    "merchant",
+    "receipt_total_jpy",
+    "tax_rate_bucket_auto",
+    "tax_rate_bucket_override",
+    "debit_tax_kubun_auto",
+    "debit_tax_kubun_override",
+    "memo_auto",
+    "memo_override",
+    "review_status",
+    "review_reason"
+  ];
+}
+
+function belle_review_log_header() {
+  return ["review_key", "source_file_id", "tax_rate_bucket", "created_at_iso"];
+}
+
+function belle_review_getHeaderRow(sh) {
+  return sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+}
+
+function belle_review_getHeaderMap(headerRow) {
+  const map = {};
+  for (let i = 0; i < headerRow.length; i++) {
+    map[String(headerRow[i] || "")] = i;
+  }
+  return map;
 }
 
 function belle_review_getOrCreateSheet(ss, name, header) {
@@ -39,27 +68,17 @@ function belle_review_getOrCreateSheet(ss, name, header) {
   const lastRow = sh.getLastRow();
   if (lastRow === 0) {
     sh.appendRow(header);
-  } else {
-    const row = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-    for (let i = 0; i < header.length; i++) {
-      if (header[i] === "review_reason_code") continue;
-      if (row.indexOf(header[i]) === -1) {
-        throw new Error("INVALID_REVIEW_HEADER: missing " + header[i]);
-      }
-    }
-    if (row.indexOf("review_reason_code") === -1) {
-      sh.getRange(1, sh.getLastColumn() + 1).setValue("review_reason_code");
+    return sh;
+  }
+  const row = belle_review_getHeaderRow(sh);
+  let nextCol = row.length + 1;
+  for (let i = 0; i < header.length; i++) {
+    if (row.indexOf(header[i]) === -1) {
+      sh.getRange(1, nextCol).setValue(header[i]);
+      nextCol++;
     }
   }
   return sh;
-}
-
-function belle_review_getHeaderRow(sh) {
-  return sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-}
-
-function belle_review_getOrCreateLogSheet(ss, name) {
-  return belle_review_getOrCreateSheet(ss, name, belle_review_getLogHeader());
 }
 
 function belle_review_makeKey(fileId, bucket) {
@@ -97,15 +116,147 @@ function belle_review_hasRate(parsed, rate) {
   return false;
 }
 
-function belle_review_buildRowAuto(params) {
-  const row = belle_yayoi_buildRow({
-    date: params.date,
-    debitTaxKubun: params.debitTaxKubun,
-    gross: params.gross,
-    summary: params.summary,
-    memo: params.memo
-  });
-  return row;
+function belle_review_effectiveBucket(autoBucket, overrideBucket) {
+  if (overrideBucket === "8" || overrideBucket === "10") return overrideBucket;
+  if (autoBucket === "8" || autoBucket === "10") return autoBucket;
+  return "unknown";
+}
+
+function belle_review_effectiveDebit(autoKubun, overrideKubun) {
+  return overrideKubun || autoKubun || "";
+}
+
+function belle_review_computeStatus(bucket, debitKubun, gross) {
+  const codes = [];
+  if (bucket !== "8" && bucket !== "10") {
+    codes.push("UNKNOWN_TAX_RATE");
+  }
+  if (!gross && gross !== 0) {
+    codes.push("GROSS_UNKNOWN");
+  }
+  if (!debitKubun) {
+    codes.push("MISSING_DEBIT_TAX_KUBUN");
+  }
+  if (codes.length === 0) {
+    return { status: "", codes: [], reason: "" };
+  }
+  const reasons = [];
+  for (let i = 0; i < codes.length; i++) {
+    reasons.push(belle_reviewReasonJa(codes[i], {}));
+  }
+  return { status: "NEEDS_REVIEW", codes: codes, reason: reasons.join(" / ") };
+}
+
+function belle_review_applyUiOverridesToState(stateSheet, stateMap, uiSheet) {
+  const uiRows = uiSheet.getLastRow();
+  if (uiRows < 2) return { updated: 0 };
+  const uiHeader = belle_review_getHeaderRow(uiSheet);
+  const uiMap = belle_review_getHeaderMap(uiHeader);
+  const uiVals = uiSheet.getRange(2, 1, uiRows - 1, uiSheet.getLastColumn()).getValues();
+  const uiByKey = {};
+  for (let i = 0; i < uiVals.length; i++) {
+    const key = String(uiVals[i][uiMap["review_key"]] || "");
+    if (!key) continue;
+    uiByKey[key] = uiVals[i];
+  }
+
+  const stateRows = stateSheet.getLastRow();
+  if (stateRows < 2) return { updated: 0 };
+  const stateVals = stateSheet.getRange(2, 1, stateRows - 1, stateSheet.getLastColumn()).getValues();
+  let updated = 0;
+
+  for (let i = 0; i < stateVals.length; i++) {
+    const row = stateVals[i];
+    const key = String(row[stateMap["review_key"]] || "");
+    if (!key || !uiByKey[key]) continue;
+
+    const uiRow = uiByKey[key];
+    const uiTaxOverride = String(uiRow[uiMap["tax_rate_bucket_override"]] || "");
+    const uiDebitOverride = String(uiRow[uiMap["debit_tax_kubun_override"]] || "");
+    const uiMemoOverride = String(uiRow[uiMap["memo_override"]] || "");
+
+    if (uiTaxOverride) row[stateMap["tax_rate_bucket_override"]] = uiTaxOverride;
+    if (uiDebitOverride) row[stateMap["debit_tax_kubun_override"]] = uiDebitOverride;
+    if (uiMemoOverride) row[stateMap["memo_override"]] = uiMemoOverride;
+
+    const autoBucket = String(row[stateMap["tax_rate_bucket_auto"]] || "");
+    const effBucket = belle_review_effectiveBucket(autoBucket, String(row[stateMap["tax_rate_bucket_override"]] || ""));
+    const autoKubun = String(row[stateMap["debit_tax_kubun_auto"]] || "");
+    const effKubun = belle_review_effectiveDebit(autoKubun, String(row[stateMap["debit_tax_kubun_override"]] || ""));
+    const gross = row[stateMap["amount_gross_jpy"]];
+
+    const statusInfo = belle_review_computeStatus(effBucket, effKubun, gross);
+    row[stateMap["review_status"]] = statusInfo.status;
+    row[stateMap["review_reason_code"]] = statusInfo.codes.join(";");
+    row[stateMap["review_reason"]] = statusInfo.reason;
+
+    updated++;
+  }
+
+  if (updated > 0) {
+    stateSheet.getRange(2, 1, stateVals.length, stateSheet.getLastColumn()).setValues(stateVals);
+  }
+  return { updated: updated };
+}
+
+function belle_review_syncUiFromState(stateSheet, stateMap, uiSheet) {
+  const uiHeader = belle_review_getHeaderRow(uiSheet);
+  const uiMap = belle_review_getHeaderMap(uiHeader);
+
+  const uiRows = uiSheet.getLastRow();
+  const uiVals = uiRows >= 2
+    ? uiSheet.getRange(2, 1, uiRows - 1, uiSheet.getLastColumn()).getValues()
+    : [];
+
+  const uiIndexByKey = {};
+  for (let i = 0; i < uiVals.length; i++) {
+    const key = String(uiVals[i][uiMap["review_key"]] || "");
+    if (key) uiIndexByKey[key] = i;
+  }
+
+  const stateRows = stateSheet.getLastRow();
+  if (stateRows < 2) return { updated: 0, appended: 0 };
+  const stateVals = stateSheet.getRange(2, 1, stateRows - 1, stateSheet.getLastColumn()).getValues();
+
+  let updated = 0;
+  const appendRows = [];
+  for (let i = 0; i < stateVals.length; i++) {
+    const s = stateVals[i];
+    const key = String(s[stateMap["review_key"]] || "");
+    if (!key) continue;
+
+    const row = new Array(uiHeader.length);
+    row[uiMap["review_key"]] = key;
+    row[uiMap["source_file_name"]] = s[stateMap["source_file_name"]];
+    row[uiMap["drive_url"]] = s[stateMap["drive_url"]];
+    row[uiMap["transaction_date"]] = s[stateMap["transaction_date"]];
+    row[uiMap["merchant"]] = s[stateMap["merchant"]];
+    row[uiMap["receipt_total_jpy"]] = s[stateMap["receipt_total_jpy"]];
+    row[uiMap["tax_rate_bucket_auto"]] = s[stateMap["tax_rate_bucket_auto"]];
+    row[uiMap["tax_rate_bucket_override"]] = s[stateMap["tax_rate_bucket_override"]];
+    row[uiMap["debit_tax_kubun_auto"]] = s[stateMap["debit_tax_kubun_auto"]];
+    row[uiMap["debit_tax_kubun_override"]] = s[stateMap["debit_tax_kubun_override"]];
+    row[uiMap["memo_auto"]] = s[stateMap["memo_auto"]];
+    row[uiMap["memo_override"]] = s[stateMap["memo_override"]];
+    row[uiMap["review_status"]] = s[stateMap["review_status"]];
+    row[uiMap["review_reason"]] = s[stateMap["review_reason"]];
+
+    if (uiIndexByKey[key] !== undefined) {
+      const idx = uiIndexByKey[key];
+      uiVals[idx] = row;
+      updated++;
+    } else {
+      appendRows.push(row);
+    }
+  }
+
+  if (updated > 0 && uiVals.length > 0) {
+    uiSheet.getRange(2, 1, uiVals.length, uiSheet.getLastColumn()).setValues(uiVals);
+  }
+  if (appendRows.length > 0) {
+    uiSheet.getRange(uiSheet.getLastRow() + 1, 1, appendRows.length, uiSheet.getLastColumn()).setValues(appendRows);
+  }
+  return { updated: updated, appended: appendRows.length };
 }
 
 function belle_buildReviewFromDoneQueue() {
@@ -113,7 +264,8 @@ function belle_buildReviewFromDoneQueue() {
   const sheetId = props.getProperty("BELLE_SHEET_ID");
   const defaultSheetName = props.getProperty("BELLE_SHEET_NAME");
   const queueSheetName = props.getProperty("BELLE_QUEUE_SHEET_NAME") || defaultSheetName;
-  const reviewSheetName = props.getProperty("BELLE_REVIEW_SHEET_NAME") || "REVIEW_YAYOI";
+  const stateSheetName = props.getProperty("BELLE_REVIEW_STATE_SHEET_NAME") || "REVIEW_STATE";
+  const uiSheetName = props.getProperty("BELLE_REVIEW_UI_SHEET_NAME") || "REVIEW_UI";
   const reviewLogSheetName = props.getProperty("BELLE_REVIEW_LOG_SHEET_NAME") || "REVIEW_LOG";
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
   if (!queueSheetName) throw new Error("Missing Script Property: BELLE_SHEET_NAME (or BELLE_QUEUE_SHEET_NAME)");
@@ -122,16 +274,20 @@ function belle_buildReviewFromDoneQueue() {
   const queue = ss.getSheetByName(queueSheetName);
   if (!queue) throw new Error("Sheet not found: " + queueSheetName);
 
-  const review = belle_review_getOrCreateSheet(ss, reviewSheetName, belle_review_getHeader());
-  const reviewHeaderRow = belle_review_getHeaderRow(review);
-  const reviewHeaderMap = belle_review_getHeaderMap(reviewHeaderRow);
-  const reviewLog = belle_review_getOrCreateLogSheet(ss, reviewLogSheetName);
-  const logSet = belle_review_loadLogSet(reviewLog);
+  const state = belle_review_getOrCreateSheet(ss, stateSheetName, belle_review_state_header());
+  const ui = belle_review_getOrCreateSheet(ss, uiSheetName, belle_review_ui_header());
+  const log = belle_review_getOrCreateSheet(ss, reviewLogSheetName, belle_review_log_header());
+  const logSet = belle_review_loadLogSet(log);
+
+  const stateHeader = belle_review_getHeaderRow(state);
+  const stateMap = belle_review_getHeaderMap(stateHeader);
 
   const header = ["status","file_id","file_name","mime_type","drive_url","queued_at_iso","ocr_json","ocr_error"];
   const lastRow = queue.getLastRow();
   if (lastRow < 2) {
-    return { ok: true, reviewAdded: 0, reason: "QUEUE_EMPTY" };
+    const result = { ok: true, reviewAdded: 0, reason: "QUEUE_EMPTY" };
+    Logger.log(result);
+    return result;
   }
   const headerRow = queue.getRange(1, 1, 1, header.length).getValues()[0];
   for (let i = 0; i < header.length; i++) {
@@ -141,7 +297,7 @@ function belle_buildReviewFromDoneQueue() {
   }
 
   const rows = queue.getRange(2, 1, lastRow - 1, 8).getValues();
-  const reviewRows = [];
+  const stateRows = [];
   const logRows = [];
   const nowIso = new Date().toISOString();
 
@@ -164,8 +320,7 @@ function belle_buildReviewFromDoneQueue() {
 
     const date = belle_yayoi_formatDate(parsed.transaction_date);
     const merchant = parsed.merchant ? String(parsed.merchant) : "unknown";
-    const docType = parsed.document_type ? String(parsed.document_type) : "unknown";
-    const summary = merchant + " / " + docType;
+    const receiptTotal = belle_yayoi_isNumber(parsed.receipt_total_jpy);
     const memoAuto = (driveUrl + " " + fileId).trim().slice(0, 200);
 
     const taxInOut = parsed.tax_meta ? parsed.tax_meta.tax_in_out : null;
@@ -193,121 +348,83 @@ function belle_buildReviewFromDoneQueue() {
       const key = belle_review_makeKey(fileId, bucket);
       if (logSet.has(key)) continue;
 
-      let reviewStatus = "";
-      const reasonCodes = [];
-      const reasonTexts = [];
       let grossVal = null;
       let debitKubun = "";
+      let reviewStatus = "";
+      let reasonCode = "";
+      let reasonText = "";
 
       if (bucket === "unknown") {
-        reviewStatus = "NEEDS_REVIEW";
         const code = singleRateInfo && singleRateInfo.reason === "NO_RATE_IN_TAX_META_OR_LINE_ITEMS"
           ? "UNKNOWN_SINGLE_RATE"
           : "UNKNOWN_TAX_RATE";
-        reasonCodes.push(code);
-        reasonTexts.push(belle_reviewReasonJa(code, {
-          file_name: fileName,
-          merchant: merchant,
-          detail: singleRateInfo ? singleRateInfo.reason : ""
-        }));
+        reviewStatus = "NEEDS_REVIEW";
+        reasonCode = code + (singleRateInfo && singleRateInfo.reason ? ":" + singleRateInfo.reason : "");
+        reasonText = belle_reviewReasonJa(code, { file_name: fileName, merchant: merchant, detail: singleRateInfo ? singleRateInfo.reason : "" });
       } else {
         const grossInfo = belle_yayoi_getGrossForRate(parsed, bucket, hasMultiple !== true, taxInOut);
         grossVal = grossInfo.gross;
-        if (grossVal === null) {
-          reviewStatus = "NEEDS_REVIEW";
-          reasonCodes.push("GROSS_UNKNOWN");
-          reasonTexts.push(belle_reviewReasonJa("GROSS_UNKNOWN", {
-            file_name: fileName,
-            merchant: merchant,
-            detail: grossInfo.reason
-          }));
-        }
         debitKubun = belle_yayoi_getDebitTaxKubun(bucket, parsed.transaction_date);
-        if (!debitKubun) {
-          reviewStatus = "NEEDS_REVIEW";
-          reasonCodes.push("MISSING_DEBIT_TAX_KUBUN");
-          reasonTexts.push(belle_reviewReasonJa("MISSING_DEBIT_TAX_KUBUN", {
-            file_name: fileName,
-            merchant: merchant
-          }));
-        }
+        const statusInfo = belle_review_computeStatus(String(bucket), debitKubun, grossVal);
+        reviewStatus = statusInfo.status;
+        reasonCode = statusInfo.codes.join(";");
+        reasonText = statusInfo.reason;
       }
 
-      const grossStr = grossVal === null ? "" : String(grossVal);
-      const row25 = belle_review_buildRowAuto({
-        date: date,
-        debitTaxKubun: debitKubun,
-        gross: grossStr,
-        summary: summary,
-        memo: memoAuto
-      });
+      const stateRow = new Array(stateHeader.length);
+      stateRow[stateMap["review_key"]] = key;
+      stateRow[stateMap["source_file_id"]] = fileId;
+      stateRow[stateMap["source_file_name"]] = fileName;
+      stateRow[stateMap["drive_url"]] = driveUrl;
+      stateRow[stateMap["transaction_date"]] = date;
+      stateRow[stateMap["merchant"]] = merchant;
+      stateRow[stateMap["receipt_total_jpy"]] = receiptTotal === null ? "" : receiptTotal;
+      stateRow[stateMap["tax_rate_bucket_auto"]] = String(bucket);
+      stateRow[stateMap["tax_rate_bucket_override"]] = "";
+      stateRow[stateMap["debit_tax_kubun_auto"]] = debitKubun;
+      stateRow[stateMap["debit_tax_kubun_override"]] = "";
+      stateRow[stateMap["memo_auto"]] = memoAuto;
+      stateRow[stateMap["memo_override"]] = "";
+      stateRow[stateMap["review_status"]] = reviewStatus;
+      stateRow[stateMap["review_reason_code"]] = reasonCode;
+      stateRow[stateMap["review_reason"]] = reasonText;
+      stateRow[stateMap["export_status"]] = "";
+      stateRow[stateMap["exported_at_iso"]] = "";
+      stateRow[stateMap["export_csv_file_id"]] = "";
+      stateRow[stateMap["amount_gross_jpy"]] = grossVal === null ? "" : grossVal;
 
-      const reviewRow = new Array(reviewHeaderRow.length);
-      reviewRow[reviewHeaderMap["review_status"]] = reviewStatus;
-      reviewRow[reviewHeaderMap["review_reason"]] = reasonTexts.join(" / ");
-      if (reviewHeaderMap["review_reason_code"] !== undefined) {
-        reviewRow[reviewHeaderMap["review_reason_code"]] = reasonCodes.join(";");
-      }
-      reviewRow[reviewHeaderMap["export_status"]] = "";
-      reviewRow[reviewHeaderMap["exported_at_iso"]] = "";
-      reviewRow[reviewHeaderMap["export_csv_file_id"]] = "";
-      reviewRow[reviewHeaderMap["source_file_id"]] = fileId;
-      reviewRow[reviewHeaderMap["source_file_name"]] = fileName;
-      reviewRow[reviewHeaderMap["drive_url"]] = driveUrl;
-      reviewRow[reviewHeaderMap["transaction_date"]] = date;
-      reviewRow[reviewHeaderMap["merchant"]] = merchant;
-      reviewRow[reviewHeaderMap["tax_rate_bucket"]] = String(bucket);
-      reviewRow[reviewHeaderMap["amount_gross_jpy"]] = grossVal === null ? "" : grossVal;
-      reviewRow[reviewHeaderMap["debit_tax_kubun_auto"]] = debitKubun;
-      reviewRow[reviewHeaderMap["debit_tax_kubun_override"]] = "";
-      reviewRow[reviewHeaderMap["memo_auto"]] = memoAuto;
-      reviewRow[reviewHeaderMap["memo_override"]] = "";
-
-      for (let j = 0; j < 25; j++) {
-        const n = String(j + 1).padStart(2, "0");
-        const key = "yayoi_col_" + n;
-        if (reviewHeaderMap[key] !== undefined) {
-          reviewRow[reviewHeaderMap[key]] = row25[j];
-        }
-      }
-
-      reviewRows.push(reviewRow);
+      stateRows.push(stateRow);
       logRows.push([key, fileId, String(bucket), nowIso]);
       logSet.add(key);
     }
   }
 
-  if (reviewRows.length > 0) {
-    review.getRange(review.getLastRow() + 1, 1, reviewRows.length, reviewRows[0].length).setValues(reviewRows);
-    reviewLog.getRange(reviewLog.getLastRow() + 1, 1, logRows.length, logRows[0].length).setValues(logRows);
+  if (stateRows.length > 0) {
+    state.getRange(state.getLastRow() + 1, 1, stateRows.length, stateRows[0].length).setValues(stateRows);
+    log.getRange(log.getLastRow() + 1, 1, logRows.length, logRows[0].length).setValues(logRows);
   }
 
-  const result = { ok: true, reviewAdded: reviewRows.length };
+  belle_review_applyUiOverridesToState(state, stateMap, ui);
+  belle_review_syncUiFromState(state, stateMap, ui);
+
+  const result = { ok: true, reviewAdded: stateRows.length };
   Logger.log(result);
   return result;
-}
-
-function belle_review_getHeaderMap(headerRow) {
-  const map = {};
-  for (let i = 0; i < headerRow.length; i++) {
-    map[String(headerRow[i] || "")] = i;
-  }
-  return map;
 }
 
 function belle_review_countNeedsReview() {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const reviewSheetName = props.getProperty("BELLE_REVIEW_SHEET_NAME") || "REVIEW_YAYOI";
+  const stateSheetName = props.getProperty("BELLE_REVIEW_STATE_SHEET_NAME") || "REVIEW_STATE";
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
 
   const ss = SpreadsheetApp.openById(sheetId);
-  const sh = ss.getSheetByName(reviewSheetName);
+  const sh = ss.getSheetByName(stateSheetName);
   if (!sh) return 0;
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return 0;
 
-  const headerRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const headerRow = belle_review_getHeaderRow(sh);
   const map = belle_review_getHeaderMap(headerRow);
   const idx = map["review_status"];
   if (idx === undefined) return 0;
@@ -322,7 +439,8 @@ function belle_review_countNeedsReview() {
 function belle_exportYayoiCsvFromReview(options) {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const reviewSheetName = props.getProperty("BELLE_REVIEW_SHEET_NAME") || "REVIEW_YAYOI";
+  const stateSheetName = props.getProperty("BELLE_REVIEW_STATE_SHEET_NAME") || "REVIEW_STATE";
+  const uiSheetName = props.getProperty("BELLE_REVIEW_UI_SHEET_NAME") || "REVIEW_UI";
   const outputFolderId = props.getProperty("BELLE_OUTPUT_FOLDER_ID") || props.getProperty("BELLE_DRIVE_FOLDER_ID");
   const strictOverride = options && typeof options.strictExport === "boolean" ? options.strictExport : null;
   const strictExport = strictOverride !== null
@@ -331,132 +449,84 @@ function belle_exportYayoiCsvFromReview(options) {
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
   const batchMaxRows = Number(props.getProperty("BELLE_EXPORT_BATCH_MAX_ROWS") || "5000");
+  const importLogName = props.getProperty("BELLE_IMPORT_LOG_SHEET_NAME") || "IMPORT_LOG";
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
   if (!outputFolderId) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
 
   const ss = SpreadsheetApp.openById(sheetId);
-  const sh = ss.getSheetByName(reviewSheetName);
-  if (!sh) {
-    const res = {
-      ok: false,
-      exportedRows: 0,
-      exportedFiles: 0,
-      heldForReview: 0,
-      strictBlocked: false,
-      csvFileId: "",
-      message: "REVIEW_SHEET_NOT_FOUND"
-    };
+  const state = ss.getSheetByName(stateSheetName);
+  const ui = ss.getSheetByName(uiSheetName);
+  if (!state || !ui) {
+    const res = { ok: false, exportedRows: 0, exportedFiles: 0, heldForReview: 0, strictBlocked: false, csvFileId: "", message: "REVIEW_SHEET_NOT_FOUND" };
     Logger.log(res);
     return res;
   }
 
-  const lastRow = sh.getLastRow();
-  if (lastRow < 2) {
-    const res = {
-      ok: true,
-      exportedRows: 0,
-      exportedFiles: 0,
-      heldForReview: 0,
-      strictBlocked: false,
-      csvFileId: "",
-      message: "NO_ROWS"
-    };
+  const stateHeader = belle_review_getHeaderRow(state);
+  const stateMap = belle_review_getHeaderMap(stateHeader);
+  belle_review_applyUiOverridesToState(state, stateMap, ui);
+  belle_review_syncUiFromState(state, stateMap, ui);
+
+  const stateRows = state.getLastRow();
+  if (stateRows < 2) {
+    const res = { ok: true, exportedRows: 0, exportedFiles: 0, heldForReview: 0, strictBlocked: false, csvFileId: "", message: "NO_ROWS" };
     Logger.log(res);
     return res;
   }
 
-  const headerRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  const map = belle_review_getHeaderMap(headerRow);
-
-  const idx = {
-    review_status: map["review_status"],
-    export_status: map["export_status"],
-    exported_at_iso: map["exported_at_iso"],
-    export_csv_file_id: map["export_csv_file_id"],
-    source_file_id: map["source_file_id"],
-    source_file_name: map["source_file_name"],
-    drive_url: map["drive_url"],
-    transaction_date: map["transaction_date"],
-    merchant: map["merchant"],
-    tax_rate_bucket: map["tax_rate_bucket"],
-    amount_gross_jpy: map["amount_gross_jpy"],
-    debit_tax_kubun_auto: map["debit_tax_kubun_auto"],
-    debit_tax_kubun_override: map["debit_tax_kubun_override"],
-    memo_auto: map["memo_auto"],
-    memo_override: map["memo_override"]
-  };
-
-  const values = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
-  let needsReview = 0;
+  const stateVals = state.getRange(2, 1, stateRows - 1, state.getLastColumn()).getValues();
   const csvRows = [];
   const exportRowIndexes = [];
+  let needsReview = 0;
   const nowIso = new Date().toISOString();
 
-  for (let i = 0; i < values.length; i++) {
-    const row = values[i];
-    const reviewStatus = String(row[idx.review_status] || "");
-    const exportStatus = String(row[idx.export_status] || "");
+  for (let i = 0; i < stateVals.length; i++) {
+    const row = stateVals[i];
+    const exportStatus = String(row[stateMap["export_status"]] || "");
+    const reviewStatus = String(row[stateMap["review_status"]] || "");
     if (exportStatus === "EXPORTED") continue;
-
     if (reviewStatus === "NEEDS_REVIEW") {
       needsReview++;
       continue;
     }
 
-    const gross = String(row[idx.amount_gross_jpy] || "");
-    const debitAuto = String(row[idx.debit_tax_kubun_auto] || "");
-    const debitOverride = String(row[idx.debit_tax_kubun_override] || "");
-    const memoAuto = String(row[idx.memo_auto] || "");
-    const memoOverride = String(row[idx.memo_override] || "");
-    if (!gross || !(debitOverride || debitAuto)) {
+    const autoBucket = String(row[stateMap["tax_rate_bucket_auto"]] || "");
+    const overrideBucket = String(row[stateMap["tax_rate_bucket_override"]] || "");
+    const bucket = belle_review_effectiveBucket(autoBucket, overrideBucket);
+    const autoKubun = String(row[stateMap["debit_tax_kubun_auto"]] || "");
+    const overrideKubun = String(row[stateMap["debit_tax_kubun_override"]] || "");
+    const debit = belle_review_effectiveDebit(autoKubun, overrideKubun);
+    const memo = String(row[stateMap["memo_override"]] || "") || String(row[stateMap["memo_auto"]] || "");
+    const gross = row[stateMap["amount_gross_jpy"]];
+    const date = belle_yayoi_formatDate(row[stateMap["transaction_date"]]);
+    const merchant = String(row[stateMap["merchant"]] || "unknown");
+    const summary = merchant + " / " + bucket;
+
+    if ((bucket !== "8" && bucket !== "10") || !debit || (gross === "" || gross === null)) {
       needsReview++;
       continue;
     }
 
-    const date = belle_yayoi_formatDate(row[idx.transaction_date]);
-    const merchant = String(row[idx.merchant] || "unknown");
-    const bucket = String(row[idx.tax_rate_bucket] || "unknown");
-    const summary = merchant + " / " + bucket;
-
-    const debit = debitOverride || debitAuto;
-    const memo = memoOverride || memoAuto;
-    const row25 = belle_review_buildRowAuto({
+    const row25 = belle_yayoi_buildRow({
       date: date,
       debitTaxKubun: debit,
       gross: String(gross),
       summary: summary,
       memo: memo
     });
-
     csvRows.push(belle_yayoi_buildCsvRow(row25));
     exportRowIndexes.push(i + 2);
     if (csvRows.length >= batchMaxRows) break;
   }
 
   if (strictExport && needsReview > 0) {
-    const res = {
-      ok: false,
-      exportedRows: 0,
-      exportedFiles: 0,
-      heldForReview: needsReview,
-      strictBlocked: true,
-      csvFileId: "",
-      message: "STRICT_BLOCKED"
-    };
+    const res = { ok: false, exportedRows: 0, exportedFiles: 0, heldForReview: needsReview, strictBlocked: true, csvFileId: "", message: "STRICT_BLOCKED" };
     Logger.log(res);
     return res;
   }
 
   if (csvRows.length === 0) {
-    const res = {
-      ok: true,
-      exportedRows: 0,
-      exportedFiles: 0,
-      heldForReview: needsReview,
-      strictBlocked: false,
-      csvFileId: "",
-      message: "NO_READY_ROWS"
-    };
+    const res = { ok: true, exportedRows: 0, exportedFiles: 0, heldForReview: needsReview, strictBlocked: false, csvFileId: "", message: "NO_READY_ROWS" };
     Logger.log(res);
     return res;
   }
@@ -474,12 +544,21 @@ function belle_exportYayoiCsvFromReview(options) {
   const file = DriveApp.getFolderById(outputFolderId).createFile(blob);
   const csvFileId = file.getId();
 
-  const exportStatusCol = idx.export_status + 1;
-  const exportedAtCol = idx.exported_at_iso + 1;
-  const csvFileCol = idx.export_csv_file_id + 1;
   for (let i = 0; i < exportRowIndexes.length; i++) {
     const rowNum = exportRowIndexes[i];
-    sh.getRange(rowNum, exportStatusCol, 1, 3).setValues([["EXPORTED", nowIso, csvFileId]]);
+    state.getRange(rowNum, stateMap["export_status"] + 1, 1, 3)
+      .setValues([["EXPORTED", nowIso, csvFileId]]);
+  }
+
+  let importLog = ss.getSheetByName(importLogName);
+  if (!importLog) {
+    importLog = ss.insertSheet(importLogName);
+    importLog.appendRow(["file_id","exported_at_iso","csv_file_id"]);
+  }
+  for (let i = 0; i < exportRowIndexes.length; i++) {
+    const rowNum = exportRowIndexes[i];
+    const key = String(state.getRange(rowNum, stateMap["review_key"] + 1).getValue());
+    importLog.appendRow([key, nowIso, csvFileId]);
   }
 
   const result = {
@@ -502,24 +581,24 @@ function belle_exportYayoiCsvFromReview_test() {
 function belle_backfillReviewReasonsJa() {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const reviewSheetName = props.getProperty("BELLE_REVIEW_SHEET_NAME") || "REVIEW_YAYOI";
+  const stateSheetName = props.getProperty("BELLE_REVIEW_STATE_SHEET_NAME") || "REVIEW_STATE";
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
 
   const ss = SpreadsheetApp.openById(sheetId);
-  const sh = ss.getSheetByName(reviewSheetName);
+  const sh = ss.getSheetByName(stateSheetName);
   if (!sh) return { ok: false, updated: 0, skipped: 0, reason: "REVIEW_SHEET_NOT_FOUND" };
 
   const lastRow = sh.getLastRow();
   if (lastRow < 2) return { ok: true, updated: 0, skipped: 0, reason: "NO_ROWS" };
 
-  const headerRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const headerRow = belle_review_getHeaderRow(sh);
   const map = belle_review_getHeaderMap(headerRow);
   const idxStatus = map["review_status"];
   const idxReason = map["review_reason"];
   const idxReasonCode = map["review_reason_code"];
   const idxMerchant = map["merchant"];
   const idxFileName = map["source_file_name"];
-  const idxBucket = map["tax_rate_bucket"];
+  const idxBucket = map["tax_rate_bucket_auto"];
 
   if (idxStatus === undefined || idxReason === undefined || idxReasonCode === undefined) {
     return { ok: false, updated: 0, skipped: 0, reason: "MISSING_REQUIRED_COLUMNS" };

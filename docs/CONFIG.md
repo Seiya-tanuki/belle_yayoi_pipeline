@@ -63,3 +63,7 @@ Add these Script Properties (optional unless noted):
 3. BELLE_STRICT_EXPORT (optional; default false)
 4. BELLE_EXPORT_BATCH_MAX_ROWS (optional; default 5000)
 5. BELLE_RUN_DO_EXPORT (optional; default false)
+
+## Review sheets (v0.2)
+1. BELLE_REVIEW_STATE_SHEET_NAME (optional; default REVIEW_STATE)
+2. BELLE_REVIEW_UI_SHEET_NAME (optional; default REVIEW_UI)
