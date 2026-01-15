@@ -389,6 +389,9 @@ function belle_exportYayoiCsvFromDoneRows() {
   const queueSheetName = props.getProperty("BELLE_QUEUE_SHEET_NAME") || defaultSheetName;
   const outputFolderId = props.getProperty("BELLE_OUTPUT_FOLDER_ID") || props.getProperty("BELLE_DRIVE_FOLDER_ID");
   const logSheetName = props.getProperty("BELLE_IMPORT_LOG_SHEET_NAME") || "IMPORT_LOG";
+  const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
+  const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
+  const invoiceSuffixMode = String(props.getProperty("BELLE_INVOICE_SUFFIX_MODE") || "OFF").toUpperCase();
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
   if (!queueSheetName) throw new Error("Missing Script Property: BELLE_SHEET_NAME (or BELLE_QUEUE_SHEET_NAME)");
   if (!outputFolderId) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
@@ -481,15 +484,23 @@ function belle_exportYayoiCsvFromDoneRows() {
 
       const merchant = parsed.merchant ? String(parsed.merchant) : "unknown";
       const docType = parsed.document_type ? String(parsed.document_type) : "unknown";
-      const summary = merchant + " / " + docType;
+      const suffix = belle_yayoi_getInvoiceSuffix(parsed, invoiceSuffixMode);
+      const summary = merchant + " / " + docType + (suffix ? " " + suffix : "");
 
       let memo = (driveUrl + " " + fileId).trim();
       if (memo.length > 200) memo = memo.slice(0, 200);
 
-      const rate10 = parsed.tax_breakdown && parsed.tax_breakdown.rate_10;
-      const rate8 = parsed.tax_breakdown && parsed.tax_breakdown.rate_8;
-      const gross10 = rate10 ? belle_yayoi_isNumber(rate10.gross_amount_jpy) : null;
-      const gross8 = rate8 ? belle_yayoi_isNumber(rate8.gross_amount_jpy) : null;
+      const taxRatePrinted = parsed.tax_meta && parsed.tax_meta.tax_rate_printed;
+      const hasMultiple = parsed.tax_breakdown && typeof parsed.tax_breakdown.has_multiple_rates === "boolean"
+        ? parsed.tax_breakdown.has_multiple_rates
+        : null;
+      let singleRate = null;
+      if (hasMultiple === false && (taxRatePrinted === 8 || taxRatePrinted === 10)) {
+        singleRate = taxRatePrinted;
+      }
+
+      const gross10 = belle_yayoi_getGrossForRate(parsed, 10, singleRate === 10);
+      const gross8 = belle_yayoi_getGrossForRate(parsed, 8, singleRate === 8);
 
       const rowsForFile = [];
       if (gross10 !== null && gross10 > 0) {
@@ -533,20 +544,29 @@ function belle_exportYayoiCsvFromDoneRows() {
     }
 
     if (csvRows.length === 0) {
-      return {
-        ok: false,
+      const result = {
+        ok: true,
         exportedRows: 0,
         reason: "NO_EXPORT_ROWS",
         skipped: skipped.length,
         errors: errors.length
       };
+      Logger.log(result);
+      return result;
     }
 
     const ts = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmmss");
     const filename = "belle_yayoi_export_" + ts + ".csv";
-    const csvText = csvRows.join("\n");
+    const eol = eolMode === "LF" ? "\n" : "\r\n";
+    const csvText = csvRows.join(eol);
     const folder = DriveApp.getFolderById(outputFolderId);
-    const file = folder.createFile(Utilities.newBlob(csvText, "text/csv", filename));
+    const blob = Utilities.newBlob("", "text/csv", filename);
+    if (encodingMode === "UTF8") {
+      blob.setDataFromString(csvText, "UTF-8");
+    } else {
+      blob.setDataFromString(csvText, "Shift_JIS");
+    }
+    const file = folder.createFile(blob);
     const csvFileId = file.getId();
     const nowIso = new Date().toISOString();
 

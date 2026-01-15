@@ -40,3 +40,9 @@ Add these Script Properties (do not commit secrets):
 Add these Script Properties (optional unless noted):
 1. BELLE_OUTPUT_FOLDER_ID (optional; defaults to BELLE_DRIVE_FOLDER_ID)
 2. BELLE_IMPORT_LOG_SHEET_NAME (optional; default IMPORT_LOG)
+
+## Yayoi CSV Export (v0) - CSV Settings
+Add these Script Properties (optional unless noted):
+1. BELLE_CSV_ENCODING (optional; SHIFT_JIS or UTF8, default SHIFT_JIS)
+2. BELLE_CSV_EOL (optional; CRLF or LF, default CRLF)
+3. BELLE_INVOICE_SUFFIX_MODE (optional; AUTO or OFF, default OFF)

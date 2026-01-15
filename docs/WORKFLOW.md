@@ -32,3 +32,8 @@
 1. Ensure DONE rows exist with valid ocr_json
 2. Run belle_exportYayoiCsvFromDoneRows_test
 3. A headerless CSV is saved to Drive; IMPORT_LOG prevents duplicate outputs
+
+## Yayoi CSV export (v0) - CSV encoding
+1. Default is SHIFT_JIS + CRLF
+2. Use BELLE_CSV_ENCODING / BELLE_CSV_EOL to override
+3. Set BELLE_INVOICE_SUFFIX_MODE=AUTO to append invoice suffix
