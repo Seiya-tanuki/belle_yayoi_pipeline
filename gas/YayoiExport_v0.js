@@ -193,17 +193,19 @@ function belle_yayoi_buildFallbackMemo(params) {
   const fileId = params.fileId || "";
   const url = params.url || "";
   const fix = params.fix || "";
+  const err = params.err || "";
   const base = "BELLE|FBK=1|RID=" + reasonCode + "|FID=" + fileId;
+  const errPart = err ? "|ERR=" + err : "";
   const urlPart = url ? "|URL=" + url : "";
   const fixPart = fix ? "|FIX=" + fix : "";
 
-  let memo = base + urlPart + fixPart;
+  let memo = base + errPart + urlPart + fixPart;
   if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
 
-  memo = base + urlPart;
+  memo = base + errPart + urlPart;
   if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
 
-  memo = base;
+  memo = base + errPart;
   if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
 
   return belle_yayoi_trimShiftJis(memo, 180);

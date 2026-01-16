@@ -2,6 +2,35 @@
 
 // NOTE: Keep comments ASCII only.
 
+function belle_queue_ensureHeaderMapForExport(sh, baseHeader, extraHeader) {
+  const required = baseHeader.concat(extraHeader || []);
+  const lastRow = sh.getLastRow();
+  if (lastRow === 0) {
+    sh.appendRow(required);
+  }
+
+  let headerRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  let nextCol = headerRow.length + 1;
+  for (let i = 0; i < required.length; i++) {
+    if (headerRow.indexOf(required[i]) === -1) {
+      sh.getRange(1, nextCol).setValue(required[i]);
+      nextCol++;
+    }
+  }
+
+  headerRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+  const map = {};
+  for (let i = 0; i < headerRow.length; i++) {
+    map[String(headerRow[i] || "")] = i;
+  }
+  for (let i = 0; i < baseHeader.length; i++) {
+    if (map[baseHeader[i]] === undefined) {
+      return null;
+    }
+  }
+  return map;
+}
+
 function belle_exportYayoiCsvFromReview(options) {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
@@ -28,47 +57,63 @@ function belle_exportYayoiCsvFromReview(options) {
       return res;
     }
 
-    const header = ["status","file_id","file_name","mime_type","drive_url","queued_at_iso","ocr_json","ocr_error"];
+    const baseHeader = ["status","file_id","file_name","mime_type","drive_url","queued_at_iso","ocr_json","ocr_error"];
+    const extraHeader = ["ocr_attempts","ocr_last_attempt_at_iso","ocr_next_retry_at_iso","ocr_error_code","ocr_error_detail"];
     const lastRow = queue.getLastRow();
     if (lastRow < 2) {
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "NO_ROWS", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
     }
-    const headerRow = queue.getRange(1, 1, 1, header.length).getValues()[0];
-    for (let i = 0; i < header.length; i++) {
-      if (String(headerRow[i] || "") !== header[i]) {
-        const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: mismatch at col " + (i + 1), exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
-        Logger.log(res);
-        return res;
-      }
+    const headerMap = belle_queue_ensureHeaderMapForExport(queue, baseHeader, extraHeader);
+    if (!headerMap) {
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: missing required columns", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
     }
 
-    const rows = queue.getRange(2, 1, lastRow - 1, 8).getValues();
+    const rows = queue.getRange(2, 1, lastRow - 1, queue.getLastColumn()).getValues();
     const counts = {
       totalCount: 0,
       doneCount: 0,
-      queuedRemaining: 0,
-      errorCount: 0
+      errorRetryableCount: 0,
+      errorFinalCount: 0,
+      queuedRemaining: 0
     };
     const pendingSamples = [];
+    const retryableSamples = [];
     for (let i = 0; i < rows.length; i++) {
-      const status = String(rows[i][0] || "");
-      const fileId = String(rows[i][1] || "");
-      const fileName = String(rows[i][2] || "");
+      const row = rows[i];
+      const fileId = String(row[headerMap["file_id"]] || "");
+      const fileName = String(row[headerMap["file_name"]] || "");
       if (!fileId) continue;
       counts.totalCount++;
+      const statusRaw = String(row[headerMap["status"]] || "");
+      const status = statusRaw || "QUEUED";
       if (status === "DONE") counts.doneCount++;
-      if (status === "ERROR") counts.errorCount++;
-      if (status === "" || status === "QUEUED") {
+      else if (status === "ERROR_FINAL") counts.errorFinalCount++;
+      else if (status === "ERROR_RETRYABLE" || status === "ERROR") {
+        counts.errorRetryableCount++;
+        if (retryableSamples.length < 5) {
+          retryableSamples.push({ file_id: fileId, file_name: fileName, status: status });
+        }
+      } else {
         counts.queuedRemaining++;
         if (pendingSamples.length < 5) {
-          pendingSamples.push({ file_id: fileId, file_name: fileName, status: status || "QUEUED" });
+          pendingSamples.push({ file_id: fileId, file_name: fileName, status: status });
         }
       }
     }
 
-    Logger.log({ phase: "EXPORT_START", ok: true, totalCount: counts.totalCount, doneCount: counts.doneCount, queuedRemaining: counts.queuedRemaining, errorCount: counts.errorCount });
+    Logger.log({
+      phase: "EXPORT_START",
+      ok: true,
+      totalCount: counts.totalCount,
+      doneCount: counts.doneCount,
+      errorRetryableCount: counts.errorRetryableCount,
+      errorFinalCount: counts.errorFinalCount,
+      queuedRemaining: counts.queuedRemaining
+    });
 
     if (counts.queuedRemaining > 0) {
       const res = {
@@ -82,6 +127,23 @@ function belle_exportYayoiCsvFromReview(options) {
         doneCount: counts.doneCount,
         totalCount: counts.totalCount,
         pendingSamples: pendingSamples,
+        csvFileId: ""
+      };
+      Logger.log(res);
+      return res;
+    }
+    if (counts.errorRetryableCount > 0) {
+      const res = {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: "OCR_RETRYABLE_REMAINING",
+        exportedRows: 0,
+        exportedFiles: 0,
+        errors: 0,
+        queuedRemaining: 0,
+        doneCount: counts.doneCount,
+        totalCount: counts.totalCount,
+        pendingSamples: retryableSamples,
         csvFileId: ""
       };
       Logger.log(res);
@@ -114,12 +176,15 @@ function belle_exportYayoiCsvFromReview(options) {
     for (let i = 0; i < rows.length; i++) {
       if (csvRows.length >= batchMaxRows) break;
       const row = rows[i];
-      const status = String(row[0] || "");
-      const fileId = String(row[1] || "");
-      const fileName = String(row[2] || "");
-      const driveUrl = String(row[4] || "");
-      const queuedAt = String(row[5] || "");
-      const ocrJson = String(row[6] || "");
+      const statusRaw = String(row[headerMap["status"]] || "");
+      const status = statusRaw || "QUEUED";
+      const fileId = String(row[headerMap["file_id"]] || "");
+      const fileName = String(row[headerMap["file_name"]] || "");
+      const driveUrl = String(row[headerMap["drive_url"]] || "");
+      const queuedAt = String(row[headerMap["queued_at_iso"]] || "");
+      const ocrJson = String(row[headerMap["ocr_json"]] || "");
+      const errorCode = String(row[headerMap["ocr_error_code"]] || "");
+      const errorDetail = String(row[headerMap["ocr_error_detail"]] || "");
       if (!fileId) continue;
       if (processed.has(fileId)) continue;
       processed.add(fileId);
@@ -127,7 +192,8 @@ function belle_exportYayoiCsvFromReview(options) {
         skipped++;
         continue;
       }
-      if (status !== "DONE") {
+
+      if (status !== "DONE" && status !== "ERROR_FINAL") {
         skipped++;
         skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_NOT_DONE:" + status });
         continue;
@@ -135,13 +201,16 @@ function belle_exportYayoiCsvFromReview(options) {
 
       let parsed = null;
       let reasonCodes = [];
-      if (!ocrJson) {
-        reasonCodes.push("OCR_JSON_MISSING");
-        errors++;
-        skipped++;
-        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_JSON_MISSING" });
-        continue;
-      } else {
+      let memoErr = "";
+
+      if (status === "DONE") {
+        if (!ocrJson) {
+          reasonCodes.push("OCR_JSON_MISSING");
+          errors++;
+          skipped++;
+          skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_JSON_MISSING" });
+          continue;
+        }
         try {
           parsed = JSON.parse(ocrJson);
         } catch (e) {
@@ -151,6 +220,10 @@ function belle_exportYayoiCsvFromReview(options) {
           skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_JSON_PARSE_ERROR" });
           continue;
         }
+      } else {
+        reasonCodes.push("OCR_ERROR_FINAL");
+        memoErr = errorCode || "ERROR_FINAL";
+        if (errorDetail) reasonCodes.push("OCR_ERROR_DETAIL");
       }
 
       let date = "";
@@ -205,7 +278,8 @@ function belle_exportYayoiCsvFromReview(options) {
         reasonCode: reasonCode,
         fileId: fileId,
         url: shortUrl,
-        fix: fix
+        fix: fix,
+        err: memoErr || errorCode
       });
 
       const row25 = belle_yayoi_buildRow({

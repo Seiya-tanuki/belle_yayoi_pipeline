@@ -22,11 +22,14 @@
 - BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH (default: 5)
 - BELLE_RUN_DO_QUEUE (default: true)
 - BELLE_RUN_DO_OCR (default: true)
+- BELLE_OCR_MAX_ATTEMPTS (default: 3)
+- BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
 - BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
   - The value must be a plain label (no extra description).
 
 ## Notes
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.
+- OCR_RAW columns are extended (append-only): ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail.
 
 ## References
 - docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md

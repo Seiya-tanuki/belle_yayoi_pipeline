@@ -24,6 +24,11 @@ Header used by queue/ocr/export:
 - queued_at_iso
 - ocr_json
 - ocr_error
+- ocr_attempts
+- ocr_last_attempt_at_iso
+- ocr_next_retry_at_iso
+- ocr_error_code
+- ocr_error_detail
 
 ### IMPORT_LOG
 - file_id
@@ -83,7 +88,9 @@ Optional:
 - BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH (default: 5)
 - BELLE_RUN_DO_QUEUE (default: true)
 - BELLE_RUN_DO_OCR (default: true)
-- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: ???)
+- BELLE_OCR_MAX_ATTEMPTS (default: 3)
+- BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
+- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
 
 ## 6. Known constraints (code facts)
 - No SpreadsheetApp.getUi usage in gas/*.js.
