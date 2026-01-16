@@ -25,6 +25,7 @@
    - line_items description tax (内消費税等/うち消費税 etc)
    - unknown -> RID=TAX_UNKNOWN or RID=MULTI_RATE
 9. 8% tax kubun uses "課対仕入込軽減8%" for 2019-10-01 and later (Yayoi Kaikei Next import format).
+10. overall_issues with only MISSING_TAX_INFO is treated as benign when tax rate is already confirmed (no FIX).
 
 ## 3. Runner (A plan)
 - belle_runPipelineBatch_v0 runs queue -> OCR only.

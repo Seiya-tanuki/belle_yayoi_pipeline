@@ -367,6 +367,7 @@ function belle_yayoi_buildFallbackMemo(params) {
 }
 
 function belle_yayoi_pickRidAndFix(parsed, rateInfo) {
+  const BENIGN_OVERALL_ISSUE_CODES = new Set(["MISSING_TAX_INFO"]);
   if (parsed && belle_yayoi_hasIssue(parsed, "UNUSUAL_FORMAT")) {
     return { rid: "UNUSUAL_FORMAT", fix: "形式要確認" };
   }
@@ -376,11 +377,15 @@ function belle_yayoi_pickRidAndFix(parsed, rateInfo) {
   if (!rateInfo || rateInfo.rate === null) {
     return { rid: "TAX_UNKNOWN", fix: "税率/税区分要確認" };
   }
+  if (parsed && Array.isArray(parsed.overall_issues) && parsed.overall_issues.length > 0) {
+    const codes = parsed.overall_issues.map((it) => (it && it.code ? String(it.code) : "")).filter(Boolean);
+    const nonBenignCodes = codes.filter((c) => !BENIGN_OVERALL_ISSUE_CODES.has(c));
+    if (nonBenignCodes.length > 0) {
+      return { rid: "OCR_ISSUES", fix: "OCR要確認" };
+    }
+  }
   if (rateInfo.inferred) {
     return { rid: "TAX_INFERRED", fix: "" };
-  }
-  if (parsed && belle_yayoi_hasAnyIssues(parsed)) {
-    return { rid: "OCR_ISSUES", fix: "OCR要確認" };
   }
   return { rid: "OK", fix: "" };
 }

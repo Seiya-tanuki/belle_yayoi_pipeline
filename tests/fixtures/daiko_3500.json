@@ -1,0 +1,8 @@
+{
+  "tax_meta": {
+    "tax_rate_printed": 10
+  },
+  "overall_issues": [
+    {"code": "MISSING_TAX_INFO"}
+  ]
+}
