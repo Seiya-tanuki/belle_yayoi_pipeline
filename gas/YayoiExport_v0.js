@@ -64,6 +64,55 @@ function belle_yayoi_trimTextShiftJis(text, maxBytes) {
   return belle_yayoi_trimShiftJis(String(text), maxBytes);
 }
 
+function belle_yayoi_normalizeDigits(input) {
+  if (!input) return "";
+  const map = {
+    "０": "0",
+    "１": "1",
+    "２": "2",
+    "３": "3",
+    "４": "4",
+    "５": "5",
+    "６": "6",
+    "７": "7",
+    "８": "8",
+    "９": "9"
+  };
+  let out = String(input);
+  for (const k in map) {
+    out = out.split(k).join(map[k]);
+  }
+  return out;
+}
+
+function belle_yayoi_extractTaxFromDescription(desc) {
+  if (!desc) return null;
+  const s = belle_yayoi_normalizeDigits(String(desc));
+  const re = /(内消費税等|内消費税|うち消費税|消費税等)[^0-9]*([0-9]{1,6})/;
+  const m = s.match(re);
+  if (!m) return null;
+  const n = Number(m[2]);
+  return isFinite(n) ? n : null;
+}
+
+function belle_yayoi_sumTaxFromLineItems(parsed) {
+  if (!parsed || !Array.isArray(parsed.line_items)) return null;
+  let sum = 0;
+  let count = 0;
+  for (let i = 0; i < parsed.line_items.length; i++) {
+    const item = parsed.line_items[i];
+    if (!item) continue;
+    let tax = belle_yayoi_isNumber(item.tax_jpy);
+    if (tax === null) {
+      tax = belle_yayoi_extractTaxFromDescription(item.description);
+    }
+    if (tax === null) continue;
+    sum += tax;
+    count++;
+  }
+  return count > 0 ? sum : null;
+}
+
 function belle_yayoi_sumLineItemsByRate(parsed, rate) {
   if (!parsed || !Array.isArray(parsed.line_items)) return null;
   let sum = 0;
@@ -104,17 +153,22 @@ function belle_yayoi_inferRateFromLineItems(parsed, tolerance) {
     const item = parsed.line_items[i];
     if (!item || !item.description) continue;
     const desc = String(item.description);
-    if (!/内消費税|内消費税等|うち消費税/.test(desc)) continue;
+    if (!/内消費税|内消費税等|うち消費税|消費税等/.test(desc)) continue;
+
     const amount = belle_yayoi_isNumber(item.amount_jpy);
-    const tax = belle_yayoi_isNumber(item.tax_jpy);
-    if (amount === null || tax === null) continue;
-    const gross = amount + tax;
-    const byTax = belle_yayoi_inferRateByTaxTotal(gross, tax, tolerance);
-    if (byTax.rate === 8 || byTax.rate === 10) {
-      ratesFound[byTax.rate] = true;
-    } else if (byTax.reason === "MULTI_RATE") {
-      ratesFound[8] = true;
-      ratesFound[10] = true;
+    let tax = belle_yayoi_isNumber(item.tax_jpy);
+    if (tax === null) tax = belle_yayoi_extractTaxFromDescription(desc);
+    if (tax === null) continue;
+
+    if (amount !== null) {
+      const gross = amount + tax;
+      const byTax = belle_yayoi_inferRateByTaxTotal(gross, tax, tolerance);
+      if (byTax.rate === 8 || byTax.rate === 10) {
+        ratesFound[byTax.rate] = true;
+      } else if (byTax.reason === "MULTI_RATE") {
+        ratesFound[8] = true;
+        ratesFound[10] = true;
+      }
     }
   }
   const keys = Object.keys(ratesFound);
@@ -127,26 +181,31 @@ function belle_yayoi_determineSingleRate(parsed) {
   const tolerance = 1; // Allow 1 yen rounding difference.
   const taxRatePrinted = parsed && parsed.tax_meta ? parsed.tax_meta.tax_rate_printed : null;
   if (taxRatePrinted === 8 || taxRatePrinted === 10) {
-    return { rate: taxRatePrinted, inferred: false, reason: "TAX_RATE_PRINTED" };
+    return { rate: taxRatePrinted, inferred: false, reason: "TAX_RATE_PRINTED", method: "PRINTED" };
   }
 
-  const taxTotal = belle_yayoi_isNumber(parsed && parsed.tax_total_jpy);
   const grossTotal = belle_yayoi_isNumber(parsed && parsed.receipt_total_jpy);
+  let taxTotal = belle_yayoi_isNumber(parsed && parsed.tax_total_jpy);
+  let taxSource = "REVERSE_TOTAL";
+  if (taxTotal === null) {
+    taxTotal = belle_yayoi_sumTaxFromLineItems(parsed);
+    if (taxTotal !== null) taxSource = "LINEITEM_TAX";
+  }
   if (taxTotal !== null && grossTotal !== null && grossTotal > 0) {
     const byTotal = belle_yayoi_inferRateByTaxTotal(grossTotal, taxTotal, tolerance);
-    if (byTotal.reason === "MULTI_RATE") return { rate: null, inferred: true, reason: "MULTI_RATE" };
+    if (byTotal.reason === "MULTI_RATE") return { rate: null, inferred: true, reason: "MULTI_RATE", method: taxSource };
     if (byTotal.rate === 8 || byTotal.rate === 10) {
-      return { rate: byTotal.rate, inferred: true, reason: "TAX_TOTAL_MATCH" };
+      return { rate: byTotal.rate, inferred: true, reason: "TAX_TOTAL_MATCH", method: taxSource };
     }
   }
 
   const byItems = belle_yayoi_inferRateFromLineItems(parsed, tolerance);
-  if (byItems.reason === "MULTI_RATE") return { rate: null, inferred: true, reason: "MULTI_RATE" };
+  if (byItems.reason === "MULTI_RATE") return { rate: null, inferred: true, reason: "MULTI_RATE", method: "LINEITEM_TAX" };
   if (byItems.rate === 8 || byItems.rate === 10) {
-    return { rate: byItems.rate, inferred: true, reason: "LINE_ITEM_TAX_MATCH" };
+    return { rate: byItems.rate, inferred: true, reason: "LINE_ITEM_TAX_MATCH", method: "LINEITEM_TAX" };
   }
 
-  return { rate: null, inferred: false, reason: "TAX_UNKNOWN" };
+  return { rate: null, inferred: false, reason: "TAX_UNKNOWN", method: "UNKNOWN" };
 }
 
 function belle_yayoi_getGrossForRate(parsed, rate, isSingleRate, taxInOut) {
@@ -190,11 +249,11 @@ function belle_yayoi_getDebitTaxKubun(rate, dateStr) {
   return "";
 }
 
-function belle_yayoi_getDebitTaxKubunFallback(rate, dateStr, parsed) {
+function belle_yayoi_getDebitTaxKubunFallback(rate, dateStr, parsed, appendSuffix) {
   if (rate !== 8 && rate !== 10) return "";
   const base = belle_yayoi_getDebitTaxKubun(rate, dateStr);
   if (!base) return "";
-  if (belle_yayoi_isQualifiedInvoice(parsed)) return base + "適格";
+  if (appendSuffix && belle_yayoi_isQualifiedInvoice(parsed)) return base + "適格";
   return base;
 }
 

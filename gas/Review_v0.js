@@ -39,6 +39,7 @@ function belle_exportYayoiCsvFallback(options) {
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
   const batchMaxRows = Number(props.getProperty("BELLE_EXPORT_BATCH_MAX_ROWS") || "5000");
+  const appendInvoiceSuffix = belle_parseBool(props.getProperty("BELLE_FALLBACK_APPEND_INVOICE_SUFFIX"), true);
   // Default label must be a plain value (no extra description).
   const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "対象外");
   const importLogName = belle_getImportLogSheetName(props);
@@ -218,10 +219,10 @@ function belle_exportYayoiCsvFallback(options) {
         memoErr = errorCode || "ERROR_FINAL";
       }
 
-      const rateInfo = parsed ? belle_yayoi_determineSingleRate(parsed) : { rate: null, inferred: false, reason: "OCR_ERROR_FINAL" };
+      const rateInfo = parsed ? belle_yayoi_determineSingleRate(parsed) : { rate: null, inferred: false, reason: "OCR_ERROR_FINAL", method: "ERROR_FINAL" };
       let debit = "";
       if (rateInfo.rate === 8 || rateInfo.rate === 10) {
-        debit = belle_yayoi_getDebitTaxKubunFallback(rateInfo.rate, parsed ? parsed.transaction_date : "", parsed);
+        debit = belle_yayoi_getDebitTaxKubunFallback(rateInfo.rate, parsed ? parsed.transaction_date : "", parsed, appendInvoiceSuffix);
       }
       if (!debit) {
         debit = fallbackDebitDefault;
@@ -243,6 +244,7 @@ function belle_exportYayoiCsvFallback(options) {
       }
 
       const summary = belle_yayoi_buildSummary(parsed);
+      Logger.log({ phase: "TAX_RATE_METHOD", file_id: fileId, method: rateInfo.method || "UNKNOWN", reason: rateInfo.reason || "" });
 
       let date = "";
       if (parsed && parsed.transaction_date) {

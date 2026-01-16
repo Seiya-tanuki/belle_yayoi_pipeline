@@ -19,6 +19,11 @@
    - OCR_RETRYABLE_REMAINING (ERROR_RETRYABLE remains)
 6. Summary format: "merchant / item / registration_number" (no "/ fallback")
 7. V-column memo includes BELLE/FBK/RID/FID (and ERR when available), FIX is prefix, URL is not used.
+8. Tax rate inference priority:
+   - tax_rate_printed
+   - receipt_total_jpy + tax_total_jpy (tolerance 1 yen)
+   - line_items description tax (内消費税等/うち消費税)
+   - unknown -> RID=TAX_UNKNOWN or RID=MULTI_RATE
 
 ## 3. Runner (A plan)
 - belle_runPipelineBatch_v0 runs queue -> OCR only.
@@ -40,4 +45,4 @@
 - docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md
 - docs/SYSTEM_OVERVIEW_FALLBACK_V0.md
 - docs/PLAN_FALLBACK_EXPORT_v0.md
-- docs/DIFF_CHECKLIST_fallback_v0.md
+- docs/DIFF_CHECKLIST_fallback_v0.md\n9. 8% tax kubun uses 軽減8% for 2019-10-01 and later (Yayoi Kaikei Next import format).\n

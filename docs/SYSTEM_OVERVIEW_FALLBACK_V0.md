@@ -63,8 +63,13 @@ ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, oc
 Priority:
 1) tax_meta.tax_rate_printed
 2) receipt_total_jpy + tax_total_jpy (tolerance 1 yen)
-3) line_items description with tax amount (内消費税/うち消費税)
-4) unknown (RID=TAX_UNKNOWN or MULTI_RATE)
+3) line_items description with tax amount (内消費税/内消費税等/うち消費税)
+4) unknown (RID=TAX_UNKNOWN or RID=MULTI_RATE)
+
+## 8% tax kubun (official wording)
+- From 2019-10-01 and later, 8% should use "軽減8%" in tax kubun notation.
+- Source: Yayoi Kaikei Next import format (tax kubun) lists 8% reduced as "軽減8%".
+- Invoice suffix (適格) can be appended, but may be disabled via BELLE_FALLBACK_APPEND_INVOICE_SUFFIX.
 
 ## Runner (time trigger)
 - belle_runPipelineBatch_v0 = Queue + OCR only (no export)

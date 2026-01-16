@@ -1,0 +1,22 @@
+{
+  "tax_meta": {
+    "tax_rate_printed": null
+  },
+  "receipt_total_jpy": 759,
+  "tax_total_jpy": null,
+  "merchant": "東京ガス",
+  "qualified_invoice": {
+    "registration_number": null,
+    "confidence": 0,
+    "issues": []
+  },
+  "line_items": [
+    {
+      "description": "内消費税等 69 / 20",
+      "amount_jpy": 690,
+      "tax_jpy": 69,
+      "tax_rate": "unknown"
+    }
+  ],
+  "overall_issues": []
+}

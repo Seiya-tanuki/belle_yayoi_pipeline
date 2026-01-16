@@ -27,6 +27,8 @@
 - BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
 - BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
   - The value must be a plain label (no extra description).
+- BELLE_FALLBACK_APPEND_INVOICE_SUFFIX (default: true)
+  - If false, do not append "適格" to tax kubun.
 
 ## Notes
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.
