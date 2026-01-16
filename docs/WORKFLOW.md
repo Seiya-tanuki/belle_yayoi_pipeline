@@ -4,12 +4,15 @@
 - list: belle_listFilesInFolder
 - queue: belle_queueFolderFilesToSheet
 - ocr: belle_processQueueOnce (runner loops)
-- export (manual): belle_exportYayoiCsvFromReview_test (1 file = 1 row fallback)
+- export (manual): belle_exportYayoiCsvFallback (alias: belle_exportYayoiCsvFromReview_test)
 
 ## 2. Operation rules
 1. dev Apps Script only. Do not push/deploy to prod/stg.
 2. Sheets/Drive are append-only (no delete/clear).
-3. Queue sheet name: BELLE_QUEUE_SHEET_NAME or BELLE_SHEET_NAME (default OCR_RAW).
+3. Queue sheet name resolution order:
+   1) BELLE_QUEUE_SHEET_NAME
+   2) BELLE_SHEET_NAME (legacy fallback)
+   3) OCR_RAW (hard default)
 4. OCR status: QUEUED / DONE / ERROR_RETRYABLE / ERROR_FINAL.
 5. Export guards:
    - OCR_PENDING (QUEUED remains)
@@ -22,7 +25,7 @@
 - No export in runner.
 
 ## 4. Manual export
-- Run belle_exportYayoiCsvFromReview_test from the editor.
+- Run belle_exportYayoiCsvFromReview_test or belle_exportYayoiCsvFallback from the editor.
 - If QUEUED remains, it logs OCR_PENDING and does not create CSV or update IMPORT_LOG.
 - If ERROR_RETRYABLE remains, it logs OCR_RETRYABLE_REMAINING and does not export.
 

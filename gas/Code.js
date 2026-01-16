@@ -1,7 +1,7 @@
 ﻿// @ts-check
 
 /**
- * Health check: verify script properties keys exist (do not log secrets).
+ * @deprecated Fallback-v0 uses runner/queue/export entrypoints.
  */
 function belle_healthCheck() {
   const props = PropertiesService.getScriptProperties();
@@ -11,8 +11,7 @@ function belle_healthCheck() {
 }
 
 /**
- * Setup placeholder (DO NOT COMMIT real IDs here).
- * Configure properties via Apps Script UI (Project Settings > Script properties).
+ * @deprecated Configure Script Properties via UI. This helper is not used in fallback-v0.
  */
 function belle_setupScriptProperties() {
   const props = PropertiesService.getScriptProperties();
@@ -25,10 +24,7 @@ function belle_setupScriptProperties() {
 }
 
 /**
- * Append-only guard: append a single row to the configured sheet.
- * Requires Script Properties:
- * - BELLE_SHEET_ID
- * - BELLE_SHEET_NAME (optional; default "OCR_RAW")
+ * @deprecated Use belle_queueFolderFilesToSheet for queueing. Not used in fallback-v0.
  */
 function belle_appendRow(values) {
   const props = PropertiesService.getScriptProperties();
@@ -46,7 +42,7 @@ function belle_appendRow(values) {
 }
 
 /**
- * Manual test runner (run in dev only).
+ * @deprecated Use belle_queueFolderFilesToSheet_test. Not used in fallback-v0.
  */
 function belle_appendRow_test() {
   belle_appendRow(["TEST", new Date().toISOString(), "hello"]);
@@ -92,8 +88,8 @@ function belle_listFilesInFolder() {
  *
  * Sheet properties:
  * - BELLE_SHEET_ID (required)
- * - BELLE_SHEET_NAME (required; used as default)
- * - BELLE_QUEUE_SHEET_NAME (optional; if set, used instead of BELLE_SHEET_NAME)
+ * - BELLE_QUEUE_SHEET_NAME (preferred)
+ * - BELLE_SHEET_NAME (legacy fallback)
  *
  * Queue row schema (8 cols):
  * 1 status
@@ -108,11 +104,9 @@ function belle_listFilesInFolder() {
 function belle_queueFolderFilesToSheet() {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const defaultSheetName = props.getProperty("BELLE_SHEET_NAME");
-  const queueSheetName = props.getProperty("BELLE_QUEUE_SHEET_NAME") || defaultSheetName;
+  const queueSheetName = belle_getQueueSheetName(props);
 
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
-  if (!queueSheetName) throw new Error("Missing Script Property: BELLE_SHEET_NAME (or BELLE_QUEUE_SHEET_NAME)");
 
   const listed = belle_listFilesInFolder();
   const files = listed.files || [];
@@ -328,6 +322,44 @@ function belle_ocr_classifyError(message) {
   return { retryable: true, code: "RETRYABLE" };
 }
 
+function belle_configWarnOnce(key, detail) {
+  try {
+    const cache = CacheService.getScriptCache();
+    if (cache.get(key)) return;
+    cache.put(key, "1", 21600);
+  } catch (e) {
+    // ignore cache errors
+  }
+  Logger.log({ phase: "CONFIG_WARN", key: key, detail: detail || "" });
+}
+
+function belle_getQueueSheetName(props) {
+  const p = props || PropertiesService.getScriptProperties();
+  const name = p.getProperty("BELLE_QUEUE_SHEET_NAME");
+  if (name) return name;
+  const legacy = p.getProperty("BELLE_SHEET_NAME");
+  if (legacy) {
+    belle_configWarnOnce("BELLE_SHEET_NAME_DEPRECATED", "Use BELLE_QUEUE_SHEET_NAME instead.");
+    return legacy;
+  }
+  return "OCR_RAW";
+}
+
+function belle_getImportLogSheetName(props) {
+  const p = props || PropertiesService.getScriptProperties();
+  return p.getProperty("BELLE_IMPORT_LOG_SHEET_NAME") || "IMPORT_LOG";
+}
+
+function belle_getSkipLogSheetName(props) {
+  const p = props || PropertiesService.getScriptProperties();
+  return p.getProperty("BELLE_SKIP_LOG_SHEET_NAME") || "EXPORT_SKIP_LOG";
+}
+
+function belle_getOutputFolderId(props) {
+  const p = props || PropertiesService.getScriptProperties();
+  return p.getProperty("BELLE_OUTPUT_FOLDER_ID") || p.getProperty("BELLE_DRIVE_FOLDER_ID");
+}
+
 /**
  * Process QUEUED rows in the queue sheet.
  * Updates only these columns for the matched row:
@@ -338,12 +370,10 @@ function belle_ocr_classifyError(message) {
 function belle_processQueueOnce(options) {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const defaultSheetName = props.getProperty("BELLE_SHEET_NAME");
-  const queueSheetName = props.getProperty("BELLE_QUEUE_SHEET_NAME") || defaultSheetName;
+  const queueSheetName = belle_getQueueSheetName(props);
   const maxAttempts = Number(props.getProperty("BELLE_OCR_MAX_ATTEMPTS") || "3");
   const backoffSeconds = Number(props.getProperty("BELLE_OCR_RETRY_BACKOFF_SECONDS") || "300");
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
-  if (!queueSheetName) throw new Error("Missing Script Property: BELLE_SHEET_NAME (or BELLE_QUEUE_SHEET_NAME)");
 
   const useLock = !(options && options.skipLock === true);
   const lock = useLock ? LockService.getScriptLock() : null;
@@ -555,278 +585,6 @@ function belle_appendSkipLogRows(ss, sheetName, details, exportedAtIso) {
   return rows.length;
 }
 
-/**
- * Export DONE rows to Yayoi CSV and save to Drive.
- * - No header in CSV
- * - Append-only for IMPORT_LOG
- */
-function belle_exportYayoiCsvFromDoneRows(options) {
-  const ignoreImportLog = options && options.ignoreImportLog === true;
-  const useLock = !(options && options.skipLock === true);
-  const props = PropertiesService.getScriptProperties();
-  const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const defaultSheetName = props.getProperty("BELLE_SHEET_NAME");
-  const queueSheetName = props.getProperty("BELLE_QUEUE_SHEET_NAME") || defaultSheetName;
-  const outputFolderId = props.getProperty("BELLE_OUTPUT_FOLDER_ID") || props.getProperty("BELLE_DRIVE_FOLDER_ID");
-  const logSheetName = props.getProperty("BELLE_IMPORT_LOG_SHEET_NAME") || "IMPORT_LOG";
-  const skipLogSheetName = props.getProperty("BELLE_SKIP_LOG_SHEET_NAME") || "EXPORT_SKIP_LOG";
-  const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
-  const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
-  const invoiceSuffixMode = String(props.getProperty("BELLE_INVOICE_SUFFIX_MODE") || "OFF").toUpperCase();
-  if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
-  if (!queueSheetName) throw new Error("Missing Script Property: BELLE_SHEET_NAME (or BELLE_QUEUE_SHEET_NAME)");
-  if (!outputFolderId) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
-
-  const lock = useLock ? LockService.getScriptLock() : null;
-  if (useLock) lock.waitLock(30000);
-
-  try {
-    const ss = SpreadsheetApp.openById(sheetId);
-    const sh = ss.getSheetByName(queueSheetName);
-    if (!sh) throw new Error("Sheet not found: " + queueSheetName);
-
-    const header = ["status","file_id","file_name","mime_type","drive_url","queued_at_iso","ocr_json","ocr_error"];
-    const lastRow = sh.getLastRow();
-    if (lastRow < 1) {
-      return { ok: false, exportedRows: 0, reason: "QUEUE_EMPTY: sheet has no header" };
-    }
-
-    const headerRow = sh.getRange(1, 1, 1, header.length).getValues()[0];
-    for (let i = 0; i < header.length; i++) {
-      if (String(headerRow[i] || "") !== header[i]) {
-        return { ok: false, exportedRows: 0, reason: "INVALID_QUEUE_HEADER: mismatch at col " + (i + 1) };
-      }
-    }
-
-    if (lastRow < 2) {
-      return { ok: false, exportedRows: 0, reason: "QUEUE_EMPTY: no DONE rows" };
-    }
-
-    let logSheet = ss.getSheetByName(logSheetName);
-    if (!logSheet) logSheet = ss.insertSheet(logSheetName);
-    const logHeader = ["file_id","exported_at_iso","csv_file_id"];
-    const logLastRow = logSheet.getLastRow();
-    if (logLastRow === 0) {
-      logSheet.appendRow(logHeader);
-    } else {
-      const logHeaderRow = logSheet.getRange(1, 1, 1, logHeader.length).getValues()[0];
-      for (let i = 0; i < logHeader.length; i++) {
-        if (String(logHeaderRow[i] || "") !== logHeader[i]) {
-          return { ok: false, exportedRows: 0, reason: "INVALID_IMPORT_LOG_HEADER: mismatch at col " + (i + 1) };
-        }
-      }
-    }
-
-    const loggedIds = new Set();
-    if (!ignoreImportLog) {
-      const logRows = logSheet.getLastRow();
-      if (logRows >= 2) {
-        const vals = logSheet.getRange(2, 1, logRows - 1, 1).getValues();
-        for (let i = 0; i < vals.length; i++) {
-          const v = vals[i][0];
-          if (v) loggedIds.add(String(v));
-        }
-      }
-    }
-
-    const values = sh.getRange(2, 1, lastRow - 1, 8).getValues();
-    const csvRows = [];
-    const exportedFileIds = new Set();
-    const skipped = [];
-    const skippedDetails = [];
-    const errors = [];
-
-    for (let i = 0; i < values.length; i++) {
-      const row = values[i];
-      const status = String(row[0] || "");
-      const fileId = String(row[1] || "");
-      const fileName = String(row[2] || "");
-      const driveUrl = String(row[4] || "");
-      const ocrJson = String(row[6] || "");
-
-      if (!fileId) continue;
-      if (status !== "DONE") continue;
-      if (!ignoreImportLog && loggedIds.has(fileId)) {
-        skipped.push({ fileId: fileId, reason: "ALREADY_EXPORTED" });
-        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "ALREADY_EXPORTED" });
-        continue;
-      }
-      if (!ocrJson) {
-        errors.push({ fileId: fileId, reason: "EMPTY_OCR_JSON" });
-        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "EMPTY_OCR_JSON" });
-        continue;
-      }
-
-      let parsed;
-      try {
-        parsed = JSON.parse(ocrJson);
-      } catch (e) {
-        errors.push({ fileId: fileId, reason: "INVALID_OCR_JSON" });
-        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "INVALID_OCR_JSON" });
-        continue;
-      }
-
-      const date = belle_yayoi_formatDate(parsed.transaction_date);
-      if (!date) {
-        errors.push({ fileId: fileId, reason: "MISSING_DATE" });
-        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "MISSING_DATE" });
-        continue;
-      }
-
-      const merchant = parsed.merchant ? String(parsed.merchant) : "unknown";
-      const docType = parsed.document_type ? String(parsed.document_type) : "unknown";
-      const suffix = belle_yayoi_getInvoiceSuffix(parsed, invoiceSuffixMode);
-      const summary = merchant + " / " + docType + (suffix ? " " + suffix : "");
-
-      let memo = (driveUrl + " " + fileId).trim();
-      if (memo.length > 200) memo = memo.slice(0, 200);
-
-      const taxInOut = parsed.tax_meta ? parsed.tax_meta.tax_in_out : null;
-      const hasMultiple = parsed.tax_breakdown && typeof parsed.tax_breakdown.has_multiple_rates === "boolean"
-        ? parsed.tax_breakdown.has_multiple_rates
-        : null;
-      const isMultiRate = hasMultiple === true;
-      let singleRateInfo = null;
-      if (!isMultiRate) {
-        singleRateInfo = belle_yayoi_determineSingleRate(parsed);
-        if (!singleRateInfo.rate) {
-          skippedDetails.push({
-            file_id: fileId,
-            file_name: fileName,
-            reason: "UNKNOWN_SINGLE_RATE: " + singleRateInfo.reason
-          });
-          continue;
-        }
-      }
-
-      const gross10Info = belle_yayoi_getGrossForRate(parsed, 10, !isMultiRate && singleRateInfo.rate === 10, taxInOut);
-      const gross8Info = belle_yayoi_getGrossForRate(parsed, 8, !isMultiRate && singleRateInfo.rate === 8, taxInOut);
-
-      const rowsForFile = [];
-      const missingReasons = [];
-      if (!isMultiRate && singleRateInfo.rate !== 10) {
-        missingReasons.push("SINGLE_RATE_IS_" + singleRateInfo.rate + "_NO_RATE_10");
-      } else if (gross10Info.gross === null) {
-        missingReasons.push("NO_GROSS_RATE_10: " + gross10Info.reason);
-      }
-
-      if (gross10Info.gross !== null && gross10Info.gross > 0 && (!isMultiRate ? singleRateInfo.rate === 10 : true)) {
-        const kubun = belle_yayoi_getDebitTaxKubun(10, parsed.transaction_date);
-        if (kubun) {
-          rowsForFile.push(belle_yayoi_buildRow({
-            date: date,
-            debitTaxKubun: kubun,
-            gross: String(gross10Info.gross),
-            summary: summary,
-            memo: memo
-          }));
-        } else {
-          skipped.push({ fileId: fileId, reason: "UNKNOWN_TAX_KUBUN_10" });
-          skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "UNKNOWN_TAX_KUBUN_10" });
-        }
-      }
-      if (!isMultiRate && singleRateInfo.rate !== 8) {
-        missingReasons.push("SINGLE_RATE_IS_" + singleRateInfo.rate + "_NO_RATE_8");
-      } else if (gross8Info.gross === null) {
-        missingReasons.push("NO_GROSS_RATE_8: " + gross8Info.reason);
-      }
-
-      if (gross8Info.gross !== null && gross8Info.gross > 0 && (!isMultiRate ? singleRateInfo.rate === 8 : true)) {
-        const kubun = belle_yayoi_getDebitTaxKubun(8, parsed.transaction_date);
-        if (kubun) {
-          rowsForFile.push(belle_yayoi_buildRow({
-            date: date,
-            debitTaxKubun: kubun,
-            gross: String(gross8Info.gross),
-            summary: summary,
-            memo: memo
-          }));
-        } else {
-          skipped.push({ fileId: fileId, reason: "UNKNOWN_TAX_KUBUN_8" });
-          skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "UNKNOWN_TAX_KUBUN_8" });
-        }
-      }
-
-      if (rowsForFile.length === 0) {
-        skipped.push({ fileId: fileId, reason: "NO_GROSS_BY_RATE" });
-        const reason = missingReasons.length > 0 ? missingReasons.join(" | ") : "NO_GROSS_BY_RATE";
-        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: reason });
-        continue;
-      }
-
-      for (let r = 0; r < rowsForFile.length; r++) {
-        csvRows.push(belle_yayoi_buildCsvRow(rowsForFile[r]));
-      }
-      exportedFileIds.add(fileId);
-    }
-
-    const exportedAtIso = new Date().toISOString();
-    if (csvRows.length === 0) {
-      belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, exportedAtIso);
-      const result = {
-        ok: true,
-        exportedRows: 0,
-        reason: "NO_EXPORT_ROWS",
-        skipped: skipped.length,
-        errors: errors.length,
-        skippedDetails: skippedDetails
-      };
-      Logger.log(result);
-      return result;
-    }
-
-    const ts = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmmss");
-    const filename = "belle_yayoi_export_" + ts + ".csv";
-    const eol = eolMode === "LF" ? "\n" : "\r\n";
-    const csvText = csvRows.join(eol);
-    const folder = DriveApp.getFolderById(outputFolderId);
-    const blob = Utilities.newBlob("", "text/csv", filename);
-    if (encodingMode === "UTF8") {
-      blob.setDataFromString(csvText, "UTF-8");
-    } else {
-      blob.setDataFromString(csvText, "Shift_JIS");
-    }
-    const file = folder.createFile(blob);
-    const csvFileId = file.getId();
-    const nowIso = exportedAtIso;
-
-    exportedFileIds.forEach(function(id) {
-      logSheet.appendRow([id, nowIso, csvFileId]);
-    });
-
-    belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, exportedAtIso);
-
-    const result = {
-      ok: true,
-      exportedRows: csvRows.length,
-      exportedFiles: exportedFileIds.size,
-      csvFileId: csvFileId,
-      skipped: skipped.length,
-      errors: errors.length,
-      skippedDetails: skippedDetails
-    };
-    Logger.log(result);
-    return result;
-  } finally {
-    if (lock) lock.releaseLock();
-  }
-}
-
-/**
- * Manual test runner (dev only).
- */
-function belle_exportYayoiCsvFromDoneRows_test() {
-  return belle_exportYayoiCsvFromDoneRows();
-}
-
-/**
- * Manual force test runner (dev only).
- * This ignores IMPORT_LOG and re-exports DONE rows.
- */
-function belle_exportYayoiCsvFromDoneRows_force_test() {
-  return belle_exportYayoiCsvFromDoneRows({ ignoreImportLog: true });
-}
-
 function belle_parseBool(value, defaultValue) {
   if (value === null || value === undefined || value === "") return defaultValue;
   const s = String(value).toLowerCase();
@@ -838,8 +596,7 @@ function belle_parseBool(value, defaultValue) {
 function belle_queue_getStatusCounts() {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const defaultSheetName = props.getProperty("BELLE_SHEET_NAME");
-  const queueSheetName = props.getProperty("BELLE_QUEUE_SHEET_NAME") || defaultSheetName;
+  const queueSheetName = belle_getQueueSheetName(props);
   if (!sheetId || !queueSheetName) return { totalCount: 0, queuedRemaining: 0, doneCount: 0, errorRetryableCount: 0, errorFinalCount: 0 };
 
   const ss = SpreadsheetApp.openById(sheetId);

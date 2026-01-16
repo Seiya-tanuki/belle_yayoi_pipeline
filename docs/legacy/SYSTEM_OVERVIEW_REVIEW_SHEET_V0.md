@@ -1,6 +1,4 @@
-# NOTE
-
-This document is legacy (review-sheet-v0). Fallback-v0 does not use REVIEW_STATE/REVIEW_UI.
+# **WARNING: Legacy (review-sheet-v0). Do not use for fallback-v0. Use docs/SYSTEM_OVERVIEW_FALLBACK_V0.md instead.**
 
 # SYSTEM_OVERVIEW_REVIEW_SHEET_V0
 
@@ -35,5 +33,5 @@ flowchart LR
 ## References
 - docs/CONFIG.md
 - docs/WORKFLOW.md
-- docs/PROJECT_STATE_SNAPSHOT.md
+- docs/legacy/PROJECT_STATE_SNAPSHOT_review_sheet_v0.md
 - docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md

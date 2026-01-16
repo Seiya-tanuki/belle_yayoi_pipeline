@@ -31,21 +31,19 @@ function belle_queue_ensureHeaderMapForExport(sh, baseHeader, extraHeader) {
   return map;
 }
 
-function belle_exportYayoiCsvFromReview(options) {
+function belle_exportYayoiCsvFallback(options) {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const defaultSheetName = props.getProperty("BELLE_SHEET_NAME");
-  const queueSheetName = props.getProperty("BELLE_QUEUE_SHEET_NAME") || defaultSheetName;
-  const outputFolderId = props.getProperty("BELLE_OUTPUT_FOLDER_ID") || props.getProperty("BELLE_DRIVE_FOLDER_ID");
+  const queueSheetName = belle_getQueueSheetName(props);
+  const outputFolderId = belle_getOutputFolderId(props);
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
   const batchMaxRows = Number(props.getProperty("BELLE_EXPORT_BATCH_MAX_ROWS") || "5000");
   // Default label must be a plain value (no extra description).
   const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "対象外");
-  const importLogName = props.getProperty("BELLE_IMPORT_LOG_SHEET_NAME") || "IMPORT_LOG";
-  const skipLogSheetName = props.getProperty("BELLE_SKIP_LOG_SHEET_NAME") || "EXPORT_SKIP_LOG";
+  const importLogName = belle_getImportLogSheetName(props);
+  const skipLogSheetName = belle_getSkipLogSheetName(props);
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
-  if (!queueSheetName) throw new Error("Missing Script Property: BELLE_SHEET_NAME (or BELLE_QUEUE_SHEET_NAME)");
   if (!outputFolderId) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
 
   const ss = SpreadsheetApp.openById(sheetId);
@@ -343,6 +341,13 @@ function belle_exportYayoiCsvFromReview(options) {
   }
 }
 
+/**
+ * @deprecated Use belle_exportYayoiCsvFallback.
+ */
+function belle_exportYayoiCsvFromReview(options) {
+  return belle_exportYayoiCsvFallback(options);
+}
+
 function belle_exportYayoiCsvFromReview_test() {
-  return belle_exportYayoiCsvFromReview({});
+  return belle_exportYayoiCsvFallback({});
 }

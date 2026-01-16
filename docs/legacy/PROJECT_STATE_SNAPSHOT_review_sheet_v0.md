@@ -157,3 +157,4 @@ gas\ReviewReasons_ja_v0.js:5:function belle_reviewReasonJa(code, context) {
 - SpreadsheetApp.getUi の呼び出しは存在しない（gas内検索で該当なし）。
 - REVIEW_STATE / REVIEW_UI / REVIEW_LOG / IMPORT_LOG / EXPORT_SKIP_LOG は存在しない場合に insertSheet で自動作成される。
 - REVIEW_YAYOI はコード内参照が存在しない（gas内検索で該当なし）。
+# **WARNING: Legacy (review-sheet-v0). Do not use for fallback-v0. Use docs/SYSTEM_OVERVIEW_FALLBACK_V0.md instead.**

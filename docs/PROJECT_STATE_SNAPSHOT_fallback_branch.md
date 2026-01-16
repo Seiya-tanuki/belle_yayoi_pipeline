@@ -3,13 +3,15 @@
 ## 1. Overview (pipeline stages)
 - runner: belle_runPipelineBatch_v0 (Queue -> OCR only; no export)
 - queue: belle_listFilesInFolder -> belle_queueFolderFilesToSheet -> belle_processQueueOnce
-- export (manual): belle_exportYayoiCsvFromReview / belle_exportYayoiCsvFromReview_test
+- export (manual): belle_exportYayoiCsvFallback / belle_exportYayoiCsvFromReview_test
 
 ## 2. Sheets (code-defined names and usage)
-- OCR_RAW: default sheet name for belle_appendRow (gas/Code.js)
-- Queue sheet: BELLE_QUEUE_SHEET_NAME or BELLE_SHEET_NAME (gas/Code.js, gas/Review_v0.js)
-- IMPORT_LOG: default name "IMPORT_LOG" (gas/Review_v0.js, gas/Code.js)
-- EXPORT_SKIP_LOG: default name "EXPORT_SKIP_LOG" (gas/Review_v0.js, gas/Code.js)
+- OCR_RAW: default sheet name when no properties are set
+- Queue sheet name resolution order:
+  1) BELLE_QUEUE_SHEET_NAME
+  2) BELLE_SHEET_NAME (legacy fallback)
+  3) "OCR_RAW" (hard default)
+- IMPORT_LOG: BELLE_IMPORT_LOG_SHEET_NAME or "IMPORT_LOG" (belle_getImportLogSheetName)\n- EXPORT_SKIP_LOG: BELLE_SKIP_LOG_SHEET_NAME or "EXPORT_SKIP_LOG" (belle_getSkipLogSheetName)\n- Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID (belle_getOutputFolderId)
 
 ## 3. Sheet headers
 ### Queue sheet (OCR_RAW / queue)
@@ -44,32 +46,28 @@ Header used by queue/ocr/export:
 - QUEUED -> ERROR_RETRYABLE -> DONE
 - QUEUED -> ERROR_RETRYABLE -> ERROR_FINAL
 - QUEUED -> ERROR_FINAL
-- ERROR (legacy) is treated as ERROR_RETRYABLE in code paths
+- ERROR (legacy) is treated as ERROR_RETRYABLE
 
-## 5. Entry point functions (belle_*)
-- gas/Code.js
-  - belle_healthCheck
-  - belle_setupScriptProperties
-  - belle_appendRow
-  - belle_appendRow_test
-  - belle_listFilesInFolder
-  - belle_queueFolderFilesToSheet
-  - belle_queueFolderFilesToSheet_test
-  - belle_getGeminiConfig
-  - belle_callGeminiOcr
-  - belle_processQueueOnce
-  - belle_processQueueOnce_test
-  - belle_appendSkipLogRows
-  - belle_exportYayoiCsvFromDoneRows
-  - belle_exportYayoiCsvFromDoneRows_test
-  - belle_exportYayoiCsvFromDoneRows_force_test
-  - belle_parseBool
-  - belle_queue_getStatusCounts
-  - belle_runPipelineBatch_v0
-  - belle_runPipelineBatch_v0_test
-- gas/Review_v0.js
-  - belle_exportYayoiCsvFromReview
-  - belle_exportYayoiCsvFromReview_test
+## 5. Entry points (belle_*)
+### Primary (fallback-v0)
+- belle_listFilesInFolder
+- belle_queueFolderFilesToSheet
+- belle_processQueueOnce
+- belle_runPipelineBatch_v0
+- belle_exportYayoiCsvFallback
+- belle_exportYayoiCsvFromReview_test
+
+### Debug / test
+- belle_queueFolderFilesToSheet_test
+- belle_processQueueOnce_test
+- belle_runPipelineBatch_v0_test
+
+### Deprecated (do not use)
+- belle_healthCheck
+- belle_setupScriptProperties
+- belle_appendRow
+- belle_appendRow_test
+- belle_exportYayoiCsvFromReview (alias of fallback export)
 
 ## 6. Script Properties
 Required:
@@ -79,8 +77,8 @@ Required:
 - BELLE_GEMINI_MODEL
 
 Optional:
-- BELLE_SHEET_NAME (default sheet name for appendRow; code default: OCR_RAW)
-- BELLE_QUEUE_SHEET_NAME (default: BELLE_SHEET_NAME)
+- BELLE_QUEUE_SHEET_NAME (preferred)
+- BELLE_SHEET_NAME (legacy fallback)
 - BELLE_OUTPUT_FOLDER_ID (default: BELLE_DRIVE_FOLDER_ID)
 - BELLE_IMPORT_LOG_SHEET_NAME (default: IMPORT_LOG)
 - BELLE_SKIP_LOG_SHEET_NAME (default: EXPORT_SKIP_LOG)

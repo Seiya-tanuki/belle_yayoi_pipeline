@@ -1,8 +1,8 @@
 # SYSTEM_OVERVIEW_FALLBACK_V0
 
 ## Goal
-- Always produce 1 CSV row per file (fallback export), even when OCR is incomplete.
-- Prevent accidental export when OCR is not finished (guarded by OCR_PENDING / OCR_RETRYABLE_REMAINING).
+- Always produce 1 CSV row per file (fallback export).
+- Prevent export when OCR is not finished (guards in export).
 
 ## Pipeline
 1) List + Queue
@@ -14,8 +14,8 @@
 - status transitions: QUEUED -> DONE, QUEUED -> ERROR_RETRYABLE -> DONE/ERROR_FINAL
 
 3) Export (manual only)
-- belle_exportYayoiCsvFromReview / _test
-- Reads OCR_RAW and generates CSV (1 file = 1 row)
+- belle_exportYayoiCsvFallback (primary)
+- belle_exportYayoiCsvFromReview is a deprecated alias
 - Guards:
   - OCR_PENDING if QUEUED exists
   - OCR_RETRYABLE_REMAINING if ERROR_RETRYABLE exists
@@ -26,14 +26,19 @@
 - EXPORT_SKIP_LOG: system-only (skipped reasons)
 - Review sheets are not used in fallback-v0.
 
-## OCR_RAW schema (latest)
+## Queue sheet name resolution order
+1) BELLE_QUEUE_SHEET_NAME
+2) BELLE_SHEET_NAME (legacy fallback; warning logged)
+3) OCR_RAW (hard default)
+
+\n## Log/output resolution\n- Import log: BELLE_IMPORT_LOG_SHEET_NAME or IMPORT_LOG\n- Skip log: BELLE_SKIP_LOG_SHEET_NAME or EXPORT_SKIP_LOG\n- Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID\n\n## OCR_RAW schema (latest)
 status, file_id, file_name, mime_type, drive_url, queued_at_iso, ocr_json, ocr_error,
 ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail
 
 ## Export rules (fallback)
 - Output targets: DONE + ERROR_FINAL
 - 1 file = 1 row (no multi-rate split)
-- Debit/credit default: 借方=仮払金, 貸方=現金 (built in belle_yayoi_buildRow)
+- Debit/credit default: 借方=仮払金, 貸方=現金 (belle_yayoi_buildRow)
 - Debit tax default: BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
 
 ## Memo format (V column)
@@ -51,6 +56,13 @@ ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, oc
 - BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
 - BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
 
+## Deprecated entrypoints
+- belle_healthCheck
+- belle_setupScriptProperties
+- belle_appendRow
+- belle_appendRow_test
+- belle_exportYayoiCsvFromReview (alias of fallback export)
+
 ## Restart checklist (quick)
 1) Run belle_runPipelineBatch_v0_test -> check RUN_SUMMARY
 2) Run export with QUEUED remaining -> OCR_PENDING guard
@@ -60,3 +72,4 @@ ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, oc
 - docs/WORKFLOW.md
 - docs/CONFIG.md
 - docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md
+- docs/legacy/SYSTEM_OVERVIEW_REVIEW_SHEET_V0.md (legacy)
