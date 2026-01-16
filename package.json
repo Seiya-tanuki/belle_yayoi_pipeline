@@ -9,7 +9,8 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "typecheck": "tsc -p tsconfig.json",
-    "test:rate": "node tests/test_rate_inference.js"
+    "test:rate": "node tests/test_rate_inference.js",
+    "test:summary": "node tests/test_summary_format.js"
   },
   "keywords": [],
   "author": "",

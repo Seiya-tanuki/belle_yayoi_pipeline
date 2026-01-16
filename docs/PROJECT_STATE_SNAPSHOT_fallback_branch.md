@@ -95,7 +95,7 @@ Optional:
 - BELLE_RUN_DO_OCR (default: true)
 - BELLE_OCR_MAX_ATTEMPTS (default: 3)
 - BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
-- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)\n- BELLE_FALLBACK_APPEND_INVOICE_SUFFIX (default: true)
+- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
 
 ## 7. Export guards (code facts)
 - OCR_PENDING: queuedRemaining > 0

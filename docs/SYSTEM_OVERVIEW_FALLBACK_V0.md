@@ -47,11 +47,11 @@ ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, oc
 - Debit tax default: BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
 
 ## Summary (摘要)
-- Format: "merchant / item / registration_number"
-- merchant missing -> "不明(要確認)"
-- item uses line_items[0].description (trimmed)
-- registration_number appended when available
-- " / fallback" is not used
+- Format: "merchant / registration_number"
+- merchant missing -> "BELLE"
+- item is not used
+- registration_number is full "T+13 digits" and never truncated
+- If too long, merchant is trimmed to preserve registration_number (Shift-JIS 120 bytes)
 
 ## Memo format (V column)
 - Always includes: BELLE|FBK=1|RID=...|FID=...
@@ -63,11 +63,11 @@ ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, oc
 Priority:
 1) tax_meta.tax_rate_printed
 2) receipt_total_jpy + tax_total_jpy (tolerance 1 yen)
-3) line_items description with tax amount (内消費税/内消費税等/うち消費税)
+3) line_items description with tax amount (内消費税等/うち消費税 etc)
 4) unknown (RID=TAX_UNKNOWN or RID=MULTI_RATE)
 
 ## 8% tax kubun (official wording)
-- From 2019-10-01 and later, 8% should use "軽減8%" in tax kubun notation.
+- From 2019-10-01 and later, 8% should use "課対仕入込軽減8%" in tax kubun notation.
 - Source: Yayoi Kaikei Next import format (tax kubun) lists 8% reduced as "軽減8%".
 - Invoice suffix (適格) can be appended, but may be disabled via BELLE_FALLBACK_APPEND_INVOICE_SUFFIX.
 

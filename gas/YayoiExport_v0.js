@@ -297,20 +297,31 @@ function belle_yayoi_buildRow(params) {
   ];
 }
 
+
+function belle_yayoi_trimTekyoPreserveRegNo(merchant, regNo, maxBytes) {
+  const safeMerchant = merchant ? String(merchant) : "";
+  const safeReg = regNo ? String(regNo) : "";
+  if (!safeReg) return belle_yayoi_trimTextShiftJis(safeMerchant, maxBytes);
+
+  const sep = " / ";
+  const regPart = sep + safeReg;
+  const full = safeMerchant + regPart;
+  if (belle_yayoi_shiftJisBytes(full) <= maxBytes) return full;
+
+  const regBytes = belle_yayoi_shiftJisBytes(regPart);
+  const allowedMerchantBytes = maxBytes - regBytes;
+  if (allowedMerchantBytes <= 0) return safeReg;
+
+  const trimmedMerchant = belle_yayoi_trimShiftJis(safeMerchant, allowedMerchantBytes);
+  if (!trimmedMerchant) return safeReg;
+  return trimmedMerchant + regPart;
+}
+
 function belle_yayoi_buildSummary(parsed) {
-  const merchant = parsed && parsed.merchant ? String(parsed.merchant) : "不明(要確認)";
-  let item = "";
-  if (parsed && Array.isArray(parsed.line_items) && parsed.line_items.length > 0) {
-    const it = parsed.line_items[0];
-    if (it && it.description) item = String(it.description);
-  }
+  const merchant = parsed && parsed.merchant ? String(parsed.merchant) : "BELLE";
   const reg = belle_yayoi_getRegistrationNumber(parsed);
-  const parts = [];
-  parts.push(merchant);
-  if (item) parts.push(item);
-  if (reg) parts.push(reg);
-  const summary = parts.join(" / ");
-  return belle_yayoi_trimTextShiftJis(summary, 80);
+  if (reg) return belle_yayoi_trimTekyoPreserveRegNo(merchant, reg, 120);
+  return belle_yayoi_trimTextShiftJis(merchant, 120);
 }
 
 function belle_yayoi_buildFallbackFixText(reasonCodes) {
