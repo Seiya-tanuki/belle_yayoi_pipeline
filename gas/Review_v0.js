@@ -489,14 +489,16 @@ function belle_exportYayoiCsvFromReview(options) {
   // Default label must be a plain value like "対象外" (no extra description).
   const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "対象外");
   const importLogName = props.getProperty("BELLE_IMPORT_LOG_SHEET_NAME") || "IMPORT_LOG";
+  const skipLogSheetName = props.getProperty("BELLE_SKIP_LOG_SHEET_NAME") || "EXPORT_SKIP_LOG";
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
   if (!queueSheetName) throw new Error("Missing Script Property: BELLE_SHEET_NAME (or BELLE_QUEUE_SHEET_NAME)");
   if (!outputFolderId) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
 
   const ss = SpreadsheetApp.openById(sheetId);
+  try {
   const queue = ss.getSheetByName(queueSheetName);
   if (!queue) {
-    const res = { ok: false, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, message: "QUEUE_SHEET_NOT_FOUND" };
+    const res = { phase: "EXPORT_GUARD", ok: true, reason: "QUEUE_SHEET_NOT_FOUND", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
     Logger.log(res);
     return res;
   }
@@ -504,17 +506,61 @@ function belle_exportYayoiCsvFromReview(options) {
   const header = ["status","file_id","file_name","mime_type","drive_url","queued_at_iso","ocr_json","ocr_error"];
   const lastRow = queue.getLastRow();
   if (lastRow < 2) {
-    const res = { ok: true, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, message: "NO_ROWS" };
+    const res = { phase: "EXPORT_GUARD", ok: true, reason: "NO_ROWS", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
     Logger.log(res);
     return res;
   }
   const headerRow = queue.getRange(1, 1, 1, header.length).getValues()[0];
   for (let i = 0; i < header.length; i++) {
     if (String(headerRow[i] || "") !== header[i]) {
-      const res = { ok: false, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, message: "INVALID_QUEUE_HEADER: mismatch at col " + (i + 1) };
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: mismatch at col " + (i + 1), exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
     }
+  }
+
+  const rows = queue.getRange(2, 1, lastRow - 1, 8).getValues();
+  const counts = {
+    totalCount: 0,
+    doneCount: 0,
+    queuedRemaining: 0,
+    errorCount: 0
+  };
+  const pendingSamples = [];
+  for (let i = 0; i < rows.length; i++) {
+    const status = String(rows[i][0] || "");
+    const fileId = String(rows[i][1] || "");
+    const fileName = String(rows[i][2] || "");
+    if (!fileId) continue;
+    counts.totalCount++;
+    if (status === "DONE") counts.doneCount++;
+    if (status === "ERROR") counts.errorCount++;
+    if (status === "" || status === "QUEUED") {
+      counts.queuedRemaining++;
+      if (pendingSamples.length < 5) {
+        pendingSamples.push({ file_id: fileId, file_name: fileName, status: status || "QUEUED" });
+      }
+    }
+  }
+
+  Logger.log({ phase: "EXPORT_START", ok: true, totalCount: counts.totalCount, doneCount: counts.doneCount, queuedRemaining: counts.queuedRemaining, errorCount: counts.errorCount });
+
+  if (counts.queuedRemaining > 0) {
+    const res = {
+      phase: "EXPORT_GUARD",
+      ok: true,
+      reason: "OCR_PENDING",
+      exportedRows: 0,
+      exportedFiles: 0,
+      errors: 0,
+      queuedRemaining: counts.queuedRemaining,
+      doneCount: counts.doneCount,
+      totalCount: counts.totalCount,
+      pendingSamples: pendingSamples,
+      csvFileId: ""
+    };
+    Logger.log(res);
+    return res;
   }
 
   let importLog = ss.getSheetByName(importLogName);
@@ -532,17 +578,18 @@ function belle_exportYayoiCsvFromReview(options) {
     }
   }
 
-  const rows = queue.getRange(2, 1, lastRow - 1, 8).getValues();
   const csvRows = [];
   const exportFileIds = [];
   let skipped = 0;
   let errors = 0;
   const processed = new Set();
+  const skippedDetails = [];
   const nowIso = new Date().toISOString();
 
   for (let i = 0; i < rows.length; i++) {
     if (csvRows.length >= batchMaxRows) break;
     const row = rows[i];
+    const status = String(row[0] || "");
     const fileId = String(row[1] || "");
     const fileName = String(row[2] || "");
     const driveUrl = String(row[4] || "");
@@ -555,18 +602,29 @@ function belle_exportYayoiCsvFromReview(options) {
       skipped++;
       continue;
     }
+    if (status !== "DONE") {
+      skipped++;
+      skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_NOT_DONE:" + status });
+      continue;
+    }
 
     let parsed = null;
     let reasonCodes = [];
     if (!ocrJson) {
-      reasonCodes.push("OCR_JSON_PARSE_ERROR");
+      reasonCodes.push("OCR_JSON_MISSING");
       errors++;
+      skipped++;
+      skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_JSON_MISSING" });
+      continue;
     } else {
       try {
         parsed = JSON.parse(ocrJson);
       } catch (e) {
         reasonCodes.push("OCR_JSON_PARSE_ERROR");
         errors++;
+        skipped++;
+        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_JSON_PARSE_ERROR" });
+        continue;
       }
     }
 
@@ -637,7 +695,10 @@ function belle_exportYayoiCsvFromReview(options) {
   }
 
   if (csvRows.length === 0) {
-    const res = { ok: true, exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, message: "NO_READY_ROWS" };
+    if (skippedDetails.length > 0) {
+      belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso);
+    }
+    const res = { phase: "EXPORT_DONE", ok: true, reason: "NO_EXPORT_ROWS", exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, csvFileId: "" };
     Logger.log(res);
     return res;
   }
@@ -659,17 +720,28 @@ function belle_exportYayoiCsvFromReview(options) {
     importLog.appendRow([exportFileIds[i], nowIso, csvFileId]);
   }
 
+  if (skippedDetails.length > 0) {
+    belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso);
+  }
+
   const result = {
+    phase: "EXPORT_DONE",
     ok: true,
+    reason: "EXPORTED",
     exportedRows: csvRows.length,
     exportedFiles: exportFileIds.length,
     skipped: skipped,
     errors: errors,
-    csvFileId: csvFileId,
-    message: "EXPORTED"
+    csvFileId: csvFileId
   };
   Logger.log(result);
   return result;
+  } catch (e) {
+    const msg = String(e && e.message ? e.message : e);
+    const stack = e && e.stack ? String(e.stack).split("\n")[0] : "";
+    Logger.log({ phase: "EXPORT_ERROR", ok: false, errorMessage: msg, stackTop: stack });
+    throw e;
+  }
 }
 
 function belle_exportYayoiCsvFromReview_test() {

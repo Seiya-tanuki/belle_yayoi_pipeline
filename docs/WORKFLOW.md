@@ -9,7 +9,7 @@
 ## 2. 重要な運用ルール
 1. dev Apps Script のみで運用（prod/stgへ push/deploy しない）
 2. Sheets/Drive 操作は append-only（削除/全クリア禁止）
-3. OCR結果に依存せず必ずCSVを出す（フォールバック優先）
+3. OCR完了（QUEUEのstatus=DONE）後のみ export する
 4. 仕訳メモ（V列）に BELLE/FBK/理由/FILE情報を必ず入れる
 
 ## 3. ランナー運用
@@ -18,12 +18,12 @@
 
 ## 4. 手動エクスポート
 - belle_exportYayoiCsvFromReview_test をエディタから実行
-- 1ファイル=1行で出力し、IMPORT_LOGで重複を防止
+- QUEUED が残っている場合は OCR_PENDING でガードされる
 
 ## 5. 動作確認（3ステップ）
-1. belle_exportYayoiCsvFromReview_test を実行
-2. ログの exportedRows / exportedFiles / errors を確認
-3. CSVのV列メモに BELLE/FBK/RID/FID が残っていることを確認
+1. QUEUED が残る状態で belle_exportYayoiCsvFromReview_test を実行し OCR_PENDING を確認
+2. 全件 DONE 後に belle_exportYayoiCsvFromReview_test を実行
+3. ログの exportedRows/exportedFiles と CSVのV列メモを確認
 
 ## 6. 参考
 - docs/CONFIG.md
