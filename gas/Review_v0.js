@@ -196,7 +196,19 @@ function belle_review_applyUiOverridesToState(stateSheet, stateMap, uiSheet) {
     const effBucket = belle_review_effectiveBucket(autoBucket, String(row[stateMap["tax_rate_bucket_override"]] || ""));
     const autoKubun = String(row[stateMap["debit_tax_kubun_auto"]] || "");
     const effKubun = belle_review_effectiveDebit(autoKubun, String(row[stateMap["debit_tax_kubun_override"]] || ""));
-    const gross = row[stateMap["amount_gross_jpy"]];
+    const exportStatus = String(row[stateMap["export_status"]] || "");
+    let gross = row[stateMap["amount_gross_jpy"]];
+
+    if (exportStatus !== "EXPORTED") {
+      const grossEmpty = gross === "" || gross === null || gross === undefined;
+      if (grossEmpty && (effBucket === "8" || effBucket === "10")) {
+        const receiptTotal = row[stateMap["receipt_total_jpy"]];
+        if (receiptTotal !== "" && receiptTotal !== null && receiptTotal !== undefined) {
+          row[stateMap["amount_gross_jpy"]] = receiptTotal;
+          gross = receiptTotal;
+        }
+      }
+    }
 
     const statusInfo = belle_review_computeStatus(effBucket, effKubun, gross);
     row[stateMap["review_status"]] = statusInfo.status;
@@ -507,6 +519,7 @@ function belle_exportYayoiCsvFromReview(options) {
   const csvRows = [];
   const exportRowIndexes = [];
   let needsReview = 0;
+  const blocked = [];
   const nowIso = new Date().toISOString();
 
   for (let i = 0; i < stateVals.length; i++) {
@@ -516,6 +529,11 @@ function belle_exportYayoiCsvFromReview(options) {
     if (exportStatus === "EXPORTED") continue;
     if (reviewStatus === "NEEDS_REVIEW") {
       needsReview++;
+      blocked.push({
+        review_key: String(row[stateMap["review_key"]] || ""),
+        review_reason_code: String(row[stateMap["review_reason_code"]] || ""),
+        amount_gross_jpy: row[stateMap["amount_gross_jpy"]]
+      });
       continue;
     }
 
@@ -549,6 +567,11 @@ function belle_exportYayoiCsvFromReview(options) {
   }
 
   if (strictExport && needsReview > 0) {
+    Logger.log({
+      ok: false,
+      reason: "STRICT_BLOCKED",
+      blocked: blocked
+    });
     const res = { ok: false, exportedRows: 0, exportedFiles: 0, heldForReview: needsReview, strictBlocked: true, csvFileId: "", message: "STRICT_BLOCKED" };
     Logger.log(res);
     return res;
