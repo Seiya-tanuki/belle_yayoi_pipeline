@@ -7,11 +7,12 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run test:rate && npm run test:summary && npm run test:rid && npm run test:memo",
     "typecheck": "tsc -p tsconfig.json",
     "test:rate": "node tests/test_rate_inference.js",
     "test:summary": "node tests/test_summary_format.js",
-    "test:rid": "node tests/test_rid_fix_overall_issues.js"
+    "test:rid": "node tests/test_rid_fix_overall_issues.js",
+    "test:memo": "node tests/test_memo_format.js"
   },
   "keywords": [],
   "author": "",

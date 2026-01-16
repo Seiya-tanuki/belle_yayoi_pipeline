@@ -64,6 +64,15 @@ function belle_yayoi_trimTextShiftJis(text, maxBytes) {
   return belle_yayoi_trimShiftJis(String(text), maxBytes);
 }
 
+function belle_yayoi_sanitizeFileName(input) {
+  if (!input) return "";
+  let s = String(input);
+  s = s.replace(/\|/g, "_");
+  s = s.replace(/[\r\n]+/g, " ");
+  s = s.replace(/\s+/g, " ").trim();
+  return s;
+}
+
 function belle_yayoi_normalizeDigits(input) {
   if (!input) return "";
   const map = {
@@ -326,7 +335,7 @@ function belle_yayoi_buildSummary(parsed) {
 
 function belle_yayoi_buildFallbackFixText(reasonCodes) {
   const codes = String(reasonCodes || "").split(";").filter(Boolean);
-  if (codes.indexOf("UNUSUAL_FORMAT") >= 0) return "形式要確認";
+  if (codes.indexOf("UNUSUAL_FORMAT") >= 0) return "明細合計不一致";
   if (codes.indexOf("MULTI_RATE") >= 0) return "税率混在の可能性";
   if (codes.indexOf("TAX_UNKNOWN") >= 0) return "税率/税区分要確認";
   if (codes.indexOf("OCR_JSON_PARSE_ERROR") >= 0) return "OCR結果要確認";
@@ -339,28 +348,40 @@ function belle_yayoi_buildFallbackFixText(reasonCodes) {
 function belle_yayoi_buildFallbackMemo(params) {
   const reasonCode = params.reasonCode || "UNKNOWN";
   const fileId = params.fileId || "";
+  const fileNameRaw = params.fileName || "";
+  const fileName = belle_yayoi_sanitizeFileName(fileNameRaw);
   const fix = params.fix || "";
   const err = params.err || "";
   const base = "BELLE|FBK=1|RID=" + reasonCode + "|FID=" + fileId;
   const errPart = err ? "|ERR=" + err : "";
+  const fnPart = fileName ? "|FN=" + fileName : "";
+  const fidPart = "|FID=" + fileId;
   const fixPart = fix ? "FIX=" + fix + "|" : "";
+  const core = "BELLE|FBK=1|RID=" + reasonCode;
 
-  let memo = fixPart + base + errPart;
+  let memo = fixPart + core + fnPart + errPart + fidPart;
   if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
 
-  memo = fixPart + base;
+  memo = fixPart + core + fnPart + fidPart;
+  if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
+
+  memo = fixPart + core + fidPart;
+  if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
+
+  const fidShort = fileId ? "|FID=" + String(fileId).slice(0, 8) : "|FID=";
+  memo = fixPart + core + fidShort;
   if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
 
   if (fixPart) {
-    const maxFixBytes = 180 - belle_yayoi_shiftJisBytes(base);
+    const maxFixBytes = 180 - belle_yayoi_shiftJisBytes(core + fidShort);
     if (maxFixBytes > 0) {
       const trimmedFix = belle_yayoi_trimShiftJis(fix, maxFixBytes);
-      memo = "FIX=" + trimmedFix + "|" + base;
+      memo = "FIX=" + trimmedFix + "|" + core + fidShort;
       if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
     }
   }
 
-  memo = base + errPart;
+  memo = core + fidShort + errPart;
   if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
 
   return belle_yayoi_trimShiftJis(memo, 180);
@@ -369,7 +390,7 @@ function belle_yayoi_buildFallbackMemo(params) {
 function belle_yayoi_pickRidAndFix(parsed, rateInfo) {
   const BENIGN_OVERALL_ISSUE_CODES = new Set(["MISSING_TAX_INFO"]);
   if (parsed && belle_yayoi_hasIssue(parsed, "UNUSUAL_FORMAT")) {
-    return { rid: "UNUSUAL_FORMAT", fix: "形式要確認" };
+    return { rid: "UNUSUAL_FORMAT", fix: "明細合計不一致" };
   }
   if (rateInfo && rateInfo.reason === "MULTI_RATE") {
     return { rid: "MULTI_RATE", fix: "税率混在の可能性" };
@@ -381,7 +402,7 @@ function belle_yayoi_pickRidAndFix(parsed, rateInfo) {
     const codes = parsed.overall_issues.map((it) => (it && it.code ? String(it.code) : "")).filter(Boolean);
     const nonBenignCodes = codes.filter((c) => !BENIGN_OVERALL_ISSUE_CODES.has(c));
     if (nonBenignCodes.length > 0) {
-      return { rid: "OCR_ISSUES", fix: "OCR要確認" };
+      return { rid: "OCR_ISSUES", fix: "OCRに問題あり" };
     }
   }
   if (rateInfo.inferred) {

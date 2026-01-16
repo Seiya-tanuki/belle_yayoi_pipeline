@@ -275,6 +275,7 @@ function belle_exportYayoiCsvFallback(options) {
       const memo = belle_yayoi_buildFallbackMemo({
         reasonCode: rid,
         fileId: fileId,
+        fileName: fileName,
         fix: fix,
         err: memoErr || errorCode
       });
