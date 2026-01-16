@@ -701,7 +701,6 @@ function belle_runPipelineBatch_v0() {
   const maxOcrItems = Number(props.getProperty("BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH") || "5");
   const doQueue = belle_parseBool(props.getProperty("BELLE_RUN_DO_QUEUE"), true);
   const doOcr = belle_parseBool(props.getProperty("BELLE_RUN_DO_OCR"), true);
-  const doExport = belle_parseBool(props.getProperty("BELLE_RUN_DO_EXPORT"), false);
 
   const startedAt = new Date().toISOString();
   const summary = {
@@ -761,13 +760,6 @@ function belle_runPipelineBatch_v0() {
       reasons.push("TIME_BUDGET_EXCEEDED");
     }
 
-    if (doExport) {
-      const e = belle_exportYayoiCsvFromDoneRows({ skipLock: true });
-      if (e && e.exportedRows) summary.exportedRows += e.exportedRows;
-      if (e && e.exportedFiles) summary.exportedFiles += e.exportedFiles;
-      if (e && e.skipped) summary.skipped += e.skipped;
-      if (e && e.reason) reasons.push(e.reason);
-    }
   } catch (e) {
     reasons.push("ERROR: " + String(e && e.message ? e.message : e).slice(0, 200));
   } finally {

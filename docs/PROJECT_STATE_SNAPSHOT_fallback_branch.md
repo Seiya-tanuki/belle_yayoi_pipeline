@@ -104,7 +104,6 @@ gas\Code.js:108:function belle_queueFolderFilesToSheet() { gas\Code.js:17:functi
 - BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH: 任意（既定 5）。RunnerのOCRループ上限。
 - BELLE_RUN_DO_QUEUE: 任意（既定 true）。RunnerでQueue実行を制御。
 - BELLE_RUN_DO_OCR: 任意（既定 true）。RunnerでOCR実行を制御。
-- BELLE_RUN_DO_EXPORT: 任意（既定 false）。RunnerでExport実行を制御。
 
 ## 6. 既知の注意点（コードから確実に言える範囲）
 - SpreadsheetApp.getUi の呼び出しは存在しない（gas内検索で該当なし）。

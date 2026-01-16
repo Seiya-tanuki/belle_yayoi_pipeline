@@ -20,7 +20,12 @@
 - belle_exportYayoiCsvFromReview_test をエディタから実行
 - 1ファイル=1行で出力し、IMPORT_LOGで重複を防止
 
-## 5. 参考
+## 5. 動作確認（3ステップ）
+1. belle_exportYayoiCsvFromReview_test を実行
+2. ログの exportedRows / exportedFiles / errors を確認
+3. CSVのV列メモに BELLE/FBK/RID/FID が残っていることを確認
+
+## 6. 参考
 - docs/CONFIG.md
 - docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md
 - docs/PLAN_FALLBACK_EXPORT_v0.md

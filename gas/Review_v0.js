@@ -486,6 +486,7 @@ function belle_exportYayoiCsvFromReview(options) {
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
   const batchMaxRows = Number(props.getProperty("BELLE_EXPORT_BATCH_MAX_ROWS") || "5000");
+  // Default label must be a plain value like "対象外" (no extra description).
   const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "対象外");
   const importLogName = props.getProperty("BELLE_IMPORT_LOG_SHEET_NAME") || "IMPORT_LOG";
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
