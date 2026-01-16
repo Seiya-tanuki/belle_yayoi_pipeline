@@ -425,6 +425,14 @@ function belle_processQueueOnce(options) {
       const attemptIso = new Date().toISOString();
       sh.getRange(sheetRow, headerMap["ocr_attempts"] + 1).setValue(attempt);
       sh.getRange(sheetRow, headerMap["ocr_last_attempt_at_iso"] + 1).setValue(attemptIso);
+      Logger.log({
+        phase: "OCR_ITEM_START",
+        row: sheetRow,
+        file_id: fileId,
+        file_name: fileName,
+        attempts: attempt,
+        status: status || "QUEUED"
+      });
 
       try {
         if (mimeType === "application/pdf") {
@@ -433,6 +441,7 @@ function belle_processQueueOnce(options) {
           sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue("UNSUPPORTED_PDF");
           sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue("PDF not supported in v0");
           sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+          Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, status: "ERROR_FINAL" });
           processedRows.push(sheetRow);
           processed++;
           errorsCount++;
@@ -453,6 +462,7 @@ function belle_processQueueOnce(options) {
         sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue("");
         sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
         sh.getRange(sheetRow, headerMap["status"] + 1).setValue("DONE");
+        Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, status: "DONE" });
         processedRows.push(sheetRow);
         processed++;
 
@@ -479,6 +489,14 @@ function belle_processQueueOnce(options) {
         } else {
           sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
         }
+        Logger.log({
+          phase: "OCR_ITEM_ERROR",
+          row: sheetRow,
+          file_id: fileId,
+          file_name: fileName,
+          error_code: errorCode,
+          message: msg.slice(0, 200)
+        });
         processedRows.push(sheetRow);
         processed++;
         errorsCount++;
@@ -865,8 +883,16 @@ function belle_runPipelineBatch_v0() {
   const doOcr = belle_parseBool(props.getProperty("BELLE_RUN_DO_OCR"), true);
 
   const startedAt = new Date().toISOString();
+  const startMs = Date.now();
+  const maxMs = Math.max(1, maxSeconds) * 1000;
+  function hasBudget(marginMs) {
+    const margin = marginMs === undefined ? 3000 : marginMs;
+    return (Date.now() - startMs) < (maxMs - margin);
+  }
+
   const summary = {
     phase: "RUN_SUMMARY",
+    ok: true,
     totalListed: 0,
     queuedAdded: 0,
     ocrProcessed: 0,
@@ -879,20 +905,33 @@ function belle_runPipelineBatch_v0() {
 
   const reasons = [];
   const lock = LockService.getScriptLock();
-  lock.waitLock(30000);
+  if (!lock.tryLock(500)) {
+    const guard = {
+      phase: "RUN_GUARD",
+      ok: true,
+      reason: "LOCK_BUSY",
+      startedAt: startedAt,
+      endedAt: new Date().toISOString()
+    };
+    Logger.log(guard);
+    return guard;
+  }
+  Logger.log({ phase: "RUN_START", ok: true, startedAt: startedAt });
 
   try {
-    const startMs = Date.now();
-    const deadlineMs = startMs + Math.max(1, maxSeconds) * 1000;
-
+    if (!hasBudget()) {
+      reasons.push("TIME_BUDGET_EXCEEDED");
+      Logger.log({ phase: "RUN_STOP", ok: true, reason: "TIME_BUDGET_EXCEEDED", processedSoFar: summary.ocrProcessed });
+      return summary;
+    }
     if (doQueue) {
       const q = belle_queueFolderFilesToSheet();
       summary.queuedAdded += q && q.queued ? q.queued : 0;
     }
 
-    if (doOcr) {
+    if (doOcr && hasBudget()) {
       let loops = 0;
-      while (loops < maxOcrItems && Date.now() < deadlineMs) {
+      while (loops < maxOcrItems && hasBudget()) {
         const r = belle_processQueueOnce({ skipLock: true });
         const processed = r && r.processed ? r.processed : 0;
         if (processed === 0) {
@@ -906,13 +945,14 @@ function belle_runPipelineBatch_v0() {
       if (loops >= maxOcrItems && summary.ocrProcessed > 0) {
         reasons.push("HIT_MAX_OCR_ITEMS_PER_BATCH");
       }
-      if (Date.now() >= deadlineMs) {
+      if (!hasBudget(0)) {
         reasons.push("TIME_BUDGET_EXCEEDED");
       }
     }
 
   } catch (e) {
     reasons.push("ERROR: " + String(e && e.message ? e.message : e).slice(0, 200));
+    summary.ok = false;
   } finally {
     const counts = belle_queue_getStatusCounts();
     summary.totalListed = counts.totalCount;
@@ -934,7 +974,11 @@ function belle_runPipelineBatch_v0() {
     }
     summary.endedAt = new Date().toISOString();
     Logger.log(summary);
-    lock.releaseLock();
+    try {
+      lock.releaseLock();
+    } catch (e) {
+      Logger.log({ phase: "RUN_LOCK_RELEASE_ERROR", ok: false, reason: "LOCK_RELEASE_FAILED" });
+    }
   }
 
   return summary;
@@ -944,5 +988,7 @@ function belle_runPipelineBatch_v0() {
  * Manual test runner (dev only).
  */
 function belle_runPipelineBatch_v0_test() {
-  return belle_runPipelineBatch_v0();
+  const result = belle_runPipelineBatch_v0();
+  Logger.log(result);
+  return result;
 }
