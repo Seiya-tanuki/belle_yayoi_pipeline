@@ -480,79 +480,149 @@ function belle_review_countNeedsReview() {
 function belle_exportYayoiCsvFromReview(options) {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const stateSheetName = props.getProperty("BELLE_REVIEW_STATE_SHEET_NAME") || "REVIEW_STATE";
-  const uiSheetName = props.getProperty("BELLE_REVIEW_UI_SHEET_NAME") || "REVIEW_UI";
+  const defaultSheetName = props.getProperty("BELLE_SHEET_NAME");
+  const queueSheetName = props.getProperty("BELLE_QUEUE_SHEET_NAME") || defaultSheetName;
   const outputFolderId = props.getProperty("BELLE_OUTPUT_FOLDER_ID") || props.getProperty("BELLE_DRIVE_FOLDER_ID");
-  const strictOverride = options && typeof options.strictExport === "boolean" ? options.strictExport : null;
-  const strictExport = strictOverride !== null
-    ? strictOverride
-    : belle_parseBool(props.getProperty("BELLE_STRICT_EXPORT"), false);
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
   const batchMaxRows = Number(props.getProperty("BELLE_EXPORT_BATCH_MAX_ROWS") || "5000");
+  const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "対象外");
   const importLogName = props.getProperty("BELLE_IMPORT_LOG_SHEET_NAME") || "IMPORT_LOG";
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
+  if (!queueSheetName) throw new Error("Missing Script Property: BELLE_SHEET_NAME (or BELLE_QUEUE_SHEET_NAME)");
   if (!outputFolderId) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
 
   const ss = SpreadsheetApp.openById(sheetId);
-  const state = ss.getSheetByName(stateSheetName);
-  const ui = ss.getSheetByName(uiSheetName);
-  if (!state || !ui) {
-    const res = { ok: false, exportedRows: 0, exportedFiles: 0, heldForReview: 0, strictBlocked: false, csvFileId: "", message: "REVIEW_SHEET_NOT_FOUND" };
+  const queue = ss.getSheetByName(queueSheetName);
+  if (!queue) {
+    const res = { ok: false, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, message: "QUEUE_SHEET_NOT_FOUND" };
     Logger.log(res);
     return res;
   }
 
-  const stateHeader = belle_review_getHeaderRow(state);
-  const stateMap = belle_review_getHeaderMap(stateHeader);
-  belle_review_applyUiOverridesToState(state, stateMap, ui);
-  belle_review_syncUiFromState(state, stateMap, ui);
-
-  const stateRows = state.getLastRow();
-  if (stateRows < 2) {
-    const res = { ok: true, exportedRows: 0, exportedFiles: 0, heldForReview: 0, strictBlocked: false, csvFileId: "", message: "NO_ROWS" };
+  const header = ["status","file_id","file_name","mime_type","drive_url","queued_at_iso","ocr_json","ocr_error"];
+  const lastRow = queue.getLastRow();
+  if (lastRow < 2) {
+    const res = { ok: true, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, message: "NO_ROWS" };
     Logger.log(res);
     return res;
   }
+  const headerRow = queue.getRange(1, 1, 1, header.length).getValues()[0];
+  for (let i = 0; i < header.length; i++) {
+    if (String(headerRow[i] || "") !== header[i]) {
+      const res = { ok: false, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, message: "INVALID_QUEUE_HEADER: mismatch at col " + (i + 1) };
+      Logger.log(res);
+      return res;
+    }
+  }
 
-  const stateVals = state.getRange(2, 1, stateRows - 1, state.getLastColumn()).getValues();
+  let importLog = ss.getSheetByName(importLogName);
+  if (!importLog) {
+    importLog = ss.insertSheet(importLogName);
+    importLog.appendRow(["file_id","exported_at_iso","csv_file_id"]);
+  }
+  const importSet = new Set();
+  const logRows = importLog.getLastRow();
+  if (logRows >= 2) {
+    const vals = importLog.getRange(2, 1, logRows - 1, 1).getValues();
+    for (let i = 0; i < vals.length; i++) {
+      const v = vals[i][0];
+      if (v) importSet.add(String(v));
+    }
+  }
+
+  const rows = queue.getRange(2, 1, lastRow - 1, 8).getValues();
   const csvRows = [];
-  const exportRowIndexes = [];
-  let needsReview = 0;
-  const blocked = [];
+  const exportFileIds = [];
+  let skipped = 0;
+  let errors = 0;
+  const processed = new Set();
   const nowIso = new Date().toISOString();
 
-  for (let i = 0; i < stateVals.length; i++) {
-    const row = stateVals[i];
-    const exportStatus = String(row[stateMap["export_status"]] || "");
-    const reviewStatus = String(row[stateMap["review_status"]] || "");
-    if (exportStatus === "EXPORTED") continue;
-    if (reviewStatus === "NEEDS_REVIEW") {
-      needsReview++;
-      blocked.push({
-        review_key: String(row[stateMap["review_key"]] || ""),
-        review_reason_code: String(row[stateMap["review_reason_code"]] || ""),
-        amount_gross_jpy: row[stateMap["amount_gross_jpy"]]
-      });
+  for (let i = 0; i < rows.length; i++) {
+    if (csvRows.length >= batchMaxRows) break;
+    const row = rows[i];
+    const fileId = String(row[1] || "");
+    const fileName = String(row[2] || "");
+    const driveUrl = String(row[4] || "");
+    const queuedAt = String(row[5] || "");
+    const ocrJson = String(row[6] || "");
+    if (!fileId) continue;
+    if (processed.has(fileId)) continue;
+    processed.add(fileId);
+    if (importSet.has(fileId)) {
+      skipped++;
       continue;
     }
 
-    const autoBucket = String(row[stateMap["tax_rate_bucket_auto"]] || "");
-    const overrideBucket = String(row[stateMap["tax_rate_bucket_override"]] || "");
-    const bucket = belle_review_effectiveBucket(autoBucket, overrideBucket);
-    const autoKubun = String(row[stateMap["debit_tax_kubun_auto"]] || "");
-    const overrideKubun = String(row[stateMap["debit_tax_kubun_override"]] || "");
-    const debit = belle_review_effectiveDebit(autoKubun, overrideKubun);
-    const memo = String(row[stateMap["memo_override"]] || "") || String(row[stateMap["memo_auto"]] || "");
-    const gross = row[stateMap["amount_gross_jpy"]];
-    const date = belle_yayoi_formatDate(row[stateMap["transaction_date"]]);
-    const merchant = String(row[stateMap["merchant"]] || "unknown");
-    const summary = merchant + " / " + bucket;
-
-    if ((bucket !== "8" && bucket !== "10") || !debit || (gross === "" || gross === null)) {
-      needsReview++;
-      continue;
+    let parsed = null;
+    let reasonCodes = [];
+    if (!ocrJson) {
+      reasonCodes.push("OCR_JSON_PARSE_ERROR");
+      errors++;
+    } else {
+      try {
+        parsed = JSON.parse(ocrJson);
+      } catch (e) {
+        reasonCodes.push("OCR_JSON_PARSE_ERROR");
+        errors++;
+      }
     }
+
+    let date = "";
+    if (parsed && parsed.transaction_date) {
+      date = belle_yayoi_formatDate(parsed.transaction_date);
+    }
+    if (!date) {
+      if (queuedAt) {
+        date = belle_yayoi_formatDate(String(queuedAt).slice(0, 10));
+      }
+    }
+    if (!date) {
+      date = belle_yayoi_formatDate(new Date().toISOString().slice(0, 10));
+    }
+    if (!parsed || !parsed.transaction_date) {
+      reasonCodes.push("DATE_FALLBACK");
+    }
+
+    let gross = null;
+    if (parsed && parsed.receipt_total_jpy !== null && parsed.receipt_total_jpy !== undefined) {
+      const n = belle_yayoi_isNumber(parsed.receipt_total_jpy);
+      if (n !== null && n > 0) gross = n;
+    }
+    if (gross === null) {
+      gross = 1;
+      reasonCodes.push("AMOUNT_FALLBACK");
+    }
+
+    let rate = null;
+    if (parsed) {
+      const info = belle_yayoi_determineSingleRate(parsed);
+      if (info && (info.rate === 8 || info.rate === 10)) rate = info.rate;
+    }
+    let debit = "";
+    if (rate === 8 || rate === 10) {
+      debit = belle_yayoi_getDebitTaxKubun(rate, parsed ? parsed.transaction_date : "");
+      if (!debit) {
+        debit = fallbackDebitDefault;
+        reasonCodes.push("TAX_KUBUN_FALLBACK");
+      }
+    } else {
+      debit = fallbackDebitDefault;
+      reasonCodes.push("TAX_UNKNOWN");
+    }
+
+    const merchant = parsed && parsed.merchant ? String(parsed.merchant) : "unknown";
+    const summary = merchant + " / fallback";
+    const reasonCode = reasonCodes.length > 0 ? reasonCodes.join(";") : "OK";
+    const fix = belle_yayoi_buildFallbackFixText(reasonCode);
+    const shortUrl = fileId ? "https://drive.google.com/open?id=" + fileId : "";
+    const memo = belle_yayoi_buildFallbackMemo({
+      reasonCode: reasonCode,
+      fileId: fileId,
+      url: shortUrl,
+      fix: fix
+    });
 
     const row25 = belle_yayoi_buildRow({
       date: date,
@@ -562,23 +632,11 @@ function belle_exportYayoiCsvFromReview(options) {
       memo: memo
     });
     csvRows.push(belle_yayoi_buildCsvRow(row25));
-    exportRowIndexes.push(i + 2);
-    if (csvRows.length >= batchMaxRows) break;
-  }
-
-  if (strictExport && needsReview > 0) {
-    Logger.log({
-      ok: false,
-      reason: "STRICT_BLOCKED",
-      blocked: blocked
-    });
-    const res = { ok: false, exportedRows: 0, exportedFiles: 0, heldForReview: needsReview, strictBlocked: true, csvFileId: "", message: "STRICT_BLOCKED" };
-    Logger.log(res);
-    return res;
+    exportFileIds.push(fileId);
   }
 
   if (csvRows.length === 0) {
-    const res = { ok: true, exportedRows: 0, exportedFiles: 0, heldForReview: needsReview, strictBlocked: false, csvFileId: "", message: "NO_READY_ROWS" };
+    const res = { ok: true, exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, message: "NO_READY_ROWS" };
     Logger.log(res);
     return res;
   }
@@ -596,29 +654,16 @@ function belle_exportYayoiCsvFromReview(options) {
   const file = DriveApp.getFolderById(outputFolderId).createFile(blob);
   const csvFileId = file.getId();
 
-  for (let i = 0; i < exportRowIndexes.length; i++) {
-    const rowNum = exportRowIndexes[i];
-    state.getRange(rowNum, stateMap["export_status"] + 1, 1, 3)
-      .setValues([["EXPORTED", nowIso, csvFileId]]);
-  }
-
-  let importLog = ss.getSheetByName(importLogName);
-  if (!importLog) {
-    importLog = ss.insertSheet(importLogName);
-    importLog.appendRow(["file_id","exported_at_iso","csv_file_id"]);
-  }
-  for (let i = 0; i < exportRowIndexes.length; i++) {
-    const rowNum = exportRowIndexes[i];
-    const key = String(state.getRange(rowNum, stateMap["review_key"] + 1).getValue());
-    importLog.appendRow([key, nowIso, csvFileId]);
+  for (let i = 0; i < exportFileIds.length; i++) {
+    importLog.appendRow([exportFileIds[i], nowIso, csvFileId]);
   }
 
   const result = {
     ok: true,
     exportedRows: csvRows.length,
-    exportedFiles: 1,
-    heldForReview: needsReview,
-    strictBlocked: false,
+    exportedFiles: exportFileIds.length,
+    skipped: skipped,
+    errors: errors,
     csvFileId: csvFileId,
     message: "EXPORTED"
   };

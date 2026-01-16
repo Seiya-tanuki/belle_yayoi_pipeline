@@ -27,7 +27,8 @@
 - BELLE_RUN_DO_QUEUE（既定 true）
 - BELLE_RUN_DO_OCR（既定 true）
 - BELLE_RUN_DO_EXPORT（既定 false）
+- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT（既定 対象外）
 
 ## 参考
-- docs/PROJECT_STATE_SNAPSHOT.md
 - docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md
+- docs/PLAN_FALLBACK_EXPORT_v0.md

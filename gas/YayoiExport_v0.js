@@ -160,3 +160,51 @@ function belle_yayoi_getInvoiceSuffix(parsed, mode) {
   if (dateStr >= "2029-10-01") return "控不";
   return "";
 }
+
+function belle_yayoi_shiftJisBytes(str) {
+  try {
+    return (/** @type {any} */ (Utilities.newBlob(str))).getBytes("Shift_JIS").length;
+  } catch (e) {
+    return Utilities.newBlob(str).getBytes().length;
+  }
+}
+
+function belle_yayoi_trimShiftJis(str, maxBytes) {
+  if (belle_yayoi_shiftJisBytes(str) <= maxBytes) return str;
+  let out = str;
+  while (out.length > 0 && belle_yayoi_shiftJisBytes(out) > maxBytes) {
+    out = out.slice(0, -1);
+  }
+  return out;
+}
+
+function belle_yayoi_buildFallbackFixText(reasonCodes) {
+  const codes = String(reasonCodes || "").split(";").filter(Boolean);
+  if (codes.indexOf("OCR_JSON_PARSE_ERROR") >= 0) return "OCR再実行/手入力";
+  if (codes.indexOf("DATE_FALLBACK") >= 0) return "日付要確認";
+  if (codes.indexOf("AMOUNT_FALLBACK") >= 0) return "金額要確認";
+  if (codes.indexOf("TAX_UNKNOWN") >= 0) return "税率/税区分要確認";
+  if (codes.indexOf("TAX_KUBUN_FALLBACK") >= 0) return "税区分要確認";
+  return "要確認";
+}
+
+function belle_yayoi_buildFallbackMemo(params) {
+  const reasonCode = params.reasonCode || "UNKNOWN";
+  const fileId = params.fileId || "";
+  const url = params.url || "";
+  const fix = params.fix || "";
+  const base = "BELLE|FBK=1|RID=" + reasonCode + "|FID=" + fileId;
+  const urlPart = url ? "|URL=" + url : "";
+  const fixPart = fix ? "|FIX=" + fix : "";
+
+  let memo = base + urlPart + fixPart;
+  if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
+
+  memo = base + urlPart;
+  if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
+
+  memo = base;
+  if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
+
+  return belle_yayoi_trimShiftJis(memo, 180);
+}
