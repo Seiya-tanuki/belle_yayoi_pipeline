@@ -14,18 +14,19 @@
    2) BELLE_SHEET_NAME (legacy fallback)
    3) OCR_RAW (hard default)
 4. OCR status: QUEUED / DONE / ERROR_RETRYABLE / ERROR_FINAL.
-5. Export guards:
+5. OCR retry uses BELLE_OCR_MAX_ATTEMPTS and BELLE_OCR_RETRY_BACKOFF_SECONDS for ERROR_RETRYABLE.
+6. Export guards:
    - OCR_PENDING (QUEUED remains)
    - OCR_RETRYABLE_REMAINING (ERROR_RETRYABLE remains)
-6. Summary format: "merchant / registration_number" (item is not used). If regno is missing, use merchant only. Regno is never truncated. Optional trim: 120 Shift-JIS bytes, preserve regno.
-7. V-column memo includes BELLE/FBK/RID/FID (and ERR when available), FIX is prefix, URL is not used.
-8. Tax rate inference priority:
+7. Summary format: "merchant / registration_number" (item is not used). If regno is missing, use merchant only. Regno is never truncated. Optional trim: 120 Shift-JIS bytes, preserve regno.
+8. V-column memo order: FIX (optional) -> BELLE|FBK=1|RID -> FN (optional) -> ERR (optional) -> FID (always last). FN is sanitized (replace "|", remove newlines, trim).
+9. Tax rate inference priority:
    - tax_rate_printed
    - receipt_total_jpy + tax_total_jpy (tolerance 1 yen)
    - line_items description tax (内消費税等/うち消費税 etc)
    - unknown -> RID=TAX_UNKNOWN or RID=MULTI_RATE
-9. 8% tax kubun uses "課対仕入込軽減8%" for 2019-10-01 and later (Yayoi Kaikei Next import format).
-10. overall_issues with only MISSING_TAX_INFO is treated as benign when tax rate is already confirmed (no FIX).
+10. 8% tax kubun uses "課対仕入込軽減8%" for 2019-10-01 and later (Yayoi Kaikei Next import format).
+11. overall_issues with only MISSING_TAX_INFO is treated as benign when tax rate is already confirmed (no FIX).
 
 ## 3. Runner (A plan)
 - belle_runPipelineBatch_v0 runs queue -> OCR only.

@@ -12,7 +12,7 @@
 
 ## 3. フォールバック優先版 v0 要件
 - 不明点があってもCSVは必ず出す。
-- 弥生側で確実に識別・修正できるよう、memo/摘要に理由コード + file_id + drive_url を残す。
+- 弥生側で確実に識別・修正できるよう、memo/摘要に理由コード + file_id + file_name を残す。
 - REVIEW_UI/REVIEW_STATE は原則使わない方針（監査と再実行整合性は維持）。
 
 ## 4. 差分方針（残す/置換/削除）
@@ -27,7 +27,7 @@
 
 ## 5. 実装ステップ案
 1) export 関数の分岐設計（REVIEW/FALLBACK）
-2) フォールバック用の memo/摘要設計（理由コード・file_id・drive_url）
+2) フォールバック用の memo/摘要設計（理由コード・file_id・file_name）
 3) IMPORT_LOG / EXPORT_SKIP_LOG の出力ルール調整
 4) REVIEW_STATE/REVIEW_UI の参照を最小化
 5) docs/WORKFLOW.md / docs/CONFIG.md をフォールバック運用に整理
@@ -43,19 +43,19 @@
 ## 7. 監査ログ/運用フロー
 - IMPORT_LOG: 出力済み行の再出力防止
 - EXPORT_SKIP_LOG: それでも出力不能な例外だけ記録
-- memo/摘要に file_id / drive_url / reason_code を必ず残す
+- memo/摘要に file_id / file_name / reason_code を必ず残す
 
 ## 8. リスクと対策
 - 税区分の暫定値で過大控除の恐れ:
   - 安全側の暫定値を採用し、理由コードで明示
 - 弥生側修正漏れ:
-  - memo/摘要に識別子を必ず残す
+- memo/摘要に識別子（file_id / file_name）を必ず残す
 - トレーサビリティ:
   - file_id -> CSV -> IMPORT_LOG の紐付けを維持
 
 ## 9. 手動テスト観点
 1) フォールバックモードで CSV が必ず出ること
-2) memo/摘要に reason_code + file_id + drive_url が残ること
+2) memo/摘要に reason_code + file_id + file_name が残ること
 3) IMPORT_LOG に記録されること
 4) EXPORT_SKIP_LOG は例外のみ記録されること
 

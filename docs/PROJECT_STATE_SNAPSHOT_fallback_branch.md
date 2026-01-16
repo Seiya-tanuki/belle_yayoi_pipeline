@@ -12,6 +12,7 @@
   2) BELLE_SHEET_NAME (legacy fallback)
   3) "OCR_RAW" (hard default)
 - IMPORT_LOG: BELLE_IMPORT_LOG_SHEET_NAME or "IMPORT_LOG" (belle_getImportLogSheetName)
+  - Note: sheet name is IMPORT_LOG but role is export log; rename is planned in a future phase.
 - EXPORT_SKIP_LOG: BELLE_SKIP_LOG_SHEET_NAME or "EXPORT_SKIP_LOG" (belle_getSkipLogSheetName)
 - Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID (belle_getOutputFolderId)
 
@@ -125,3 +126,7 @@ Reasons:
 ## 9. Known constraints (code facts)
 - No SpreadsheetApp.getUi usage in gas/*.js.
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not referenced by code.
+
+## 10. Memo format (V column)
+- Order: FIX (optional) -> BELLE|FBK=1|RID -> FN (optional) -> ERR (optional) -> FID (always last)
+- FN is sanitized (replace "|", remove newlines, trim)

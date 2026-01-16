@@ -11,5 +11,5 @@
 - フォールバック運用とレビュー運用が混在していないか
 
 ## 命名/ログ
-- reason_code / file_id / drive_url が memo/摘要に残る設計になっているか
+- reason_code / file_id / file_name が memo/摘要に残る設計になっているか
 - IMPORT_LOG / EXPORT_SKIP_LOG の用途が明記されているか

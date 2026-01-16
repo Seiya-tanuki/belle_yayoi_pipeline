@@ -23,6 +23,7 @@
 ## Sheet roles (who edits)
 - OCR_RAW: system-only (queue + OCR output)
 - IMPORT_LOG: system-only (dedupe and audit)
+  - Note: sheet name is IMPORT_LOG but role is export log; rename is planned in a future phase.
 - EXPORT_SKIP_LOG: system-only (skipped reasons)
 - Review sheets are not used in fallback-v0.
 
@@ -54,10 +55,9 @@ ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, oc
 - If too long, merchant is trimmed to preserve registration_number (Shift-JIS 120 bytes)
 
 ## Memo format (V column)
-- Always includes: BELLE|FBK=1|RID=...|FID=...
-- Optional: FIX=... (prefix), ERR=...
-- URL is not included
-- Trim rule: Shift-JIS 180 bytes, keep FIX + BELLE/FBK/RID/FID/ERR in that order
+- Order: FIX (optional) -> BELLE|FBK=1|RID -> FN (optional) -> ERR (optional) -> FID (always last)
+- FN is sanitized (replace "|", remove newlines, trim)
+- Trim rule: Shift-JIS 180 bytes, keep FIX + RID + FN + ERR + FID in that order
 
 ## Tax rate inference (fallback)
 Priority:
