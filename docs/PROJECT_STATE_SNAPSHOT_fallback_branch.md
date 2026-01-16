@@ -1,11 +1,9 @@
 # PROJECT_STATE_SNAPSHOT_fallback_branch
 
 ## 1. Overview (pipeline stages)
-- list: belle_listFilesInFolder (gas/Code.js)
-- queue: belle_queueFolderFilesToSheet (gas/Code.js)
-- ocr: belle_processQueueOnce (gas/Code.js)
-- export: belle_exportYayoiCsvFromReview (gas/Review_v0.js)
-- runner: belle_runPipelineBatch_v0 (gas/Code.js)
+- runner: belle_runPipelineBatch_v0 (Queue -> OCR only; no export)
+- queue: belle_listFilesInFolder -> belle_queueFolderFilesToSheet -> belle_processQueueOnce
+- export (manual): belle_exportYayoiCsvFromReview / belle_exportYayoiCsvFromReview_test
 
 ## 2. Sheets (code-defined names and usage)
 - OCR_RAW: default sheet name for belle_appendRow (gas/Code.js)
@@ -41,7 +39,14 @@ Header used by queue/ocr/export:
 - file_name
 - reason
 
-## 4. Entry point functions (belle_*)
+## 4. Status values and transitions (OCR_RAW)
+- QUEUED -> DONE
+- QUEUED -> ERROR_RETRYABLE -> DONE
+- QUEUED -> ERROR_RETRYABLE -> ERROR_FINAL
+- QUEUED -> ERROR_FINAL
+- ERROR (legacy) is treated as ERROR_RETRYABLE in code paths
+
+## 5. Entry point functions (belle_*)
 - gas/Code.js
   - belle_healthCheck
   - belle_setupScriptProperties
@@ -59,13 +64,14 @@ Header used by queue/ocr/export:
   - belle_exportYayoiCsvFromDoneRows_test
   - belle_exportYayoiCsvFromDoneRows_force_test
   - belle_parseBool
+  - belle_queue_getStatusCounts
   - belle_runPipelineBatch_v0
   - belle_runPipelineBatch_v0_test
 - gas/Review_v0.js
   - belle_exportYayoiCsvFromReview
   - belle_exportYayoiCsvFromReview_test
 
-## 5. Script Properties
+## 6. Script Properties
 Required:
 - BELLE_SHEET_ID
 - BELLE_DRIVE_FOLDER_ID
@@ -92,6 +98,31 @@ Optional:
 - BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
 - BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
 
-## 6. Known constraints (code facts)
+## 7. Export guards (code facts)
+- OCR_PENDING: queuedRemaining > 0
+- OCR_RETRYABLE_REMAINING: errorRetryableCount > 0
+- Export targets: DONE + ERROR_FINAL (1 file = 1 row)
+- IMPORT_LOG updates only when CSV is created
+
+## 8. Runner phases and reasons
+Phases:
+- RUN_START
+- RUN_GUARD (LOCK_BUSY)
+- OCR_ITEM_START
+- OCR_ITEM_DONE
+- OCR_ITEM_ERROR
+- RUN_STOP (TIME_BUDGET_EXCEEDED)
+- RUN_SUMMARY
+
+Reasons:
+- LOCK_BUSY
+- TIME_BUDGET_EXCEEDED
+- NO_OCR_TARGETS
+- OCR_NO_PROGRESS
+- HIT_MAX_OCR_ITEMS_PER_BATCH
+- NO_QUEUED_ITEMS
+- ERROR:...
+
+## 9. Known constraints (code facts)
 - No SpreadsheetApp.getUi usage in gas/*.js.
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not referenced by code.

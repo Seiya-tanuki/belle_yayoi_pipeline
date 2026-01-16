@@ -33,4 +33,5 @@
 
 ## References
 - docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md
+- docs/SYSTEM_OVERVIEW_FALLBACK_V0.md
 - docs/PLAN_FALLBACK_EXPORT_v0.md
