@@ -1,3 +1,7 @@
+# NOTE
+
+This document is legacy (review-sheet-v0). Fallback-v0 does not use REVIEW_STATE/REVIEW_UI.
+
 # SYSTEM_OVERVIEW_REVIEW_SHEET_V0
 
 ## Goal / Non-Goal

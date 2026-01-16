@@ -1,31 +1,38 @@
 # WORKFLOW
 
-## 1. 全体像（fallback-v0）
+## 1. Overview (fallback-v0)
 - list: belle_listFilesInFolder
 - queue: belle_queueFolderFilesToSheet
-- ocr: belle_processQueueOnce
-- export: belle_exportYayoiCsvFromReview_test（フォールバック前提・1ファイル=1行）
+- ocr: belle_processQueueOnce (runner loops)
+- export (manual): belle_exportYayoiCsvFromReview_test (1 file = 1 row fallback)
 
-## 2. 重要な運用ルール
-1. dev Apps Script のみで運用（prod/stgへ push/deploy しない）
-2. Sheets/Drive 操作は append-only（削除/全クリア禁止）
-3. OCR完了（QUEUEのstatus=DONE）後のみ export する
-4. 仕訳メモ（V列）に BELLE/FBK/理由/FILE情報を必ず入れる
+## 2. Operation rules
+1. dev Apps Script only. Do not push/deploy to prod/stg.
+2. Sheets/Drive are append-only (no delete/clear).
+3. Queue sheet name: BELLE_QUEUE_SHEET_NAME or BELLE_SHEET_NAME (default OCR_RAW).
+4. Export runs only after OCR is done (status=DONE). If QUEUED remains, export is guarded (OCR_PENDING).
+5. V-column memo always includes BELLE/FBK/RID/FID and is trimmed to 180 bytes (Shift-JIS).
 
-## 3. ランナー運用
-- belle_runPipelineBatch_v0 は Queue -> OCR -> Review 更新まで
-- Export は手動（belle_exportYayoiCsvFromReview_test）
+## 3. Runner (A plan)
+- belle_runPipelineBatch_v0 runs queue -> OCR only.
+- No review sheet generation.
+- No export in runner.
 
-## 4. 手動エクスポート
-- belle_exportYayoiCsvFromReview_test をエディタから実行
-- QUEUED が残っている場合は OCR_PENDING でガードされる
+## 4. Manual export
+- Run belle_exportYayoiCsvFromReview_test from the editor.
+- If QUEUED remains, it logs OCR_PENDING and does not create CSV or update IMPORT_LOG.
 
-## 5. 動作確認（3ステップ）
-1. QUEUED が残る状態で belle_exportYayoiCsvFromReview_test を実行し OCR_PENDING を確認
-2. 全件 DONE 後に belle_exportYayoiCsvFromReview_test を実行
-3. ログの exportedRows/exportedFiles と CSVのV列メモを確認
+## 5. Verification checklist (manual)
+A. Delete REVIEW_STATE/REVIEW_UI/REVIEW_LOG if they exist.
+B. Run belle_runPipelineBatch_v0_test and confirm:
+   - REVIEW_* sheets are not created
+   - OCR_RAW status moves to DONE (up to 5 items)
+   - summary has no reviewAdded field
+C. With QUEUED remaining, run belle_exportYayoiCsvFromReview_test and confirm:
+   - OCR_PENDING guard
+   - no CSV file and no IMPORT_LOG update
 
-## 6. 参考
+## 6. References
 - docs/CONFIG.md
 - docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md
 - docs/PLAN_FALLBACK_EXPORT_v0.md

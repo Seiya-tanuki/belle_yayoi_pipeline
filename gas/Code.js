@@ -692,7 +692,7 @@ function belle_parseBool(value, defaultValue) {
 }
 
 /**
- * Runner: queue -> ocr -> export (batch).
+ * Runner: queue -> ocr (batch).
  * Uses ScriptLock and stops by time or item limits.
  */
 function belle_runPipelineBatch_v0() {
@@ -707,10 +707,6 @@ function belle_runPipelineBatch_v0() {
     queuedAdded: 0,
     ocrProcessed: 0,
     ocrErrors: 0,
-    reviewAdded: 0,
-    exportedRows: 0,
-    exportedFiles: 0,
-    skipped: 0,
     reason: "",
     startedAt: startedAt,
     endedAt: ""
@@ -750,28 +746,11 @@ function belle_runPipelineBatch_v0() {
       }
     }
 
-    if (Date.now() < deadlineMs) {
-      const r = belle_buildReviewFromDoneQueue();
-      if (r && r.reviewAdded) summary.reviewAdded += r.reviewAdded;
-      if (summary.ocrProcessed > 0 && summary.reviewAdded === 0) {
-        reasons.push("REVIEW_NO_NEW_ROWS");
-      }
-    } else {
-      reasons.push("TIME_BUDGET_EXCEEDED");
-    }
-
   } catch (e) {
     reasons.push("ERROR: " + String(e && e.message ? e.message : e).slice(0, 200));
   } finally {
-    if (summary.reviewAdded > 0 && summary.ocrProcessed === 0) {
-      summary.reason = "REVIEW_ADDED_ONLY";
-    } else if (
-      summary.queuedAdded === 0 &&
-      summary.ocrProcessed === 0 &&
-      summary.reviewAdded === 0 &&
-      summary.exportedRows === 0
-    ) {
-      summary.reason = "NO_WORK";
+    if (summary.queuedAdded === 0 && summary.ocrProcessed === 0) {
+      summary.reason = "NO_QUEUED_ITEMS";
     } else if (reasons.indexOf("OCR_NO_PROGRESS") >= 0) {
       summary.reason = "OCR_NO_PROGRESS";
     } else if (reasons.indexOf("HIT_MAX_OCR_ITEMS_PER_BATCH") >= 0) {
