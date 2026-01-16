@@ -178,7 +178,6 @@ function belle_exportYayoiCsvFallback(options) {
       const status = statusRaw || "QUEUED";
       const fileId = String(row[headerMap["file_id"]] || "");
       const fileName = String(row[headerMap["file_name"]] || "");
-      const driveUrl = String(row[headerMap["drive_url"]] || "");
       const queuedAt = String(row[headerMap["queued_at_iso"]] || "");
       const ocrJson = String(row[headerMap["ocr_json"]] || "");
       const errorCode = String(row[headerMap["ocr_error_code"]] || "");
@@ -198,12 +197,10 @@ function belle_exportYayoiCsvFallback(options) {
       }
 
       let parsed = null;
-      let reasonCodes = [];
       let memoErr = "";
 
       if (status === "DONE") {
         if (!ocrJson) {
-          reasonCodes.push("OCR_JSON_MISSING");
           errors++;
           skipped++;
           skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_JSON_MISSING" });
@@ -212,17 +209,40 @@ function belle_exportYayoiCsvFallback(options) {
         try {
           parsed = JSON.parse(ocrJson);
         } catch (e) {
-          reasonCodes.push("OCR_JSON_PARSE_ERROR");
           errors++;
           skipped++;
           skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_JSON_PARSE_ERROR" });
           continue;
         }
       } else {
-        reasonCodes.push("OCR_ERROR_FINAL");
         memoErr = errorCode || "ERROR_FINAL";
-        if (errorDetail) reasonCodes.push("OCR_ERROR_DETAIL");
       }
+
+      const rateInfo = parsed ? belle_yayoi_determineSingleRate(parsed) : { rate: null, inferred: false, reason: "OCR_ERROR_FINAL" };
+      let debit = "";
+      if (rateInfo.rate === 8 || rateInfo.rate === 10) {
+        debit = belle_yayoi_getDebitTaxKubunFallback(rateInfo.rate, parsed ? parsed.transaction_date : "", parsed);
+      }
+      if (!debit) {
+        debit = fallbackDebitDefault;
+      }
+
+      let rid = "OK";
+      let fix = "";
+      if (status === "ERROR_FINAL") {
+        rid = "OCR_ERROR_FINAL";
+        fix = "OCRエラー要確認";
+      } else {
+        const ridInfo = belle_yayoi_pickRidAndFix(parsed, rateInfo);
+        rid = ridInfo.rid;
+        fix = ridInfo.fix;
+        if ((rid === "OK" || rid === "TAX_INFERRED") && !debit) {
+          rid = "TAX_UNKNOWN";
+          if (!fix) fix = "税率/税区分要確認";
+        }
+      }
+
+      const summary = belle_yayoi_buildSummary(parsed);
 
       let date = "";
       if (parsed && parsed.transaction_date) {
@@ -236,9 +256,6 @@ function belle_exportYayoiCsvFallback(options) {
       if (!date) {
         date = belle_yayoi_formatDate(new Date().toISOString().slice(0, 10));
       }
-      if (!parsed || !parsed.transaction_date) {
-        reasonCodes.push("DATE_FALLBACK");
-      }
 
       let gross = null;
       if (parsed && parsed.receipt_total_jpy !== null && parsed.receipt_total_jpy !== undefined) {
@@ -247,35 +264,15 @@ function belle_exportYayoiCsvFallback(options) {
       }
       if (gross === null) {
         gross = 1;
-        reasonCodes.push("AMOUNT_FALLBACK");
-      }
-
-      let rate = null;
-      if (parsed) {
-        const info = belle_yayoi_determineSingleRate(parsed);
-        if (info && (info.rate === 8 || info.rate === 10)) rate = info.rate;
-      }
-      let debit = "";
-      if (rate === 8 || rate === 10) {
-        debit = belle_yayoi_getDebitTaxKubun(rate, parsed ? parsed.transaction_date : "");
-        if (!debit) {
-          debit = fallbackDebitDefault;
-          reasonCodes.push("TAX_KUBUN_FALLBACK");
+        if (!fix && rid === "OK") {
+          rid = "AMOUNT_FALLBACK";
+          fix = "金額要確認";
         }
-      } else {
-        debit = fallbackDebitDefault;
-        reasonCodes.push("TAX_UNKNOWN");
       }
 
-      const merchant = parsed && parsed.merchant ? String(parsed.merchant) : "unknown";
-      const summary = merchant + " / fallback";
-      const reasonCode = reasonCodes.length > 0 ? reasonCodes.join(";") : "OK";
-      const fix = belle_yayoi_buildFallbackFixText(reasonCode);
-      const shortUrl = fileId ? "https://drive.google.com/open?id=" + fileId : "";
       const memo = belle_yayoi_buildFallbackMemo({
-        reasonCode: reasonCode,
+        reasonCode: rid,
         fileId: fileId,
-        url: shortUrl,
         fix: fix,
         err: memoErr || errorCode
       });

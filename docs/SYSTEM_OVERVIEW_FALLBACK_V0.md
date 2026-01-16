@@ -28,10 +28,15 @@
 
 ## Queue sheet name resolution order
 1) BELLE_QUEUE_SHEET_NAME
-2) BELLE_SHEET_NAME (legacy fallback; warning logged)
+2) BELLE_SHEET_NAME (legacy fallback; CONFIG_WARN)
 3) OCR_RAW (hard default)
 
-\n## Log/output resolution\n- Import log: BELLE_IMPORT_LOG_SHEET_NAME or IMPORT_LOG\n- Skip log: BELLE_SKIP_LOG_SHEET_NAME or EXPORT_SKIP_LOG\n- Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID\n\n## OCR_RAW schema (latest)
+## Log/output resolution
+- Import log: BELLE_IMPORT_LOG_SHEET_NAME or IMPORT_LOG
+- Skip log: BELLE_SKIP_LOG_SHEET_NAME or EXPORT_SKIP_LOG
+- Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID
+
+## OCR_RAW schema (latest)
 status, file_id, file_name, mime_type, drive_url, queued_at_iso, ocr_json, ocr_error,
 ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail
 
@@ -41,10 +46,25 @@ ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, oc
 - Debit/credit default: 借方=仮払金, 貸方=現金 (belle_yayoi_buildRow)
 - Debit tax default: BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
 
+## Summary (摘要)
+- Format: "merchant / item / registration_number"
+- merchant missing -> "不明(要確認)"
+- item uses line_items[0].description (trimmed)
+- registration_number appended when available
+- " / fallback" is not used
+
 ## Memo format (V column)
 - Always includes: BELLE|FBK=1|RID=...|FID=...
-- Optional: URL=..., FIX=..., ERR=...
-- Trim rule: Shift-JIS 180 bytes, drop FIX first, then URL, keep BELLE/FBK/RID/FID/ERR
+- Optional: FIX=... (prefix), ERR=...
+- URL is not included
+- Trim rule: Shift-JIS 180 bytes, keep FIX + BELLE/FBK/RID/FID/ERR in that order
+
+## Tax rate inference (fallback)
+Priority:
+1) tax_meta.tax_rate_printed
+2) receipt_total_jpy + tax_total_jpy (tolerance 1 yen)
+3) line_items description with tax amount (内消費税/うち消費税)
+4) unknown (RID=TAX_UNKNOWN or MULTI_RATE)
 
 ## Runner (time trigger)
 - belle_runPipelineBatch_v0 = Queue + OCR only (no export)

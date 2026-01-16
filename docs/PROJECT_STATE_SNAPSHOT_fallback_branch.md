@@ -11,7 +11,9 @@
   1) BELLE_QUEUE_SHEET_NAME
   2) BELLE_SHEET_NAME (legacy fallback)
   3) "OCR_RAW" (hard default)
-- IMPORT_LOG: BELLE_IMPORT_LOG_SHEET_NAME or "IMPORT_LOG" (belle_getImportLogSheetName)\n- EXPORT_SKIP_LOG: BELLE_SKIP_LOG_SHEET_NAME or "EXPORT_SKIP_LOG" (belle_getSkipLogSheetName)\n- Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID (belle_getOutputFolderId)
+- IMPORT_LOG: BELLE_IMPORT_LOG_SHEET_NAME or "IMPORT_LOG" (belle_getImportLogSheetName)
+- EXPORT_SKIP_LOG: BELLE_SKIP_LOG_SHEET_NAME or "EXPORT_SKIP_LOG" (belle_getSkipLogSheetName)
+- Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID (belle_getOutputFolderId)
 
 ## 3. Sheet headers
 ### Queue sheet (OCR_RAW / queue)
@@ -85,7 +87,6 @@ Optional:
 - BELLE_EXPORT_BATCH_MAX_ROWS (default: 5000)
 - BELLE_CSV_ENCODING (default: SHIFT_JIS)
 - BELLE_CSV_EOL (default: CRLF)
-- BELLE_INVOICE_SUFFIX_MODE (default: OFF)
 - BELLE_GEMINI_SLEEP_MS (default: 500)
 - BELLE_MAX_ITEMS_PER_RUN (default: 1)
 - BELLE_RUN_MAX_SECONDS (default: 240)

@@ -15,6 +15,55 @@ function belle_yayoi_isNumber(value) {
   return n;
 }
 
+function belle_yayoi_hasIssue(parsed, code) {
+  if (!parsed || !Array.isArray(parsed.overall_issues)) return false;
+  for (let i = 0; i < parsed.overall_issues.length; i++) {
+    const it = parsed.overall_issues[i];
+    if (it && it.code === code) return true;
+  }
+  return false;
+}
+
+function belle_yayoi_hasAnyIssues(parsed) {
+  return !!(parsed && Array.isArray(parsed.overall_issues) && parsed.overall_issues.length > 0);
+}
+
+function belle_yayoi_isQualifiedInvoice(parsed) {
+  const qi = parsed && parsed.qualified_invoice;
+  if (!qi || !qi.registration_number) return false;
+  const confidence = Number(qi.confidence || 0);
+  const issues = Array.isArray(qi.issues) ? qi.issues : [];
+  return confidence >= 0.9 && issues.length === 0;
+}
+
+function belle_yayoi_getRegistrationNumber(parsed) {
+  const qi = parsed && parsed.qualified_invoice;
+  if (qi && qi.registration_number) return String(qi.registration_number);
+  return "";
+}
+
+function belle_yayoi_shiftJisBytes(str) {
+  try {
+    return (/** @type {any} */ (Utilities.newBlob(str))).getBytes("Shift_JIS").length;
+  } catch (e) {
+    return Utilities.newBlob(str).getBytes().length;
+  }
+}
+
+function belle_yayoi_trimShiftJis(str, maxBytes) {
+  if (belle_yayoi_shiftJisBytes(str) <= maxBytes) return str;
+  let out = str;
+  while (out.length > 0 && belle_yayoi_shiftJisBytes(out) > maxBytes) {
+    out = out.slice(0, -1);
+  }
+  return out;
+}
+
+function belle_yayoi_trimTextShiftJis(text, maxBytes) {
+  if (!text) return "";
+  return belle_yayoi_trimShiftJis(String(text), maxBytes);
+}
+
 function belle_yayoi_sumLineItemsByRate(parsed, rate) {
   if (!parsed || !Array.isArray(parsed.line_items)) return null;
   let sum = 0;
@@ -31,41 +80,73 @@ function belle_yayoi_sumLineItemsByRate(parsed, rate) {
   return count > 0 ? sum : null;
 }
 
-function belle_yayoi_determineSingleRate(parsed) {
-  const taxRatePrinted = parsed && parsed.tax_meta ? parsed.tax_meta.tax_rate_printed : null;
-  if (taxRatePrinted === 8 || taxRatePrinted === 10) {
-    return { rate: taxRatePrinted, reason: "TAX_RATE_PRINTED" };
+function belle_yayoi_inferRateByTaxTotal(gross, tax, tolerance) {
+  const rates = [8, 10];
+  const matches = [];
+  for (let i = 0; i < rates.length; i++) {
+    const r = rates[i];
+    const expected = gross * r / (100 + r);
+    const rounded = Math.round(expected);
+    const floored = Math.floor(expected);
+    if (Math.abs(rounded - tax) <= tolerance || Math.abs(floored - tax) <= tolerance) {
+      matches.push(r);
+    }
   }
+  if (matches.length === 1) return { rate: matches[0], reason: "TAX_TOTAL_MATCH" };
+  if (matches.length > 1) return { rate: null, reason: "MULTI_RATE" };
+  return { rate: null, reason: "TAX_TOTAL_NO_MATCH" };
+}
 
-  if (!parsed || !Array.isArray(parsed.line_items)) {
-    return { rate: null, reason: "NO_LINE_ITEMS" };
-  }
-
-  const rates = {};
-  let knownCount = 0;
-  let unknownCount = 0;
+function belle_yayoi_inferRateFromLineItems(parsed, tolerance) {
+  if (!parsed || !Array.isArray(parsed.line_items)) return { rate: null, reason: "NO_LINE_ITEMS" };
+  const ratesFound = {};
   for (let i = 0; i < parsed.line_items.length; i++) {
     const item = parsed.line_items[i];
-    if (!item) continue;
-    if (item.tax_rate === 8 || item.tax_rate === 10) {
-      rates[item.tax_rate] = true;
-      knownCount++;
-    } else {
-      unknownCount++;
+    if (!item || !item.description) continue;
+    const desc = String(item.description);
+    if (!/内消費税|内消費税等|うち消費税/.test(desc)) continue;
+    const amount = belle_yayoi_isNumber(item.amount_jpy);
+    const tax = belle_yayoi_isNumber(item.tax_jpy);
+    if (amount === null || tax === null) continue;
+    const gross = amount + tax;
+    const byTax = belle_yayoi_inferRateByTaxTotal(gross, tax, tolerance);
+    if (byTax.rate === 8 || byTax.rate === 10) {
+      ratesFound[byTax.rate] = true;
+    } else if (byTax.reason === "MULTI_RATE") {
+      ratesFound[8] = true;
+      ratesFound[10] = true;
+    }
+  }
+  const keys = Object.keys(ratesFound);
+  if (keys.length === 1) return { rate: Number(keys[0]), reason: "LINE_ITEM_TAX_MATCH" };
+  if (keys.length > 1) return { rate: null, reason: "MULTI_RATE" };
+  return { rate: null, reason: "NO_LINE_ITEM_TAX_MATCH" };
+}
+
+function belle_yayoi_determineSingleRate(parsed) {
+  const tolerance = 1; // Allow 1 yen rounding difference.
+  const taxRatePrinted = parsed && parsed.tax_meta ? parsed.tax_meta.tax_rate_printed : null;
+  if (taxRatePrinted === 8 || taxRatePrinted === 10) {
+    return { rate: taxRatePrinted, inferred: false, reason: "TAX_RATE_PRINTED" };
+  }
+
+  const taxTotal = belle_yayoi_isNumber(parsed && parsed.tax_total_jpy);
+  const grossTotal = belle_yayoi_isNumber(parsed && parsed.receipt_total_jpy);
+  if (taxTotal !== null && grossTotal !== null && grossTotal > 0) {
+    const byTotal = belle_yayoi_inferRateByTaxTotal(grossTotal, taxTotal, tolerance);
+    if (byTotal.reason === "MULTI_RATE") return { rate: null, inferred: true, reason: "MULTI_RATE" };
+    if (byTotal.rate === 8 || byTotal.rate === 10) {
+      return { rate: byTotal.rate, inferred: true, reason: "TAX_TOTAL_MATCH" };
     }
   }
 
-  const keys = Object.keys(rates);
-  if (keys.length === 1) {
-    return { rate: Number(keys[0]), reason: "LINE_ITEMS_SINGLE_RATE" };
+  const byItems = belle_yayoi_inferRateFromLineItems(parsed, tolerance);
+  if (byItems.reason === "MULTI_RATE") return { rate: null, inferred: true, reason: "MULTI_RATE" };
+  if (byItems.rate === 8 || byItems.rate === 10) {
+    return { rate: byItems.rate, inferred: true, reason: "LINE_ITEM_TAX_MATCH" };
   }
-  if (knownCount === 0) {
-    return { rate: null, reason: "NO_RATE_IN_TAX_META_OR_LINE_ITEMS" };
-  }
-  if (unknownCount > 0) {
-    return { rate: null, reason: "MIXED_OR_UNKNOWN_LINE_ITEM_RATES" };
-  }
-  return { rate: null, reason: "MIXED_LINE_ITEM_RATES" };
+
+  return { rate: null, inferred: false, reason: "TAX_UNKNOWN" };
 }
 
 function belle_yayoi_getGrossForRate(parsed, rate, isSingleRate, taxInOut) {
@@ -109,6 +190,14 @@ function belle_yayoi_getDebitTaxKubun(rate, dateStr) {
   return "";
 }
 
+function belle_yayoi_getDebitTaxKubunFallback(rate, dateStr, parsed) {
+  if (rate !== 8 && rate !== 10) return "";
+  const base = belle_yayoi_getDebitTaxKubun(rate, dateStr);
+  if (!base) return "";
+  if (belle_yayoi_isQualifiedInvoice(parsed)) return base + "適格";
+  return base;
+}
+
 function belle_yayoi_csvEscape(value) {
   if (value === null || value === undefined) return "\"\"";
   const s = String(value);
@@ -149,64 +238,79 @@ function belle_yayoi_buildRow(params) {
   ];
 }
 
-function belle_yayoi_getInvoiceSuffix(parsed, mode) {
-  if (mode !== "AUTO") return "";
-  const qi = parsed && parsed.qualified_invoice;
-  if (qi && qi.registration_number) return "適格";
-  const dateStr = parsed && parsed.transaction_date ? String(parsed.transaction_date) : "";
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return "";
-  if (dateStr >= "2023-10-01" && dateStr <= "2026-09-30") return "区分80%";
-  if (dateStr >= "2026-10-01" && dateStr <= "2029-09-30") return "区分50%";
-  if (dateStr >= "2029-10-01") return "控不";
-  return "";
-}
-
-function belle_yayoi_shiftJisBytes(str) {
-  try {
-    return (/** @type {any} */ (Utilities.newBlob(str))).getBytes("Shift_JIS").length;
-  } catch (e) {
-    return Utilities.newBlob(str).getBytes().length;
+function belle_yayoi_buildSummary(parsed) {
+  const merchant = parsed && parsed.merchant ? String(parsed.merchant) : "不明(要確認)";
+  let item = "";
+  if (parsed && Array.isArray(parsed.line_items) && parsed.line_items.length > 0) {
+    const it = parsed.line_items[0];
+    if (it && it.description) item = String(it.description);
   }
-}
-
-function belle_yayoi_trimShiftJis(str, maxBytes) {
-  if (belle_yayoi_shiftJisBytes(str) <= maxBytes) return str;
-  let out = str;
-  while (out.length > 0 && belle_yayoi_shiftJisBytes(out) > maxBytes) {
-    out = out.slice(0, -1);
-  }
-  return out;
+  const reg = belle_yayoi_getRegistrationNumber(parsed);
+  const parts = [];
+  parts.push(merchant);
+  if (item) parts.push(item);
+  if (reg) parts.push(reg);
+  const summary = parts.join(" / ");
+  return belle_yayoi_trimTextShiftJis(summary, 80);
 }
 
 function belle_yayoi_buildFallbackFixText(reasonCodes) {
   const codes = String(reasonCodes || "").split(";").filter(Boolean);
-  if (codes.indexOf("OCR_JSON_PARSE_ERROR") >= 0) return "OCR再実行/手入力";
-  if (codes.indexOf("DATE_FALLBACK") >= 0) return "日付要確認";
-  if (codes.indexOf("AMOUNT_FALLBACK") >= 0) return "金額要確認";
+  if (codes.indexOf("UNUSUAL_FORMAT") >= 0) return "形式要確認";
+  if (codes.indexOf("MULTI_RATE") >= 0) return "税率混在の可能性";
   if (codes.indexOf("TAX_UNKNOWN") >= 0) return "税率/税区分要確認";
-  if (codes.indexOf("TAX_KUBUN_FALLBACK") >= 0) return "税区分要確認";
-  return "要確認";
+  if (codes.indexOf("OCR_JSON_PARSE_ERROR") >= 0) return "OCR結果要確認";
+  if (codes.indexOf("OCR_ERROR_FINAL") >= 0) return "OCRエラー要確認";
+  if (codes.indexOf("AMOUNT_FALLBACK") >= 0) return "金額要確認";
+  if (codes.indexOf("DATE_FALLBACK") >= 0) return "日付要確認";
+  return "";
 }
 
 function belle_yayoi_buildFallbackMemo(params) {
   const reasonCode = params.reasonCode || "UNKNOWN";
   const fileId = params.fileId || "";
-  const url = params.url || "";
   const fix = params.fix || "";
   const err = params.err || "";
   const base = "BELLE|FBK=1|RID=" + reasonCode + "|FID=" + fileId;
   const errPart = err ? "|ERR=" + err : "";
-  const urlPart = url ? "|URL=" + url : "";
-  const fixPart = fix ? "|FIX=" + fix : "";
+  const fixPart = fix ? "FIX=" + fix + "|" : "";
 
-  let memo = base + errPart + urlPart + fixPart;
+  let memo = fixPart + base + errPart;
   if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
 
-  memo = base + errPart + urlPart;
+  memo = fixPart + base;
   if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
+
+  if (fixPart) {
+    const maxFixBytes = 180 - belle_yayoi_shiftJisBytes(base);
+    if (maxFixBytes > 0) {
+      const trimmedFix = belle_yayoi_trimShiftJis(fix, maxFixBytes);
+      memo = "FIX=" + trimmedFix + "|" + base;
+      if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
+    }
+  }
 
   memo = base + errPart;
   if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
 
   return belle_yayoi_trimShiftJis(memo, 180);
+}
+
+function belle_yayoi_pickRidAndFix(parsed, rateInfo) {
+  if (parsed && belle_yayoi_hasIssue(parsed, "UNUSUAL_FORMAT")) {
+    return { rid: "UNUSUAL_FORMAT", fix: "形式要確認" };
+  }
+  if (rateInfo && rateInfo.reason === "MULTI_RATE") {
+    return { rid: "MULTI_RATE", fix: "税率混在の可能性" };
+  }
+  if (!rateInfo || rateInfo.rate === null) {
+    return { rid: "TAX_UNKNOWN", fix: "税率/税区分要確認" };
+  }
+  if (rateInfo.inferred) {
+    return { rid: "TAX_INFERRED", fix: "" };
+  }
+  if (parsed && belle_yayoi_hasAnyIssues(parsed)) {
+    return { rid: "OCR_ISSUES", fix: "OCR要確認" };
+  }
+  return { rid: "OK", fix: "" };
 }

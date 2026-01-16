@@ -17,7 +17,8 @@
 5. Export guards:
    - OCR_PENDING (QUEUED remains)
    - OCR_RETRYABLE_REMAINING (ERROR_RETRYABLE remains)
-6. V-column memo includes BELLE/FBK/RID/FID (and ERR when available) and is trimmed to 180 bytes (Shift-JIS).
+6. Summary format: "merchant / item / registration_number" (no "/ fallback")
+7. V-column memo includes BELLE/FBK/RID/FID (and ERR when available), FIX is prefix, URL is not used.
 
 ## 3. Runner (A plan)
 - belle_runPipelineBatch_v0 runs queue -> OCR only.
