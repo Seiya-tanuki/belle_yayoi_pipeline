@@ -36,6 +36,9 @@
 - BELLE_CHATWORK_NOTIFY_ENABLED (default: false)
 - BELLE_CHATWORK_API_TOKEN (required when enabled)
 - BELLE_CHATWORK_ROOM_ID (required when enabled)
+- BELLE_CHATWORK_WEBHOOK_ENABLED (default: false)
+- BELLE_CHATWORK_WEBHOOK_TOKEN (Chatwork webhook token; Base64 string)
+- BELLE_CHATWORK_WEBHOOK_ROUTE (default: chatwork)
 
 ## Notes
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.
