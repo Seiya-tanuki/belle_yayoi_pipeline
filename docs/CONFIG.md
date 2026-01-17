@@ -33,6 +33,9 @@
   - Required for export; years must match and range must be valid.
 - BELLE_RESET_TOKEN (admin-only)
   - Must match the expected token in code to run destructive reset.
+- BELLE_CHATWORK_NOTIFY_ENABLED (default: false)
+- BELLE_CHATWORK_API_TOKEN (required when enabled)
+- BELLE_CHATWORK_ROOM_ID (required when enabled)
 
 ## Notes
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.
