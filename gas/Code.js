@@ -441,6 +441,7 @@ function belle_processQueueOnce(options) {
       const mimeType = String(row[headerMap["mime_type"]] || "");
       const ocrJson = String(row[headerMap["ocr_json"]] || "");
       const ocrErr = String(row[headerMap["ocr_error"]] || "");
+      const nextRetryAt = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
 
       if (!fileId) continue;
       if (status === "DONE") continue;
@@ -457,7 +458,10 @@ function belle_processQueueOnce(options) {
         file_id: fileId,
         file_name: fileName,
         attempts: attempt,
-        status: status || "QUEUED"
+        status: status || "QUEUED",
+        isRetryableTarget: t >= queuedIdx.length,
+        nowIso: new Date(nowMs).toISOString(),
+        nextRetryIso: nextRetryAt
       });
 
       try {
