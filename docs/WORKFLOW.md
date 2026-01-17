@@ -53,7 +53,7 @@
 4) Case A (legacy): IMPORT_LOG exists and EXPORT_LOG missing -> export is guarded; rename IMPORT_LOG to EXPORT_LOG, then retry
 5) Case B (fresh): neither exists -> export creates EXPORT_LOG with header
 6) Chatwork (optional): set BELLE_CHATWORK_NOTIFY_ENABLED=true and run belle_chatwork_sendLatestCsv_test (latest CSV sends file post only to avoid duplicate messages)
-7) Chatwork Webhook (optional): deploy Web App with ?route=chatwork, set BELLE_CHATWORK_WEBHOOK_ENABLED=true and BELLE_CHATWORK_WEBHOOK_TOKEN; signature mismatch or parse errors are logged and still return 200.
+7) Chatwork Webhook (optional): deploy Web App with ?route=chatwork&token=<SECRET>, set BELLE_CHATWORK_WEBHOOK_ENABLED=true and BELLE_CHATWORK_WEBHOOK_TOKEN (same value as URL token). Signature verification is not used on GAS; token mismatch/parse errors are logged and still return 200.
 
 ## 6. References
 - docs/CONFIG.md

@@ -22,10 +22,16 @@ function belle_chatwork_webhook_computeSignature_(bodyString, tokenBase64) {
   return Utilities.base64Encode(digest);
 }
 
+function belle_chatwork_webhook_log_(obj) {
+  const msg = JSON.stringify(obj);
+  console.log(msg);
+  Logger.log(msg);
+}
+
 function belle_chatwork_webhook_logEvent_(payload) {
   const eventType = payload && payload.webhook_event_type ? String(payload.webhook_event_type) : "";
   const body = payload && payload.body ? String(payload.body) : "";
-  Logger.log({
+  belle_chatwork_webhook_log_({
     phase: "CHATWORK_WEBHOOK_EVENT",
     webhook_setting_id: payload && payload.webhook_setting_id,
     webhook_event_type: eventType,
@@ -44,14 +50,18 @@ function belle_chatwork_webhook_handle_(e) {
     false
   );
   if (!enabled) {
-    Logger.log({ phase: "CHATWORK_WEBHOOK_GUARD", ok: true, reason: "WEBHOOK_DISABLED" });
+    belle_chatwork_webhook_log_({
+      phase: "CHATWORK_WEBHOOK_GUARD",
+      ok: true,
+      reason: "WEBHOOK_DISABLED"
+    });
     return ContentService.createTextOutput("ok");
   }
 
   const expectedRoute = belle_chatwork_webhook_getExpectedRoute_(props);
   const route = e && e.parameter && e.parameter.route ? String(e.parameter.route) : "";
   if (route !== expectedRoute) {
-    Logger.log({
+    belle_chatwork_webhook_log_({
       phase: "CHATWORK_WEBHOOK_GUARD",
       ok: true,
       reason: "ROUTE_MISMATCH",
@@ -64,26 +74,30 @@ function belle_chatwork_webhook_handle_(e) {
   const bodyString =
     e && e.postData && typeof e.postData.contents === "string" ? e.postData.contents : "";
   if (!bodyString) {
-    Logger.log({ phase: "CHATWORK_WEBHOOK_GUARD", ok: true, reason: "BODY_MISSING" });
-    return ContentService.createTextOutput("ok");
-  }
-
-  const signature =
-    e && e.parameter && e.parameter.chatwork_webhook_signature
-      ? String(e.parameter.chatwork_webhook_signature).trim()
-      : "";
-  if (!signature) {
-    Logger.log({ phase: "CHATWORK_WEBHOOK_GUARD", ok: true, reason: "SIGNATURE_MISSING" });
-    return ContentService.createTextOutput("ok");
-  }
-
-  const token = props.getProperty("BELLE_CHATWORK_WEBHOOK_TOKEN");
-  const computed = belle_chatwork_webhook_computeSignature_(bodyString, token).trim();
-  if (computed !== signature) {
-    Logger.log({
+    belle_chatwork_webhook_log_({
       phase: "CHATWORK_WEBHOOK_GUARD",
       ok: true,
-      reason: "SIGNATURE_MISMATCH"
+      reason: "BODY_MISSING"
+    });
+    return ContentService.createTextOutput("ok");
+  }
+
+  const tokenParam =
+    e && e.parameter && e.parameter.token ? String(e.parameter.token) : "";
+  const expectedToken = props.getProperty("BELLE_CHATWORK_WEBHOOK_TOKEN") || "";
+  if (!expectedToken) {
+    belle_chatwork_webhook_log_({
+      phase: "CHATWORK_WEBHOOK_GUARD",
+      ok: true,
+      reason: "TOKEN_MISSING"
+    });
+    return ContentService.createTextOutput("ok");
+  }
+  if (tokenParam !== expectedToken) {
+    belle_chatwork_webhook_log_({
+      phase: "CHATWORK_WEBHOOK_GUARD",
+      ok: true,
+      reason: "TOKEN_MISMATCH"
     });
     return ContentService.createTextOutput("ok");
   }
@@ -92,7 +106,12 @@ function belle_chatwork_webhook_handle_(e) {
   try {
     payload = JSON.parse(bodyString);
   } catch (e2) {
-    Logger.log({ phase: "CHATWORK_WEBHOOK_GUARD", ok: true, reason: "JSON_PARSE_ERROR" });
+    belle_chatwork_webhook_log_({
+      phase: "CHATWORK_WEBHOOK_GUARD",
+      ok: true,
+      reason: "JSON_PARSE_ERROR",
+      body_preview: bodyString.slice(0, 100)
+    });
     return ContentService.createTextOutput("ok");
   }
 
@@ -105,7 +124,11 @@ function doPost(e) {
     return belle_chatwork_webhook_handle_(e);
   } catch (err) {
     const message = err && err.message ? err.message : String(err);
-    Logger.log({ phase: "CHATWORK_WEBHOOK_ERROR", ok: false, message: message });
+    belle_chatwork_webhook_log_({
+      phase: "CHATWORK_WEBHOOK_ERROR",
+      ok: false,
+      message: message
+    });
     return ContentService.createTextOutput("ok");
   }
 }

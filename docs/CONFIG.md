@@ -37,7 +37,7 @@
 - BELLE_CHATWORK_API_TOKEN (required when enabled)
 - BELLE_CHATWORK_ROOM_ID (required when enabled)
 - BELLE_CHATWORK_WEBHOOK_ENABLED (default: false)
-- BELLE_CHATWORK_WEBHOOK_TOKEN (Chatwork webhook token; Base64 string)
+- BELLE_CHATWORK_WEBHOOK_TOKEN (URL token for webhook; set same value as ?token=...)
 - BELLE_CHATWORK_WEBHOOK_ROUTE (default: chatwork)
 
 ## Notes
