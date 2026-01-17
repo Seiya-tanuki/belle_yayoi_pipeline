@@ -52,6 +52,7 @@
 3) After DONE/ERROR_FINAL only, export should create CSV and update EXPORT_LOG
 4) Case A (legacy): IMPORT_LOG exists and EXPORT_LOG missing -> export is guarded; rename IMPORT_LOG to EXPORT_LOG, then retry
 5) Case B (fresh): neither exists -> export creates EXPORT_LOG with header
+6) Chatwork (optional): set BELLE_CHATWORK_NOTIFY_ENABLED=true and run belle_chatwork_sendLatestCsv_test
 
 ## 6. References
 - docs/CONFIG.md
