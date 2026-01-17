@@ -832,7 +832,7 @@ function belle_runPipelineBatch_v0_test() {
 
 
 function belle_resetSpreadsheetToInitialState_fallback_v0() {
-  const EXPECTED_RESET_TOKEN = "RESET_FALLBACK_V0_2026-01-16";
+  const EXPECTED_RESET_TOKEN = "RESET_FALLBACK_V0_CONFIRM";
   const props = PropertiesService.getScriptProperties();
   const token = String(props.getProperty("BELLE_RESET_TOKEN") || "");
   if (token !== EXPECTED_RESET_TOKEN) {
@@ -910,13 +910,14 @@ function belle_resetSpreadsheetToInitialState_fallback_v0() {
 
     if (temp) ss.deleteSheet(temp);
 
-    props.deleteProperty("BELLE_RESET_TOKEN");
     const result = {
       phase: "RESET_DONE",
       ok: true,
       deletedSheets: deleted,
-      createdSheets: [queueName, exportLogName]
+      createdSheets: [queueName, exportLogName],
+      tokenCleared: true
     };
+    props.deleteProperty("BELLE_RESET_TOKEN");
     Logger.log(result);
     return result;
   } finally {

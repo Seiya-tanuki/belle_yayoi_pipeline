@@ -11,7 +11,7 @@ Use only when headers/sheet names are corrupted.
 ## Token Guard
 - Set Script Property `BELLE_RESET_TOKEN` to the expected value.
 - Expected token:
-  - `RESET_FALLBACK_V0_2026-01-16`
+  - `RESET_FALLBACK_V0_CONFIRM`
 
 ## Execution Steps
 1) Open Script Properties and set `BELLE_RESET_TOKEN` to the expected token.
