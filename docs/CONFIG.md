@@ -39,6 +39,7 @@
 - BELLE_CHATWORK_WEBHOOK_ENABLED (default: false)
 - BELLE_CHATWORK_WEBHOOK_TOKEN (URL token for webhook; set same value as ?token=...)
 - BELLE_CHATWORK_WEBHOOK_ROUTE (default: chatwork)
+- BELLE_INTEGRATIONS_SHEET_ID (required for webhook log persistence)
 
 ## Notes
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.
