@@ -41,7 +41,7 @@
   - BELLE_OUTPUT_FOLDER_ID / BELLE_SKIP_LOG_SHEET_NAME
 
 ## 7. 監査ログ/運用フロー
-- EXPORT_LOG: 出力済み行の再出力防止
+- EXPORT_LOG: 出力済み行の再出力防止（legacy IMPORT_LOG は手動で rename）
 - EXPORT_SKIP_LOG: それでも出力不能な例外だけ記録
 - memo/摘要に file_id / file_name / reason_code を必ず残す
 

@@ -32,6 +32,7 @@
 ## Notes
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.
 - OCR_RAW columns are extended (append-only): ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail.
+- Export log sheet name is fixed: EXPORT_LOG (legacy IMPORT_LOG must be renamed manually).
 
 ## References
 - docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md

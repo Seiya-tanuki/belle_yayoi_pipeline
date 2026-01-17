@@ -13,3 +13,4 @@
 ## 命名/ログ
 - reason_code / file_id / file_name が memo/摘要に残る設計になっているか
 - EXPORT_LOG / EXPORT_SKIP_LOG の用途が明記されているか
+- legacy IMPORT_LOG が残っている場合は手動で rename する旨が明記されているか

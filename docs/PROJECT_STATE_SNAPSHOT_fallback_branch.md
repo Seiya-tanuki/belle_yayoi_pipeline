@@ -11,8 +11,8 @@
   1) BELLE_QUEUE_SHEET_NAME
   2) BELLE_SHEET_NAME (legacy fallback)
   3) "OCR_RAW" (hard default)
-- EXPORT_LOG: "EXPORT_LOG" (belle_getImportLogSheetName)
-  - Note: legacy sheet name IMPORT_LOG is auto-migrated on first export.
+- EXPORT_LOG: "EXPORT_LOG" (fixed name)
+  - Note: legacy sheet name IMPORT_LOG must be renamed manually before export.
 - EXPORT_SKIP_LOG: BELLE_SKIP_LOG_SHEET_NAME or "EXPORT_SKIP_LOG" (belle_getSkipLogSheetName)
 - Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID (belle_getOutputFolderId)
 

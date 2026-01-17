@@ -23,7 +23,7 @@
 ## Sheet roles (who edits)
 - OCR_RAW: system-only (queue + OCR output)
 - EXPORT_LOG: system-only (dedupe and audit)
-  - Note: legacy sheet name IMPORT_LOG is auto-migrated on first export.
+  - Note: legacy sheet name IMPORT_LOG must be renamed manually before export.
 - EXPORT_SKIP_LOG: system-only (skipped reasons)
 - Review sheets are not used in fallback-v0.
 
@@ -33,7 +33,7 @@
 3) OCR_RAW (hard default)
 
 ## Log/output resolution
-- Export log: EXPORT_LOG (legacy IMPORT_LOG is auto-migrated)
+- Export log: EXPORT_LOG (legacy IMPORT_LOG must be renamed manually)
 - Skip log: BELLE_SKIP_LOG_SHEET_NAME or EXPORT_SKIP_LOG
 - Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID
 

@@ -134,7 +134,7 @@ gas\ReviewReasons_ja_v0.js:5:function belle_reviewReasonJa(code, context) {
 - BELLE_QUEUE_SHEET_NAME: 任意（Queue/OCR/Reviewで使用。未設定時は BELLE_SHEET_NAME を使用）。
 - BELLE_DRIVE_FOLDER_ID: belle_listFilesInFolder で必須。出力フォルダ未指定時の代替としても使用。
 - BELLE_OUTPUT_FOLDER_ID: 任意（Review Export/Done Export の出力先。未設定時は BELLE_DRIVE_FOLDER_ID）。
-- BELLE_IMPORT_LOG_SHEET_NAME: 任意（既定 IMPORT_LOG）。Review Export/Done Export で使用。
+- (removed) legacy import log property was removed in fallback-v0.
 - BELLE_SKIP_LOG_SHEET_NAME: 任意（既定 EXPORT_SKIP_LOG）。Done Export の skip log で使用。
 - BELLE_REVIEW_STATE_SHEET_NAME: 任意（既定 REVIEW_STATE）。Review State の参照/生成に使用。
 - BELLE_REVIEW_UI_SHEET_NAME: 任意（既定 REVIEW_UI）。Review UI の参照/生成に使用。

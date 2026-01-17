@@ -345,9 +345,6 @@ function belle_getQueueSheetName(props) {
   return "OCR_RAW";
 }
 
-function belle_getImportLogSheetName(props) {
-  return "EXPORT_LOG";
-}
 
 function belle_getSkipLogSheetName(props) {
   const p = props || PropertiesService.getScriptProperties();
