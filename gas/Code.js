@@ -82,6 +82,28 @@ function belle_listFilesInFolder() {
   return { ok: true, count: files.length, files: files };
 }
 
+function belle_getQueueHeaderColumns_v0() {
+  return [
+    "status",
+    "file_id",
+    "file_name",
+    "mime_type",
+    "drive_url",
+    "queued_at_iso",
+    "ocr_json",
+    "ocr_error",
+    "ocr_attempts",
+    "ocr_last_attempt_at_iso",
+    "ocr_next_retry_at_iso",
+    "ocr_error_code",
+    "ocr_error_detail"
+  ];
+}
+
+function belle_getExportLogHeaderColumns_v0() {
+  return ["file_id","exported_at_iso","csv_file_id"];
+}
+
 /**
  * Append-only queue writer:
  * Writes QUEUED rows into the configured sheet.
@@ -805,4 +827,103 @@ function belle_runPipelineBatch_v0_test() {
   const result = belle_runPipelineBatch_v0();
   Logger.log(result);
   return result;
+}
+
+
+
+function belle_resetSpreadsheetToInitialState_fallback_v0() {
+  const EXPECTED_RESET_TOKEN = "RESET_FALLBACK_V0_2026-01-16";
+  const props = PropertiesService.getScriptProperties();
+  const token = String(props.getProperty("BELLE_RESET_TOKEN") || "");
+  if (token !== EXPECTED_RESET_TOKEN) {
+    const guard = { phase: "RESET_GUARD", ok: true, reason: "RESET_TOKEN_MISMATCH" };
+    Logger.log(guard);
+    return guard;
+  }
+
+  let lock;
+  try {
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+  } catch (e) {
+    const guard = { phase: "RESET_GUARD", ok: true, reason: "LOCK_BUSY" };
+    Logger.log(guard);
+    return guard;
+  }
+
+  try {
+    const sheetId = props.getProperty("BELLE_SHEET_ID");
+    if (!sheetId) {
+      const guard = { phase: "RESET_GUARD", ok: true, reason: "MISSING_SHEET_ID" };
+      Logger.log(guard);
+      return guard;
+    }
+
+    const ss = SpreadsheetApp.openById(sheetId);
+    const queueName = belle_getQueueSheetName(props);
+    const exportLogName = "EXPORT_LOG";
+    const candidates = [
+      queueName,
+      exportLogName,
+      "OCR_RAW",
+      "QUEUE",
+      "IMPORT_LOG",
+      "REVIEW_UI",
+      "REVIEW_STATE",
+      "REVIEW_LOG"
+    ];
+    const uniq = {};
+    const targets = [];
+    for (let i = 0; i < candidates.length; i++) {
+      const name = candidates[i];
+      if (name && !uniq[name]) {
+        uniq[name] = true;
+        targets.push(name);
+      }
+    }
+
+    const existing = [];
+    for (let i = 0; i < targets.length; i++) {
+      const sh = ss.getSheetByName(targets[i]);
+      if (sh) existing.push(sh);
+    }
+
+    let temp = null;
+    if (existing.length > 0 && existing.length >= ss.getSheets().length) {
+      temp = ss.insertSheet("__RESET_TMP__");
+    }
+
+    const deleted = [];
+    for (let i = 0; i < existing.length; i++) {
+      const sh = existing[i];
+      deleted.push(sh.getName());
+      ss.deleteSheet(sh);
+    }
+
+    const queueSheet = ss.insertSheet(queueName);
+    const queueHeader = belle_getQueueHeaderColumns_v0();
+    queueSheet.getRange(1, 1, 1, queueHeader.length).setValues([queueHeader]);
+
+    const exportLogSheet = ss.insertSheet(exportLogName);
+    const exportHeader = belle_getExportLogHeaderColumns_v0();
+    exportLogSheet.getRange(1, 1, 1, exportHeader.length).setValues([exportHeader]);
+
+    if (temp) ss.deleteSheet(temp);
+
+    props.deleteProperty("BELLE_RESET_TOKEN");
+    const result = {
+      phase: "RESET_DONE",
+      ok: true,
+      deletedSheets: deleted,
+      createdSheets: [queueName, exportLogName]
+    };
+    Logger.log(result);
+    return result;
+  } finally {
+    if (lock) lock.releaseLock();
+  }
+}
+
+function belle_resetSpreadsheetToInitialState_fallback_v0_test() {
+  return belle_resetSpreadsheetToInitialState_fallback_v0();
 }

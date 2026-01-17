@@ -1,0 +1,12 @@
+﻿const fs = require('fs');
+const vm = require('vm');
+const code = fs.readFileSync('gas/Code.js','utf8');
+const sandbox = { console };
+vm.createContext(sandbox);
+vm.runInContext(code, sandbox);
+const header = sandbox.belle_getQueueHeaderColumns_v0();
+if (!Array.isArray(header)) throw new Error('header missing');
+if (header[0] !== 'status' || header[1] !== 'file_id') throw new Error('header order wrong');
+const exportHeader = sandbox.belle_getExportLogHeaderColumns_v0();
+if (!Array.isArray(exportHeader) || exportHeader[0] !== 'file_id') throw new Error('export header wrong');
+console.log('OK: test_reset_headers');

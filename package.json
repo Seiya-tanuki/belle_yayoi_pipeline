@@ -7,14 +7,15 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "npm run test:rate && npm run test:summary && npm run test:rid && npm run test:memo && npm run test:date && npm run test:ocr",
+    "test": "npm run test:rate && npm run test:summary && npm run test:rid && npm run test:memo && npm run test:date && npm run test:ocr && npm run test:reset",
     "typecheck": "tsc -p tsconfig.json",
     "test:rate": "node tests/test_rate_inference.js",
     "test:summary": "node tests/test_summary_format.js",
     "test:rid": "node tests/test_rid_fix_overall_issues.js",
     "test:memo": "node tests/test_memo_format.js",
     "test:date": "node tests/test_date_fallback.js",
-    "test:ocr": "node tests/test_ocr_validation.js"
+    "test:ocr": "node tests/test_ocr_validation.js",
+    "test:reset": "node tests/test_reset_headers.js"
   },
   "keywords": [],
   "author": "",

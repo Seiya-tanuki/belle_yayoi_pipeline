@@ -33,6 +33,7 @@
    - Out of range -> replace year with fiscal year; DT=OUT_OF_RANGE, RID=DATE_FALLBACK, FIX=誤った取引日
    - Leap invalid after replace -> use fiscal end; DT=LEAP_ADJUST
    - Do not use file_name or queued_at_iso for date fallback.
+14. Destructive reset (admin only): use BELLE_RESET_TOKEN and belle_resetSpreadsheetToInitialState_fallback_v0_test (see docs/RESET_GUIDE_fallback_v0.md).
 
 ## 3. Runner (A plan)
 - belle_runPipelineBatch_v0 runs queue -> OCR only.

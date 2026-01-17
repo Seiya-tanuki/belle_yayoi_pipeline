@@ -31,6 +31,8 @@
 - BELLE_FISCAL_START_DATE (format: YYYY-MM-DD)
 - BELLE_FISCAL_END_DATE (format: YYYY-MM-DD)
   - Required for export; years must match and range must be valid.
+- BELLE_RESET_TOKEN (admin-only)
+  - Must match the expected token in code to run destructive reset.
 
 ## Notes
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.
