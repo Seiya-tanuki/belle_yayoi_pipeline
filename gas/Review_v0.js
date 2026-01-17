@@ -31,6 +31,47 @@ function belle_queue_ensureHeaderMapForExport(sh, baseHeader, extraHeader) {
   return map;
 }
 
+function belle_ensureExportLogSheet(ss, exportLogName) {
+  const EXPORT_LOG_NAME = exportLogName || "EXPORT_LOG";
+  const LEGACY_NAME = "IMPORT_LOG";
+  let sh = ss.getSheetByName(EXPORT_LOG_NAME);
+  if (sh) return sh;
+
+  const legacy = ss.getSheetByName(LEGACY_NAME);
+  if (legacy) {
+    try {
+      legacy.setName(EXPORT_LOG_NAME);
+      return legacy;
+    } catch (e) {
+      try {
+        const copied = legacy.copyTo(ss);
+        copied.setName(EXPORT_LOG_NAME);
+        return copied;
+      } catch (e2) {
+        sh = ss.insertSheet(EXPORT_LOG_NAME);
+        sh.appendRow(["file_id","exported_at_iso","csv_file_id"]);
+        try {
+          const rows = legacy.getLastRow();
+          if (rows >= 2) {
+            const vals = legacy.getRange(2, 1, rows - 1, 1).getValues();
+            for (let i = 0; i < vals.length; i++) {
+              const v = vals[i][0];
+              if (v) sh.appendRow([String(v), "", ""]);
+            }
+          }
+        } catch (e3) {
+          // ignore transfer errors
+        }
+        return sh;
+      }
+    }
+  }
+
+  sh = ss.insertSheet(EXPORT_LOG_NAME);
+  sh.appendRow(["file_id","exported_at_iso","csv_file_id"]);
+  return sh;
+}
+
 function belle_exportYayoiCsvFallback(options) {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
@@ -42,7 +83,7 @@ function belle_exportYayoiCsvFallback(options) {
   const appendInvoiceSuffix = belle_parseBool(props.getProperty("BELLE_FALLBACK_APPEND_INVOICE_SUFFIX"), true);
   // Default label must be a plain value (no extra description).
   const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "対象外");
-  const importLogName = belle_getImportLogSheetName(props);
+  const exportLogName = belle_getImportLogSheetName(props);
   const skipLogSheetName = belle_getSkipLogSheetName(props);
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
   if (!outputFolderId) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
@@ -149,15 +190,11 @@ function belle_exportYayoiCsvFallback(options) {
       return res;
     }
 
-    let importLog = ss.getSheetByName(importLogName);
-    if (!importLog) {
-      importLog = ss.insertSheet(importLogName);
-      importLog.appendRow(["file_id","exported_at_iso","csv_file_id"]);
-    }
+    const exportLog = belle_ensureExportLogSheet(ss, exportLogName);
     const importSet = new Set();
-    const logRows = importLog.getLastRow();
+    const logRows = exportLog.getLastRow();
     if (logRows >= 2) {
-      const vals = importLog.getRange(2, 1, logRows - 1, 1).getValues();
+      const vals = exportLog.getRange(2, 1, logRows - 1, 1).getValues();
       for (let i = 0; i < vals.length; i++) {
         const v = vals[i][0];
         if (v) importSet.add(String(v));
@@ -314,7 +351,7 @@ function belle_exportYayoiCsvFallback(options) {
     const csvFileId = file.getId();
 
     for (let i = 0; i < exportFileIds.length; i++) {
-      importLog.appendRow([exportFileIds[i], nowIso, csvFileId]);
+      exportLog.appendRow([exportFileIds[i], nowIso, csvFileId]);
     }
 
     if (skippedDetails.length > 0) {

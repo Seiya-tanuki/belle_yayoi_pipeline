@@ -6,7 +6,7 @@
 
 ## 2. 現行（review-sheet-v0）の要約
 - パイプライン: belle_listFilesInFolder -> belle_queueFolderFilesToSheet -> belle_processQueueOnce -> belle_buildReviewFromDoneQueue -> belle_exportYayoiCsvFromReview
-- シート: REVIEW_STATE / REVIEW_UI / REVIEW_LOG / IMPORT_LOG / EXPORT_SKIP_LOG
+- シート: REVIEW_STATE / REVIEW_UI / REVIEW_LOG / EXPORT_LOG / EXPORT_SKIP_LOG
 - 入口関数: belle_runPipelineBatch_v0（export無効が既定）, belle_exportYayoiCsvFromReview_test（手動）
 - 参照: docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md
 
@@ -17,7 +17,7 @@
 
 ## 4. 差分方針（残す/置換/削除）
 - 残す:
-  - belle_queueFolderFilesToSheet / belle_processQueueOnce / IMPORT_LOG / EXPORT_SKIP_LOG
+  - belle_queueFolderFilesToSheet / belle_processQueueOnce / EXPORT_LOG / EXPORT_SKIP_LOG
 - 置換:
   - belle_exportYayoiCsvFromReview をフォールバック優先に変更
 - 削除/無効化:
@@ -28,7 +28,7 @@
 ## 5. 実装ステップ案
 1) export 関数の分岐設計（REVIEW/FALLBACK）
 2) フォールバック用の memo/摘要設計（理由コード・file_id・file_name）
-3) IMPORT_LOG / EXPORT_SKIP_LOG の出力ルール調整
+3) EXPORT_LOG / EXPORT_SKIP_LOG の出力ルール調整
 4) REVIEW_STATE/REVIEW_UI の参照を最小化
 5) docs/WORKFLOW.md / docs/CONFIG.md をフォールバック運用に整理
 
@@ -38,10 +38,10 @@
   - BELLE_FALLBACK_REASON_PREFIX (memo識別子)
 - 既存利用:
   - BELLE_CSV_ENCODING / BELLE_CSV_EOL
-  - BELLE_OUTPUT_FOLDER_ID / BELLE_IMPORT_LOG_SHEET_NAME / BELLE_SKIP_LOG_SHEET_NAME
+  - BELLE_OUTPUT_FOLDER_ID / BELLE_SKIP_LOG_SHEET_NAME
 
 ## 7. 監査ログ/運用フロー
-- IMPORT_LOG: 出力済み行の再出力防止
+- EXPORT_LOG: 出力済み行の再出力防止
 - EXPORT_SKIP_LOG: それでも出力不能な例外だけ記録
 - memo/摘要に file_id / file_name / reason_code を必ず残す
 
@@ -51,12 +51,12 @@
 - 弥生側修正漏れ:
 - memo/摘要に識別子（file_id / file_name）を必ず残す
 - トレーサビリティ:
-  - file_id -> CSV -> IMPORT_LOG の紐付けを維持
+  - file_id -> CSV -> EXPORT_LOG の紐付けを維持
 
 ## 9. 手動テスト観点
 1) フォールバックモードで CSV が必ず出ること
 2) memo/摘要に reason_code + file_id + file_name が残ること
-3) IMPORT_LOG に記録されること
+3) EXPORT_LOG に記録されること
 4) EXPORT_SKIP_LOG は例外のみ記録されること
 
 ## 10. 次ターン実装対象（予定）

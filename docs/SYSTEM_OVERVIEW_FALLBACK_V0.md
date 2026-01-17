@@ -22,8 +22,8 @@
 
 ## Sheet roles (who edits)
 - OCR_RAW: system-only (queue + OCR output)
-- IMPORT_LOG: system-only (dedupe and audit)
-  - Note: sheet name is IMPORT_LOG but role is export log; rename is planned in a future phase.
+- EXPORT_LOG: system-only (dedupe and audit)
+  - Note: legacy sheet name IMPORT_LOG is auto-migrated on first export.
 - EXPORT_SKIP_LOG: system-only (skipped reasons)
 - Review sheets are not used in fallback-v0.
 
@@ -33,7 +33,7 @@
 3) OCR_RAW (hard default)
 
 ## Log/output resolution
-- Import log: BELLE_IMPORT_LOG_SHEET_NAME or IMPORT_LOG
+- Export log: EXPORT_LOG (legacy IMPORT_LOG is auto-migrated)
 - Skip log: BELLE_SKIP_LOG_SHEET_NAME or EXPORT_SKIP_LOG
 - Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID
 
@@ -92,7 +92,7 @@ Note: overall_issues with only MISSING_TAX_INFO is treated as benign when tax ra
 ## Restart checklist (quick)
 1) Run belle_runPipelineBatch_v0_test -> check RUN_SUMMARY
 2) Run export with QUEUED remaining -> OCR_PENDING guard
-3) After DONE/ERROR_FINAL only -> export generates CSV and updates IMPORT_LOG
+3) After DONE/ERROR_FINAL only -> export generates CSV and updates EXPORT_LOG
 
 ## References
 - docs/WORKFLOW.md

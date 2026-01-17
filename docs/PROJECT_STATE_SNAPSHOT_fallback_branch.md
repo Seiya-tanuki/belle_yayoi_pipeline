@@ -11,8 +11,8 @@
   1) BELLE_QUEUE_SHEET_NAME
   2) BELLE_SHEET_NAME (legacy fallback)
   3) "OCR_RAW" (hard default)
-- IMPORT_LOG: BELLE_IMPORT_LOG_SHEET_NAME or "IMPORT_LOG" (belle_getImportLogSheetName)
-  - Note: sheet name is IMPORT_LOG but role is export log; rename is planned in a future phase.
+- EXPORT_LOG: "EXPORT_LOG" (belle_getImportLogSheetName)
+  - Note: legacy sheet name IMPORT_LOG is auto-migrated on first export.
 - EXPORT_SKIP_LOG: BELLE_SKIP_LOG_SHEET_NAME or "EXPORT_SKIP_LOG" (belle_getSkipLogSheetName)
 - Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID (belle_getOutputFolderId)
 
@@ -33,7 +33,7 @@ Header used by queue/ocr/export:
 - ocr_error_code
 - ocr_error_detail
 
-### IMPORT_LOG
+### EXPORT_LOG
 - file_id
 - exported_at_iso
 - csv_file_id
@@ -83,7 +83,6 @@ Optional:
 - BELLE_QUEUE_SHEET_NAME (preferred)
 - BELLE_SHEET_NAME (legacy fallback)
 - BELLE_OUTPUT_FOLDER_ID (default: BELLE_DRIVE_FOLDER_ID)
-- BELLE_IMPORT_LOG_SHEET_NAME (default: IMPORT_LOG)
 - BELLE_SKIP_LOG_SHEET_NAME (default: EXPORT_SKIP_LOG)
 - BELLE_EXPORT_BATCH_MAX_ROWS (default: 5000)
 - BELLE_CSV_ENCODING (default: SHIFT_JIS)
@@ -102,7 +101,7 @@ Optional:
 - OCR_PENDING: queuedRemaining > 0
 - OCR_RETRYABLE_REMAINING: errorRetryableCount > 0
 - Export targets: DONE + ERROR_FINAL (1 file = 1 row)
-- IMPORT_LOG updates only when CSV is created
+- EXPORT_LOG updates only when CSV is created
 
 ## 8. Runner phases and reasons
 Phases:

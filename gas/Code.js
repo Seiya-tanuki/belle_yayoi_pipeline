@@ -346,8 +346,7 @@ function belle_getQueueSheetName(props) {
 }
 
 function belle_getImportLogSheetName(props) {
-  const p = props || PropertiesService.getScriptProperties();
-  return p.getProperty("BELLE_IMPORT_LOG_SHEET_NAME") || "IMPORT_LOG";
+  return "EXPORT_LOG";
 }
 
 function belle_getSkipLogSheetName(props) {

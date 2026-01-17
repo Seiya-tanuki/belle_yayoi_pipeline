@@ -35,13 +35,16 @@
 
 ## 4. Manual export
 - Run belle_exportYayoiCsvFromReview_test or belle_exportYayoiCsvFallback from the editor.
-- If QUEUED remains, it logs OCR_PENDING and does not create CSV or update IMPORT_LOG.
+- If QUEUED remains, it logs OCR_PENDING and does not create CSV or update EXPORT_LOG.
 - If ERROR_RETRYABLE remains, it logs OCR_RETRYABLE_REMAINING and does not export.
+- Export log uses EXPORT_LOG (legacy IMPORT_LOG is auto-migrated on first export).
 
 ## 5. Verification checklist (manual)
 1) Run belle_runPipelineBatch_v0_test and check RUN_SUMMARY
 2) With QUEUED remaining, run export and expect OCR_PENDING
-3) After DONE/ERROR_FINAL only, export should create CSV and update IMPORT_LOG
+3) After DONE/ERROR_FINAL only, export should create CSV and update EXPORT_LOG
+4) Case A (legacy): IMPORT_LOG exists and EXPORT_LOG missing -> export creates EXPORT_LOG by renaming or copying and preserves file_id dedupe
+5) Case B (fresh): neither exists -> export creates EXPORT_LOG with header
 
 ## 6. References
 - docs/CONFIG.md
