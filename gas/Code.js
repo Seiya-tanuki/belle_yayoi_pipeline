@@ -404,6 +404,46 @@ function belle_processQueueOnce(options) {
     const processedRows = [];
     let errorsCount = 0;
 
+    const legacyFixed = [];
+    const nowIso = new Date().toISOString();
+    for (let i = 0; i < values.length; i++) {
+      const row = values[i];
+      const status = String(row[headerMap["status"]] || "");
+      const fileId = String(row[headerMap["file_id"]] || "");
+      const ocrJson = String(row[headerMap["ocr_json"]] || "");
+      const ocrError = String(row[headerMap["ocr_error"]] || "");
+      const normalized = status || "QUEUED";
+      if (!fileId) continue;
+      if ((normalized === "ERROR_RETRYABLE" || normalized === "ERROR") && ocrJson && !ocrError) {
+        const sheetRow = i + 2;
+        const detail = String(ocrJson).slice(0, 500);
+        const summary = detail.slice(0, 200);
+        sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue("LEGACY_ERROR_IN_OCR_JSON");
+        sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue(detail);
+        sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue(summary);
+        sh.getRange(sheetRow, headerMap["ocr_json"] + 1).setValue("");
+        const attempt = Number(row[headerMap["ocr_attempts"]] || 0) || 1;
+        const lastAttempt = String(row[headerMap["ocr_last_attempt_at_iso"]] || "");
+        const nextRetry = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
+        if (!row[headerMap["ocr_attempts"]]) {
+          sh.getRange(sheetRow, headerMap["ocr_attempts"] + 1).setValue(attempt);
+        }
+        if (!lastAttempt) {
+          sh.getRange(sheetRow, headerMap["ocr_last_attempt_at_iso"] + 1).setValue(nowIso);
+        }
+        if (!nextRetry) {
+          const backoff = Math.max(1, backoffSeconds) * 1000 * Math.min(attempt, 6);
+          const nextRetryIso = new Date(Date.now() + backoff).toISOString();
+          sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue(nextRetryIso);
+        }
+        values[i][headerMap["ocr_json"]] = "";
+        legacyFixed.push(fileId);
+      }
+    }
+    if (legacyFixed.length > 0) {
+      Logger.log({ phase: "OCR_LEGACY_NORMALIZE", fixed: legacyFixed.length, sampleFileIds: legacyFixed.slice(0, 5) });
+    }
+
     const queuedIdx = [];
     const retryIdx = [];
     const nowMs = Date.now();
@@ -444,8 +484,9 @@ function belle_processQueueOnce(options) {
       const nextRetryAt = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
 
       if (!fileId) continue;
-      if (status === "DONE") continue;
-      if (ocrJson) continue;
+      const normalized = status || "QUEUED";
+      if (normalized === "DONE") continue;
+      if (ocrJson && normalized !== "ERROR_RETRYABLE" && normalized !== "ERROR") continue;
 
       const sheetRow = i + 2;
       const attempt = Number(row[headerMap["ocr_attempts"]] || 0) + 1;
@@ -485,7 +526,6 @@ function belle_processQueueOnce(options) {
         if (jsonStr.length > MAX_CELL_CHARS) {
           throw new Error("OCR JSON too long for single cell: " + jsonStr.length);
         }
-
         sh.getRange(sheetRow, headerMap["ocr_json"] + 1).setValue(jsonStr);
         sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue("");
         sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue("");
@@ -512,6 +552,7 @@ function belle_processQueueOnce(options) {
         sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue(errorCode);
         sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue(detail);
         sh.getRange(sheetRow, headerMap["status"] + 1).setValue(statusOut);
+        sh.getRange(sheetRow, headerMap["ocr_json"] + 1).setValue("");
         if (statusOut === "ERROR_RETRYABLE") {
           const backoff = Math.max(1, backoffSeconds) * 1000 * Math.min(attempt, 6);
           const nextRetryIso = new Date(Date.now() + backoff).toISOString();
