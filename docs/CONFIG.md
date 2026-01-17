@@ -28,6 +28,9 @@
   - The value must be a plain label (no extra description).
 - BELLE_FALLBACK_APPEND_INVOICE_SUFFIX (default: true)
   - If false, do not append "適格" to tax kubun.
+- BELLE_FISCAL_START_DATE (format: YYYY-MM-DD)
+- BELLE_FISCAL_END_DATE (format: YYYY-MM-DD)
+  - Required for export; years must match and range must be valid.
 
 ## Notes
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.

@@ -55,9 +55,16 @@ ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, oc
 - If too long, merchant is trimmed to preserve registration_number (Shift-JIS 120 bytes)
 
 ## Memo format (V column)
-- Order: FIX (optional) -> BELLE|FBK=1|RID -> FN (optional) -> ERR (optional) -> FID (always last)
+- Order: FIX (optional) -> BELLE|FBK=1|RID -> DT (optional) -> FN (optional) -> ERR (optional) -> FID (always last)
 - FN is sanitized (replace "|", remove newlines, trim)
-- Trim rule: Shift-JIS 180 bytes, keep FIX + RID + FN + ERR + FID in that order
+- Trim rule: Shift-JIS 180 bytes, keep FIX + RID + DT + FN + ERR + FID in that order
+
+## Date fallback (export)
+- Requires BELLE_FISCAL_START_DATE and BELLE_FISCAL_END_DATE (same year, YYYY-MM-DD).
+- No/invalid date -> use fiscal end, RID=DATE_FALLBACK, DT=NO_DATE, FIX=誤った取引日.
+- Out of range -> replace year with fiscal year, DT=OUT_OF_RANGE.
+- Leap invalid after replace -> use fiscal end, DT=LEAP_ADJUST.
+- Do not use file_name or queued_at_iso for date fallback.
 
 ## Tax rate inference (fallback)
 Priority:

@@ -19,7 +19,7 @@
    - OCR_PENDING (QUEUED remains)
    - OCR_RETRYABLE_REMAINING (ERROR_RETRYABLE remains)
 7. Summary format: "merchant / registration_number" (item is not used). If regno is missing, use merchant only. Regno is never truncated. Optional trim: 120 Shift-JIS bytes, preserve regno.
-8. V-column memo order: FIX (optional) -> BELLE|FBK=1|RID -> FN (optional) -> ERR (optional) -> FID (always last). FN is sanitized (replace "|", remove newlines, trim).
+8. V-column memo order: FIX (optional) -> BELLE|FBK=1|RID -> DT (optional) -> FN (optional) -> ERR (optional) -> FID (always last). FN is sanitized (replace "|", remove newlines, trim).
 9. Tax rate inference priority:
    - tax_rate_printed
    - receipt_total_jpy + tax_total_jpy (tolerance 1 yen)
@@ -27,6 +27,11 @@
    - unknown -> RID=TAX_UNKNOWN or RID=MULTI_RATE
 10. 8% tax kubun uses "課対仕入込軽減8%" for 2019-10-01 and later (Yayoi Kaikei Next import format).
 11. overall_issues with only MISSING_TAX_INFO is treated as benign when tax rate is already confirmed (no FIX).
+12. Date fallback (fiscal year 01/01-12/31):
+   - No/invalid date -> use BELLE_FISCAL_END_DATE, RID=DATE_FALLBACK, DT=NO_DATE, FIX=誤った取引日
+   - Out of range -> replace year with fiscal year; DT=OUT_OF_RANGE, RID=DATE_FALLBACK, FIX=誤った取引日
+   - Leap invalid after replace -> use fiscal end; DT=LEAP_ADJUST
+   - Do not use file_name or queued_at_iso for date fallback.
 
 ## 3. Runner (A plan)
 - belle_runPipelineBatch_v0 runs queue -> OCR only.

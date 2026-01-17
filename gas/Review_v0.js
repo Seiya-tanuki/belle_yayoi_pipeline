@@ -66,12 +66,20 @@ function belle_exportYayoiCsvFallback(options) {
   const appendInvoiceSuffix = belle_parseBool(props.getProperty("BELLE_FALLBACK_APPEND_INVOICE_SUFFIX"), true);
   // Default label must be a plain value (no extra description).
   const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "対象外");
+  const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
+  const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
   const skipLogSheetName = belle_getSkipLogSheetName(props);
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
   if (!outputFolderId) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
 
   const ss = SpreadsheetApp.openById(sheetId);
   try {
+    const fiscalRange = belle_yayoi_validateFiscalRange(fiscalStart, fiscalEnd);
+    if (!fiscalRange.ok) {
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: fiscalRange.reason, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
     const queue = ss.getSheetByName(queueSheetName);
     if (!queue) {
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "QUEUE_SHEET_NOT_FOUND", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
@@ -263,6 +271,7 @@ function belle_exportYayoiCsvFallback(options) {
 
       let rid = "OK";
       let fix = "";
+      let dtCode = "";
       if (status === "ERROR_FINAL") {
         rid = "OCR_ERROR_FINAL";
         fix = "OCRエラー要確認";
@@ -279,17 +288,13 @@ function belle_exportYayoiCsvFallback(options) {
       const summary = belle_yayoi_buildSummary(parsed);
       Logger.log({ phase: "TAX_RATE_METHOD", file_id: fileId, method: rateInfo.method || "UNKNOWN", reason: rateInfo.reason || "" });
 
-      let date = "";
-      if (parsed && parsed.transaction_date) {
-        date = belle_yayoi_formatDate(parsed.transaction_date);
-      }
-      if (!date) {
-        if (queuedAt) {
-          date = belle_yayoi_formatDate(String(queuedAt).slice(0, 10));
-        }
-      }
-      if (!date) {
-        date = belle_yayoi_formatDate(new Date().toISOString().slice(0, 10));
+      const dateInfo = belle_yayoi_resolveTransactionDate(parsed, fiscalRange);
+      let date = dateInfo.dateYmdSlash;
+      if (dateInfo.dateRid) {
+        rid = dateInfo.dateRid;
+        fix = dateInfo.dateFix;
+        dtCode = dateInfo.dateDt;
+        Logger.log({ phase: "DATE_FALLBACK", file_id: fileId, original_date: dateInfo.original, resolved_date: date, dt_code: dtCode });
       }
 
       let gross = null;
@@ -310,6 +315,7 @@ function belle_exportYayoiCsvFallback(options) {
         fileId: fileId,
         fileName: fileName,
         fix: fix,
+        dtCode: dtCode,
         err: memoErr || errorCode
       });
 

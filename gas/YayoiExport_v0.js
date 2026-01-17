@@ -64,6 +64,71 @@ function belle_yayoi_trimTextShiftJis(text, maxBytes) {
   return belle_yayoi_trimShiftJis(String(text), maxBytes);
 }
 
+function belle_yayoi_isValidDateParts(year, month, day) {
+  if (!year || !month || !day) return false;
+  if (month < 1 || month > 12) return false;
+  const daysInMonth = [31, (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return day >= 1 && day <= daysInMonth[month - 1];
+}
+
+function belle_yayoi_parseYmd(dateStr) {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) return null;
+  const parts = String(dateStr).split("-");
+  const y = Number(parts[0]);
+  const m = Number(parts[1]);
+  const d = Number(parts[2]);
+  if (!belle_yayoi_isValidDateParts(y, m, d)) return null;
+  return { y: y, m: m, d: d, ymd: parts[0] + "-" + parts[1] + "-" + parts[2] };
+}
+
+function belle_yayoi_validateFiscalRange(startStr, endStr) {
+  const start = belle_yayoi_parseYmd(startStr);
+  const end = belle_yayoi_parseYmd(endStr);
+  if (!start || !end) return { ok: false, reason: "FISCAL_RANGE_NOT_CONFIGURED" };
+  if (start.y !== end.y) return { ok: false, reason: "FISCAL_YEAR_MISMATCH" };
+  if (start.ymd > end.ymd) return { ok: false, reason: "FISCAL_RANGE_NOT_CONFIGURED" };
+  return { ok: true, reason: "", start: start, end: end };
+}
+
+function belle_yayoi_resolveTransactionDate(parsed, fiscal) {
+  const result = { dateYmdSlash: "", dateFix: "", dateRid: "", dateDt: "", original: "" };
+  const fiscalEnd = fiscal.end.ymd;
+  const fiscalStart = fiscal.start.ymd;
+  const parsedDate = parsed && parsed.transaction_date ? String(parsed.transaction_date) : "";
+  const parsedParts = belle_yayoi_parseYmd(parsedDate);
+  if (!parsedParts) {
+    result.dateYmdSlash = belle_yayoi_formatDate(fiscalEnd);
+    result.dateFix = "誤った取引日";
+    result.dateRid = "DATE_FALLBACK";
+    result.dateDt = "NO_DATE";
+    return result;
+  }
+
+  result.original = parsedParts.ymd;
+  if (parsedParts.ymd < fiscalStart || parsedParts.ymd > fiscalEnd) {
+    const y = fiscal.start.y;
+    const mm = String(parsedParts.m).padStart(2, "0");
+    const dd = String(parsedParts.d).padStart(2, "0");
+    const replaced = y + "-" + mm + "-" + dd;
+    const replacedParts = belle_yayoi_parseYmd(replaced);
+    if (!replacedParts) {
+      result.dateYmdSlash = belle_yayoi_formatDate(fiscalEnd);
+      result.dateFix = "誤った取引日";
+      result.dateRid = "DATE_FALLBACK";
+      result.dateDt = "LEAP_ADJUST";
+      return result;
+    }
+    result.dateYmdSlash = belle_yayoi_formatDate(replacedParts.ymd);
+    result.dateFix = "誤った取引日";
+    result.dateRid = "DATE_FALLBACK";
+    result.dateDt = "OUT_OF_RANGE";
+    return result;
+  }
+
+  result.dateYmdSlash = belle_yayoi_formatDate(parsedParts.ymd);
+  return result;
+}
+
 function belle_yayoi_sanitizeFileName(input) {
   if (!input) return "";
   let s = String(input);
@@ -352,12 +417,12 @@ function belle_yayoi_buildFallbackMemo(params) {
   const fileName = belle_yayoi_sanitizeFileName(fileNameRaw);
   const fix = params.fix || "";
   const err = params.err || "";
-  const base = "BELLE|FBK=1|RID=" + reasonCode + "|FID=" + fileId;
   const errPart = err ? "|ERR=" + err : "";
+  const dtPart = params.dtCode ? "|DT=" + params.dtCode : "";
   const fnPart = fileName ? "|FN=" + fileName : "";
   const fidPart = "|FID=" + fileId;
   const fixPart = fix ? "FIX=" + fix + "|" : "";
-  const core = "BELLE|FBK=1|RID=" + reasonCode;
+  const core = "BELLE|FBK=1|RID=" + reasonCode + dtPart;
 
   let memo = fixPart + core + fnPart + errPart + fidPart;
   if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;

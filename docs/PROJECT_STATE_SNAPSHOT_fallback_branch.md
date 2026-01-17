@@ -100,6 +100,8 @@ Optional:
 ## 7. Export guards (code facts)
 - OCR_PENDING: queuedRemaining > 0
 - OCR_RETRYABLE_REMAINING: errorRetryableCount > 0
+- FISCAL_RANGE_NOT_CONFIGURED: fiscal dates missing or invalid format
+- FISCAL_YEAR_MISMATCH: fiscal start/end years do not match
 - Export targets: DONE + ERROR_FINAL (1 file = 1 row)
 - EXPORT_LOG updates only when CSV is created
 
@@ -127,5 +129,5 @@ Reasons:
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not referenced by code.
 
 ## 10. Memo format (V column)
-- Order: FIX (optional) -> BELLE|FBK=1|RID -> FN (optional) -> ERR (optional) -> FID (always last)
+- Order: FIX (optional) -> BELLE|FBK=1|RID -> DT (optional) -> FN (optional) -> ERR (optional) -> FID (always last)
 - FN is sanitized (replace "|", remove newlines, trim)
