@@ -10,11 +10,39 @@ function belle_chatwork_parseBool(value, defaultValue) {
   return defaultValue;
 }
 
+function belle_chatwork_previewValue_(value) {
+  try {
+    return JSON.stringify(value).slice(0, 200);
+  } catch (e) {
+    return String(value).slice(0, 200);
+  }
+}
+
+function belle_chatwork_requireString_(message, context) {
+  if (typeof message !== "string") {
+    throw new Error(
+      "CHATWORK_MESSAGE_NOT_STRING:" +
+        String(context || "UNKNOWN") +
+        ":type=" +
+        typeof message +
+        ":value=" +
+        belle_chatwork_previewValue_(message)
+    );
+  }
+  return message;
+}
+
 function belle_chatwork_buildPayload(message) {
-  return "body=" + encodeURIComponent(String(message || ""));
+  const msg = belle_chatwork_requireString_(message, "CHATWORK_MESSAGE");
+  return "body=" + encodeURIComponent(msg);
+}
+
+function belle_chatwork_buildLatestCsvMessage_(fileName) {
+  return "最新のcsvファイルです: " + String(fileName || "");
 }
 
 function belle_chatwork_sendMessage(message, opts) {
+  belle_chatwork_requireString_(message, "CHATWORK_MESSAGE");
   const token = opts && opts.token ? String(opts.token) : "";
   const roomId = opts && opts.roomId ? String(opts.roomId) : "";
   const url = "https://api.chatwork.com/v2/rooms/" + encodeURIComponent(roomId) + "/messages";
@@ -90,6 +118,7 @@ function belle_chatwork_selectLatestCsvMeta(items) {
 }
 
 function belle_chatwork_sendFile(message, fileBlob, opts) {
+  belle_chatwork_requireString_(message, "CHATWORK_FILE_MESSAGE");
   const token = opts && opts.token ? String(opts.token) : "";
   const roomId = opts && opts.roomId ? String(opts.roomId) : "";
   const url = "https://api.chatwork.com/v2/rooms/" + encodeURIComponent(roomId) + "/files";
@@ -97,7 +126,7 @@ function belle_chatwork_sendFile(message, fileBlob, opts) {
   const res = UrlFetchApp.fetch(url, {
     method: "post",
     payload: {
-      message: String(message || ""),
+      message: message,
       file: fileBlob
     },
     headers: {
@@ -154,18 +183,13 @@ function belle_chatwork_sendLatestCsv_test() {
 
   const latest = belle_chatwork_selectLatestCsvMeta(files);
   if (!latest) {
-    const msg = "???????CSV????????? (folderId=" + folderId + ")";
+    const msg = "出力フォルダにCSVがありませんでした (folderId=" + folderId + ")";
     const res = belle_chatwork_sendMessage(msg, { token: token, roomId: roomId });
     Logger.log(res);
     return res;
   }
 
-  const message = "???csv??????: " + latest.name;
-  const msgRes = belle_chatwork_sendMessage(message, { token: token, roomId: roomId });
-  Logger.log(msgRes);
-  if (!msgRes.ok) {
-    throw new Error("CHATWORK_MESSAGE_FAILED");
-  }
+  const message = belle_chatwork_buildLatestCsvMessage_(latest.name);
 
   const file = DriveApp.getFileById(latest.id);
   const fileRes = belle_chatwork_sendFile(message, file.getBlob(), { token: token, roomId: roomId });
@@ -174,7 +198,6 @@ function belle_chatwork_sendLatestCsv_test() {
     fileId: latest.id,
     fileName: latest.name,
     createdAt: latest.createdAt ? latest.createdAt.toISOString() : null,
-    messageStatus: msgRes.status,
     fileStatus: fileRes.status
   });
   if (!fileRes.ok) {

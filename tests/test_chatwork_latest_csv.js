@@ -22,5 +22,8 @@ expect(latest && latest.id === '3', 'should pick newest csv');
 const none = sandbox.belle_chatwork_selectLatestCsvMeta([{ id: '4', name: 'x.txt', mimeType: 'text/plain', createdAt: '2026-01-04T00:00:00Z' }]);
 expect(none === null, 'should return null when no csv');
 
-console.log('OK: test_chatwork_latest_csv');
+const msg = sandbox.belle_chatwork_buildLatestCsvMessage_('sample.csv');
+expect(typeof msg === 'string', 'message should be string');
+expect(msg.indexOf('最新のcsvファイルです') >= 0, 'message should contain jp text');
 
+console.log('OK: test_chatwork_latest_csv');
