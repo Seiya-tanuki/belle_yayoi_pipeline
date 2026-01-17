@@ -12,6 +12,7 @@
 2) OCR
 - belle_processQueueOnce: process QUEUED or ERROR_RETRYABLE rows
 - status transitions: QUEUED -> DONE, QUEUED -> ERROR_RETRYABLE -> DONE/ERROR_FINAL
+- invalid/empty OCR responses are treated as retryable and stored in error columns (not ocr_json)
 
 3) Export (manual only)
 - belle_exportYayoiCsvFallback (primary)
@@ -40,6 +41,9 @@
 ## OCR_RAW schema (latest)
 status, file_id, file_name, mime_type, drive_url, queued_at_iso, ocr_json, ocr_error,
 ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail
+Notes:
+- ocr_json is written only on successful OCR (valid JSON schema).
+- errors are stored in ocr_error / ocr_error_detail, and ocr_json is cleared for ERROR_RETRYABLE/ERROR_FINAL.
 
 ## Export rules (fallback)
 - Output targets: DONE + ERROR_FINAL

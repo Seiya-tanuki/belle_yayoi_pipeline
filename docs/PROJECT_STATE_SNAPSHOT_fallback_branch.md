@@ -32,6 +32,9 @@ Header used by queue/ocr/export:
 - ocr_next_retry_at_iso
 - ocr_error_code
 - ocr_error_detail
+Notes:
+- ocr_json is written only on successful OCR (valid JSON schema).
+- errors are stored in ocr_error / ocr_error_detail and ocr_json is cleared on ERROR_RETRYABLE/ERROR_FINAL.
 
 ### EXPORT_LOG
 - file_id

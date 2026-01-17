@@ -284,6 +284,9 @@ function belle_queue_ensureHeaderMap(sh, baseHeader, extraHeader) {
 function belle_ocr_classifyError(message) {
   const msg = String(message || "").toLowerCase();
   const retryable = [
+    "invalid_schema",
+    "empty_response",
+    "ocr output is not valid json",
     "timeout",
     "timed out",
     "rate limit",
@@ -316,7 +319,10 @@ function belle_ocr_classifyError(message) {
   }
   for (let i = 0; i < retryable.length; i++) {
     if (msg.indexOf(retryable[i]) >= 0) {
-      return { retryable: true, code: "RETRYABLE" };
+      const code = (msg.indexOf("invalid_schema") >= 0 || msg.indexOf("empty_response") >= 0 || msg.indexOf("ocr output is not valid json") >= 0)
+        ? "INVALID_SCHEMA"
+        : "RETRYABLE";
+      return { retryable: true, code: code };
     }
   }
   return { retryable: true, code: "RETRYABLE" };
@@ -525,6 +531,16 @@ function belle_processQueueOnce(options) {
         const MAX_CELL_CHARS = 45000;
         if (jsonStr.length > MAX_CELL_CHARS) {
           throw new Error("OCR JSON too long for single cell: " + jsonStr.length);
+        }
+        let parsed;
+        try {
+          parsed = JSON.parse(jsonStr);
+        } catch (e) {
+          throw new Error("INVALID_SCHEMA: PARSE_ERROR");
+        }
+        const validation = belle_ocr_validateSchema(parsed);
+        if (!validation.ok) {
+          throw new Error("INVALID_SCHEMA: " + validation.reason);
         }
         sh.getRange(sheetRow, headerMap["ocr_json"] + 1).setValue(jsonStr);
         sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue("");
