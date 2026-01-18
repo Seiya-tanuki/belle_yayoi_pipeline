@@ -116,9 +116,8 @@ function belle_chatwork_webhook_log_(obj) {
   }
 }
 
-function belle_chatwork_webhook_logEvent_(payload) {
+function belle_chatwork_webhook_logEvent_(payload, bodyPreview) {
   const eventType = payload && payload.webhook_event_type ? String(payload.webhook_event_type) : "";
-  const body = payload && payload.body ? String(payload.body) : "";
   belle_chatwork_webhook_log_({
     phase: "CHATWORK_WEBHOOK_EVENT",
     webhook_setting_id: payload && payload.webhook_setting_id,
@@ -127,7 +126,7 @@ function belle_chatwork_webhook_logEvent_(payload) {
     room_id: payload && payload.room_id,
     account_id: payload && payload.account_id,
     message_id: payload && payload.message_id,
-    body_preview: body ? body.slice(0, 200) : ""
+    body_preview: bodyPreview || ""
   });
 }
 
@@ -218,6 +217,7 @@ function belle_chatwork_webhook_handle_(e) {
   const extracted = belle_chatwork_webhook_extractBody_(payload);
   const rawBody = extracted.rawBody;
   const sanitizedBody = belle_chatwork_webhook_sanitizeBody_(rawBody);
+  const sanitizedPreview = belle_chatwork_webhook_truncate_(sanitizedBody, 200);
   belle_chatwork_webhook_log_({
     phase: "CHATWORK_WEBHOOK_BODY_CAPTURE",
     webhook_event_type: payload && payload.webhook_event_type,
@@ -227,11 +227,11 @@ function belle_chatwork_webhook_handle_(e) {
     body_length_raw: rawBody.length,
     body_length_sanitized: sanitizedBody.length,
     body_hash_sha256: belle_chatwork_webhook_hashSha256Hex_(rawBody),
-    body_preview: belle_chatwork_webhook_truncate_(sanitizedBody, 200),
+    body_preview: sanitizedPreview,
     sanitize_note: "removed_control_chars"
   });
 
-  belle_chatwork_webhook_logEvent_(payload);
+  belle_chatwork_webhook_logEvent_(payload, sanitizedPreview);
   return ContentService.createTextOutput("ok");
 }
 

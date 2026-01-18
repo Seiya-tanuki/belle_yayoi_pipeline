@@ -93,12 +93,13 @@ runWith(
         room_id: 123,
         account_id: 456,
         message_id: 789,
-        body: 'hello'
+        webhook_event: { body: 'hello' }
       })
     }
   }
 );
 const d = findPhase('CHATWORK_WEBHOOK_EVENT');
 expect(d && d.webhook_event_type === 'message_created', 'D: EVENT_LOG');
+expect(d && d.body_preview === 'hello', 'D: EVENT_BODY_PREVIEW');
 
 console.log('OK: test_chatwork_webhook');
