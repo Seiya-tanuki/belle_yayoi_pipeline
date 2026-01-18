@@ -19,6 +19,11 @@ const sandbox = {
     getScriptProperties: () => ({
       getProperty: (key) => sandbox.__props[key] || ''
     })
+  },
+  Utilities: {
+    DigestAlgorithm: { SHA_256: 'SHA_256' },
+    Charset: { UTF_8: 'UTF-8' },
+    computeDigest: () => new Array(32).fill(0)
   }
 };
 

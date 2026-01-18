@@ -28,6 +28,40 @@ function belle_chatwork_webhook_truncate_(text, maxLen) {
   return s.slice(0, maxLen) + "...(truncated)";
 }
 
+function belle_chatwork_webhook_sanitizeBody_(text) {
+  const s = String(text || "");
+  // Remove control characters that can break logs.
+  return s.replace(/[\u0000-\u001F\u007F]/g, "");
+}
+
+function belle_chatwork_webhook_hashSha256Hex_(text) {
+  const bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    String(text || ""),
+    Utilities.Charset.UTF_8
+  );
+  let out = "";
+  for (let i = 0; i < bytes.length; i++) {
+    const b = bytes[i] < 0 ? bytes[i] + 256 : bytes[i];
+    out += ("0" + b.toString(16)).slice(-2);
+  }
+  return out;
+}
+
+function belle_chatwork_webhook_extractBody_(payload) {
+  const ev = payload && payload.webhook_event ? payload.webhook_event : null;
+  if (ev && typeof ev.body === "string") {
+    return { rawBody: ev.body, bodySource: "webhook_event.body" };
+  }
+  if (ev && ev.message && typeof ev.message.body === "string") {
+    return { rawBody: ev.message.body, bodySource: "webhook_event.message.body" };
+  }
+  if (ev && ev.message && typeof ev.message.text === "string") {
+    return { rawBody: ev.message.text, bodySource: "webhook_event.message.text" };
+  }
+  return { rawBody: "", bodySource: "unknown" };
+}
+
 function belle_chatwork_webhook_ensureLogSheet_(ss) {
   const name = "WEBHOOK_LOG";
   let sheet = ss.getSheetByName(name);
@@ -180,6 +214,22 @@ function belle_chatwork_webhook_handle_(e) {
     });
     return ContentService.createTextOutput("ok");
   }
+
+  const extracted = belle_chatwork_webhook_extractBody_(payload);
+  const rawBody = extracted.rawBody;
+  const sanitizedBody = belle_chatwork_webhook_sanitizeBody_(rawBody);
+  belle_chatwork_webhook_log_({
+    phase: "CHATWORK_WEBHOOK_BODY_CAPTURE",
+    webhook_event_type: payload && payload.webhook_event_type,
+    body_source: extracted.bodySource,
+    event_keys: payload && payload.webhook_event ? Object.keys(payload.webhook_event) : [],
+    body_present: !!rawBody,
+    body_length_raw: rawBody.length,
+    body_length_sanitized: sanitizedBody.length,
+    body_hash_sha256: belle_chatwork_webhook_hashSha256Hex_(rawBody),
+    body_preview: belle_chatwork_webhook_truncate_(sanitizedBody, 200),
+    sanitize_note: "removed_control_chars"
+  });
 
   belle_chatwork_webhook_logEvent_(payload);
   return ContentService.createTextOutput("ok");
