@@ -88,8 +88,9 @@ function belle_exportYayoiCsvFallback(options) {
       return res;
     }
 
-    const baseHeader = ["status","file_id","file_name","mime_type","drive_url","queued_at_iso","ocr_json","ocr_error"];
-    const extraHeader = ["ocr_attempts","ocr_last_attempt_at_iso","ocr_next_retry_at_iso","ocr_error_code","ocr_error_detail"];
+    const headerAll = belle_getQueueHeader_fallback_v0_();
+    const baseHeader = headerAll.slice(0, 8);
+    const extraHeader = headerAll.slice(8);
     const lastRow = queue.getLastRow();
     if (lastRow < 2) {
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "NO_ROWS", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
