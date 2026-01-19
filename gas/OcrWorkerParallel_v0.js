@@ -23,8 +23,15 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   const props = PropertiesService.getScriptProperties();
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
   const ttlSeconds = belle_ocr_worker_resolveTtlSeconds_(props.getProperty("BELLE_OCR_LOCK_TTL_SECONDS"));
+  const lockMode = opts && opts.lockMode ? String(opts.lockMode) : "wait";
+  const lockWaitMs = Number((opts && opts.lockWaitMs) || "30000");
   const claimStart = Date.now();
-  const claim = belle_ocr_claimNextRow_fallback_v0_({ workerId: workerId, ttlSeconds: ttlSeconds });
+  const claim = belle_ocr_claimNextRow_fallback_v0_({
+    workerId: workerId,
+    ttlSeconds: ttlSeconds,
+    lockMode: lockMode,
+    lockWaitMs: lockWaitMs
+  });
   const claimElapsedMs = Date.now() - claimStart;
   if (!claim || claim.claimed !== true) {
     return {
@@ -228,6 +235,8 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
   const maxItemsValue = opts && opts.maxItems !== undefined ? opts.maxItems : props.getProperty("BELLE_OCR_WORKER_MAX_ITEMS");
   const maxItems = belle_ocr_worker_resolveMaxItems_(maxItemsValue);
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
+  const lockMode = opts && opts.lockMode ? String(opts.lockMode) : "wait";
+  const lockWaitMs = Number((opts && opts.lockWaitMs) || "30000");
   const summary = {
     phase: "OCR_WORKER_SUMMARY",
     ok: true,
@@ -238,11 +247,15 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
     claimedRowIndex: null,
     claimedFileId: "",
     claimedStatusBefore: "",
-    claimElapsedMs: 0
+    claimElapsedMs: 0,
+    lastReason: ""
   };
   for (let i = 0; i < maxItems; i++) {
-    const r = belle_ocr_workerOnce_fallback_v0_({ workerId: workerId });
-    if (!r || r.processed === 0) break;
+    const r = belle_ocr_workerOnce_fallback_v0_({ workerId: workerId, lockMode: lockMode, lockWaitMs: lockWaitMs });
+    if (!r || r.processed === 0) {
+      summary.lastReason = r && r.reason ? r.reason : "NO_TARGET";
+      break;
+    }
     summary.processed++;
     if (r.outcome === "DONE") summary.done++;
     else summary.errors++;

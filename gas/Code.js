@@ -692,7 +692,17 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
   let lock;
   try {
     lock = LockService.getScriptLock();
-    lock.waitLock(30000);
+    const lockMode = opts && opts.lockMode ? String(opts.lockMode) : "wait";
+    const waitMs = Number((opts && opts.lockWaitMs) || "30000");
+    if (lockMode === "try") {
+      if (!lock.tryLock(waitMs)) {
+        const res = { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "LOCK_BUSY" };
+        Logger.log(res);
+        return res;
+      }
+    } else {
+      lock.waitLock(waitMs);
+    }
   } catch (e) {
     const res = { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "LOCK_BUSY" };
     Logger.log(res);
@@ -910,6 +920,7 @@ function belle_runPipelineBatch_v0() {
   const maxOcrItems = Number(props.getProperty("BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH") || "5");
   const doQueue = belle_parseBool(props.getProperty("BELLE_RUN_DO_QUEUE"), true);
   const doOcr = belle_parseBool(props.getProperty("BELLE_RUN_DO_OCR"), true);
+  const parallelEnabled = belle_parseBool(props.getProperty("BELLE_OCR_PARALLEL_ENABLED"), false);
 
   const startedAt = new Date().toISOString();
   const startMs = Date.now();
@@ -958,7 +969,11 @@ function belle_runPipelineBatch_v0() {
       summary.queuedAdded += q && q.queued ? q.queued : 0;
     }
 
-    if (doOcr && hasBudget()) {
+    if (doOcr && parallelEnabled) {
+      Logger.log({ phase: "RUN_GUARD", ok: true, reason: "OCR_PARALLEL_ENABLED" });
+    }
+
+    if (doOcr && !parallelEnabled && hasBudget()) {
       let loops = 0;
       while (loops < maxOcrItems && hasBudget()) {
         const r = belle_processQueueOnce({ skipLock: true });

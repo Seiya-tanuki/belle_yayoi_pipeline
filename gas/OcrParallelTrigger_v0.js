@@ -28,6 +28,15 @@ function belle_ocr_parallel_getTriggersByIds_(ids) {
   return found;
 }
 
+function belle_ocr_parallel_getTriggersByHandler_(handlerName) {
+  const triggers = ScriptApp.getProjectTriggers();
+  const out = [];
+  for (let i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === handlerName) out.push(triggers[i]);
+  }
+  return out;
+}
+
 function belle_ocr_workerTick_fallback_v0() {
   const props = PropertiesService.getScriptProperties();
   const enabled = belle_parseBool(props.getProperty("BELLE_OCR_PARALLEL_ENABLED"), false);
@@ -38,7 +47,12 @@ function belle_ocr_workerTick_fallback_v0() {
   }
 
   const workerId = Utilities.getUuid();
-  const result = belle_ocr_workerLoop_fallback_v0_({ workerId: workerId, maxItems: 1 });
+  const result = belle_ocr_workerLoop_fallback_v0_({ workerId: workerId, maxItems: 1, lockMode: "try", lockWaitMs: 500 });
+  if (result && result.lastReason === "LOCK_BUSY") {
+    const guard = { phase: "OCR_PARALLEL_GUARD", ok: true, reason: "LOCK_BUSY" };
+    Logger.log(guard);
+    return guard;
+  }
   const res = {
     phase: "OCR_PARALLEL_TICK",
     workerId: workerId,
@@ -70,11 +84,18 @@ function belle_ocr_parallel_enable_fallback_v0() {
     ids = [];
   }
 
-  const existing = belle_ocr_parallel_getTriggersByIds_(ids);
-  if (existing.length > 0) {
-    const res = { phase: "OCR_PARALLEL_ENABLE", ok: true, reason: "ALREADY_ENABLED", requested: requested, existing: existing.length };
-    Logger.log(res);
-    return res;
+  const handlerName = "belle_ocr_workerTick_fallback_v0";
+  const existingById = belle_ocr_parallel_getTriggersByIds_(ids);
+  const existingByHandler = belle_ocr_parallel_getTriggersByHandler_(handlerName);
+  let deletedOld = 0;
+  for (let i = 0; i < existingById.length; i++) {
+    ScriptApp.deleteTrigger(existingById[i]);
+    deletedOld++;
+  }
+  for (let i = 0; i < existingByHandler.length; i++) {
+    if (existingById.indexOf(existingByHandler[i]) >= 0) continue;
+    ScriptApp.deleteTrigger(existingByHandler[i]);
+    deletedOld++;
   }
 
   const triggerIds = [];
@@ -84,7 +105,7 @@ function belle_ocr_parallel_enable_fallback_v0() {
   }
   props.setProperty("BELLE_OCR_PARALLEL_TRIGGER_IDS", JSON.stringify(triggerIds));
   props.setProperty("BELLE_OCR_PARALLEL_ENABLED", "true");
-  const res = { phase: "OCR_PARALLEL_ENABLE", ok: true, tag: tag, requested: requested, created: triggerIds.length, triggerIds: triggerIds };
+  const res = { phase: "OCR_PARALLEL_ENABLE", ok: true, tag: tag, requested: requested, deletedOld: deletedOld, createdNew: triggerIds.length, triggerIds: triggerIds };
   Logger.log(res);
   return res;
 }
@@ -100,15 +121,24 @@ function belle_ocr_parallel_disable_fallback_v0() {
     ids = [];
   }
 
+  const handlerName = "belle_ocr_workerTick_fallback_v0";
   const triggers = belle_ocr_parallel_getTriggersByIds_(ids);
   let deleted = 0;
   for (let i = 0; i < triggers.length; i++) {
     ScriptApp.deleteTrigger(triggers[i]);
     deleted++;
   }
+  const missing = ids.length - triggers.length;
+  if (ids.length === 0) {
+    const byHandler = belle_ocr_parallel_getTriggersByHandler_(handlerName);
+    for (let i = 0; i < byHandler.length; i++) {
+      ScriptApp.deleteTrigger(byHandler[i]);
+      deleted++;
+    }
+  }
   props.deleteProperty("BELLE_OCR_PARALLEL_TRIGGER_IDS");
   props.setProperty("BELLE_OCR_PARALLEL_ENABLED", "false");
-  const res = { phase: "OCR_PARALLEL_DISABLE", ok: true, deleted: deleted };
+  const res = { phase: "OCR_PARALLEL_DISABLE", ok: true, deleted: deleted, missing: missing };
   Logger.log(res);
   return res;
 }
@@ -121,6 +151,34 @@ function belle_ocr_parallel_enable_fallback_v0_test() {
 
 function belle_ocr_parallel_disable_fallback_v0_test() {
   const res = belle_ocr_parallel_disable_fallback_v0();
+  Logger.log(res);
+  return res;
+}
+
+function belle_ocr_parallel_status_fallback_v0_test() {
+  const props = PropertiesService.getScriptProperties();
+  const enabled = belle_parseBool(props.getProperty("BELLE_OCR_PARALLEL_ENABLED"), false);
+  const workerCount = belle_ocr_parallel_getWorkerCount_(props);
+  const idsRaw = props.getProperty("BELLE_OCR_PARALLEL_TRIGGER_IDS") || "[]";
+  let ids = [];
+  try {
+    ids = JSON.parse(idsRaw);
+    if (!Array.isArray(ids)) ids = [];
+  } catch (e) {
+    ids = [];
+  }
+  const handlerName = "belle_ocr_workerTick_fallback_v0";
+  const byId = belle_ocr_parallel_getTriggersByIds_(ids);
+  const byHandler = belle_ocr_parallel_getTriggersByHandler_(handlerName);
+  const res = {
+    phase: "OCR_PARALLEL_STATUS",
+    enabled: enabled,
+    workerCount: workerCount,
+    triggerIds: ids,
+    triggerIdCount: ids.length,
+    existingById: byId.length,
+    handlerMatches: byHandler.length
+  };
   Logger.log(res);
   return res;
 }

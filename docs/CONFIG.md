@@ -27,6 +27,7 @@
 - BELLE_OCR_PARALLEL_ENABLED (default: false)
 - BELLE_OCR_PARALLEL_WORKERS (default: 1)
 - BELLE_OCR_PARALLEL_TRIGGER_TAG (default: BELLE_OCR_PARALLEL_V0)
+  - When true, runner OCR is guarded with RUN_GUARD: OCR_PARALLEL_ENABLED.
 - BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
   - The value must be a plain label (no extra description).
 - BELLE_FALLBACK_APPEND_INVOICE_SUFFIX (default: true)

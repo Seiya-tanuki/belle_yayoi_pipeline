@@ -36,7 +36,7 @@
 14. Destructive reset (admin only): use BELLE_RESET_TOKEN and belle_resetSpreadsheetToInitialState_fallback_v0_test (see docs/RESET_GUIDE_fallback_v0.md).
 15. OCR claim (phase1): added PROCESSING and lock columns (ocr_lock_owner, ocr_lock_until_iso, ocr_processing_started_at_iso). Claim function only (no OCR); TTL expiry makes row claimable again.
 16. OCR worker (phase2): belle_ocr_workerLoop_fallback_v0_test runs claim -> OCR -> writeback (locks only during claim/update), worker max items via BELLE_OCR_WORKER_MAX_ITEMS, TTL via BELLE_OCR_LOCK_TTL_SECONDS. Existing runner/processQueueOnce are unchanged.
-17. OCR parallel triggers (phase4): use belle_ocr_parallel_enable_fallback_v0 / belle_ocr_parallel_disable_fallback_v0 to create/delete N time-based triggers for belle_ocr_workerTick_fallback_v0. BELLE_OCR_PARALLEL_ENABLED gates tick execution.
+17. OCR parallel triggers (phase4): use belle_ocr_parallel_enable_fallback_v0 / belle_ocr_parallel_disable_fallback_v0 to create/delete N time-based triggers for belle_ocr_workerTick_fallback_v0. BELLE_OCR_PARALLEL_ENABLED gates tick execution and runner OCR is skipped with RUN_GUARD.
 
 ## 3. Runner (A plan)
 - belle_runPipelineBatch_v0 runs queue -> OCR only.
