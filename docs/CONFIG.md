@@ -31,6 +31,8 @@
 - BELLE_FISCAL_START_DATE (format: YYYY-MM-DD)
 - BELLE_FISCAL_END_DATE (format: YYYY-MM-DD)
   - Required for export; years must match and range must be valid.
+- BELLE_ERROR_FINAL_TEKIYO_LABEL (default: BELLE)
+  - Applies to ERROR_FINAL dummy entries only.
 - BELLE_RESET_TOKEN (admin-only)
   - Must match the expected token in code to run destructive reset.
 - BELLE_CHATWORK_NOTIFY_ENABLED (default: false)

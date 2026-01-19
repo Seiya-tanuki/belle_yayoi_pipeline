@@ -1,4 +1,4 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const vm = require('vm');
 
 const code = fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
@@ -41,6 +41,16 @@ expect(memo2.startsWith('FIX='), 'FIX should be prefix');
 expect(memo2.includes('|ERR=ERROR_FINAL'), 'ERR should exist');
 expect(memo2.endsWith('FID=xyz789'), 'FID should be last');
 
+const memo4 = build({
+  reasonCode: 'OCR_ERROR_FINAL',
+  fileId: 'err001',
+  fileName: 'e.pdf',
+  fix: '全データ確認',
+  dm: true
+});
+expect(memo4.includes('RID=OCR_ERROR_FINAL|DM=1'), 'DM should follow RID');
+expect(memo4.startsWith('FIX=全データ確認|'), 'FIX should be override');
+
 const longFix = 'X'.repeat(200);
 const longName = 'Y'.repeat(200);
 const memo3 = build({
@@ -55,3 +65,4 @@ expect(memo3.includes('RID=UNUSUAL_FORMAT'), 'RID should be preserved');
 expect(memo3.includes('FID='), 'FID should be preserved');
 
 console.log('OK: test_memo_format');
+

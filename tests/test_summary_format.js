@@ -30,5 +30,14 @@ if (!summaryLong.includes(regNo)) {
   throw new Error('registration_number truncated in long summary: ' + summaryLong);
 }
 
-console.log('OK: summary includes full registration_number');
+const summaryLabel = sandbox.belle_yayoi_buildSummaryWithLabel(null, 'DUMMY');
+if (summaryLabel !== 'DUMMY') {
+  throw new Error('label summary mismatch: ' + summaryLabel);
+}
 
+const summaryLabelReg = sandbox.belle_yayoi_buildSummaryWithLabel(parsedLong, 'DUMMY');
+if (!summaryLabelReg.includes('DUMMY') || !summaryLabelReg.includes(regNo)) {
+  throw new Error('label summary missing reg: ' + summaryLabelReg);
+}
+
+console.log('OK: summary includes full registration_number');

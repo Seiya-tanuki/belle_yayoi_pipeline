@@ -20,7 +20,7 @@
    - OCR_PENDING (QUEUED remains)
    - OCR_RETRYABLE_REMAINING (ERROR_RETRYABLE remains)
 8. Summary format: "merchant / registration_number" (item is not used). If regno is missing, use merchant only. Regno is never truncated. Optional trim: 120 Shift-JIS bytes, preserve regno.
-9. V-column memo order: FIX (optional) -> BELLE|FBK=1|RID -> DT (optional) -> FN (optional) -> ERR (optional) -> FID (always last). FN is sanitized (replace "|", remove newlines, trim).
+9. V-column memo order: FIX (optional) -> BELLE|FBK=1|RID -> DM (ERROR_FINAL only) -> DT (optional) -> FN (optional) -> ERR (optional) -> FID (always last). FN is sanitized (replace "|", remove newlines, trim).
 10. Tax rate inference priority:
    - tax_rate_printed
    - receipt_total_jpy + tax_total_jpy (tolerance 1 yen)

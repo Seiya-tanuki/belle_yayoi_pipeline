@@ -1,4 +1,4 @@
-// @ts-check
+﻿// @ts-check
 
 // NOTE: Keep comments ASCII only.
 
@@ -66,6 +66,7 @@ function belle_exportYayoiCsvFallback(options) {
   const appendInvoiceSuffix = belle_parseBool(props.getProperty("BELLE_FALLBACK_APPEND_INVOICE_SUFFIX"), true);
   // Default label must be a plain value (no extra description).
   const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "対象外");
+  const errorFinalTekiyoLabel = String(props.getProperty("BELLE_ERROR_FINAL_TEKIYO_LABEL") || "BELLE");
   const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
   const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
   const skipLogSheetName = belle_getSkipLogSheetName(props);
@@ -272,6 +273,7 @@ function belle_exportYayoiCsvFallback(options) {
       let rid = "OK";
       let fix = "";
       let dtCode = "";
+      let dmFlag = false;
       if (status === "ERROR_FINAL") {
         rid = "OCR_ERROR_FINAL";
         fix = "OCRエラー要確認";
@@ -285,7 +287,15 @@ function belle_exportYayoiCsvFallback(options) {
         }
       }
 
-      const summary = belle_yayoi_buildSummary(parsed);
+      if (status === "ERROR_FINAL") {
+        fix = "全データ確認";
+        dmFlag = true;
+      }
+
+      let summary = belle_yayoi_buildSummary(parsed);
+      if (status === "ERROR_FINAL") {
+        summary = belle_yayoi_buildSummaryWithLabel(parsed, errorFinalTekiyoLabel);
+      }
       Logger.log({ phase: "TAX_RATE_METHOD", file_id: fileId, method: rateInfo.method || "UNKNOWN", reason: rateInfo.reason || "" });
 
       const dateInfo = belle_yayoi_resolveTransactionDate(parsed, fiscalRange);
@@ -316,7 +326,8 @@ function belle_exportYayoiCsvFallback(options) {
         fileName: fileName,
         fix: fix,
         dtCode: dtCode,
-        err: memoErr || errorCode
+        err: memoErr || errorCode,
+        dm: dmFlag
       });
 
       const row25 = belle_yayoi_buildRow({
@@ -390,3 +401,6 @@ function belle_exportYayoiCsvFromReview(options) {
 function belle_exportYayoiCsvFromReview_test() {
   return belle_exportYayoiCsvFallback({});
 }
+
+
+

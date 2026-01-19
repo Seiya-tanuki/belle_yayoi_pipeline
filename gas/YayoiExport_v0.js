@@ -398,6 +398,13 @@ function belle_yayoi_buildSummary(parsed) {
   return belle_yayoi_trimTextShiftJis(merchant, 120);
 }
 
+function belle_yayoi_buildSummaryWithLabel(parsed, label) {
+  const merchant = label ? String(label) : "BELLE";
+  const reg = belle_yayoi_getRegistrationNumber(parsed);
+  if (reg) return belle_yayoi_trimTekyoPreserveRegNo(merchant, reg, 120);
+  return belle_yayoi_trimTextShiftJis(merchant, 120);
+}
+
 function belle_yayoi_buildFallbackFixText(reasonCodes) {
   const codes = String(reasonCodes || "").split(";").filter(Boolean);
   if (codes.indexOf("UNUSUAL_FORMAT") >= 0) return "明細合計不一致";
@@ -419,10 +426,11 @@ function belle_yayoi_buildFallbackMemo(params) {
   const err = params.err || "";
   const errPart = err ? "|ERR=" + err : "";
   const dtPart = params.dtCode ? "|DT=" + params.dtCode : "";
+  const dmPart = params.dm ? "|DM=1" : "";
   const fnPart = fileName ? "|FN=" + fileName : "";
   const fidPart = "|FID=" + fileId;
   const fixPart = fix ? "FIX=" + fix + "|" : "";
-  const core = "BELLE|FBK=1|RID=" + reasonCode + dtPart;
+  const core = "BELLE|FBK=1|RID=" + reasonCode + dmPart + dtPart;
 
   let memo = fixPart + core + fnPart + errPart + fidPart;
   if (belle_yayoi_shiftJisBytes(memo) <= 180) return memo;
