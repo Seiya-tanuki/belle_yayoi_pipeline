@@ -24,9 +24,9 @@
 10. Tax rate inference priority:
    - tax_rate_printed
    - receipt_total_jpy + tax_total_jpy (tolerance 1 yen)
-   - line_items description tax (内消費税等/うち消費税 etc)
+   - line_items description tax (冁E��費税筁EぁE��消費稁Eetc)
    - unknown -> RID=TAX_UNKNOWN or RID=MULTI_RATE
-11. 8% tax kubun uses "課対仕入込軽減8%" for 2019-10-01 and later (Yayoi Kaikei Next import format).
+11. 8% tax kubun uses "課対仕�E込軽渁E%" for 2019-10-01 and later (Yayoi Kaikei Next import format).
 12. overall_issues with only MISSING_TAX_INFO is treated as benign when tax rate is already confirmed (no FIX).
 13. Date fallback (fiscal year 01/01-12/31):
    - No/invalid date -> use BELLE_FISCAL_END_DATE, RID=DATE_FALLBACK, DT=NO_DATE, FIX=誤った取引日
@@ -36,7 +36,7 @@
 14. Destructive reset (admin only): use BELLE_RESET_TOKEN and belle_resetSpreadsheetToInitialState_fallback_v0_test (see docs/RESET_GUIDE_fallback_v0.md).
 15. OCR claim (phase1): added PROCESSING and lock columns (ocr_lock_owner, ocr_lock_until_iso, ocr_processing_started_at_iso). Claim function only (no OCR); TTL expiry makes row claimable again.
 16. OCR worker (phase2): belle_ocr_workerLoop_fallback_v0_test runs claim -> OCR -> writeback (locks only during claim/update), worker max items via BELLE_OCR_WORKER_MAX_ITEMS, TTL via BELLE_OCR_LOCK_TTL_SECONDS. Existing runner/processQueueOnce are unchanged.
-17. OCR parallel triggers (phase4): use belle_ocr_parallel_enable_fallback_v0 / belle_ocr_parallel_disable_fallback_v0 to create/delete N time-based triggers for belle_ocr_workerTick_fallback_v0. BELLE_OCR_PARALLEL_ENABLED gates tick execution and runner OCR is skipped with RUN_GUARD.
+17. OCR parallel triggers (phase4): use belle_ocr_parallel_enable_fallback_v0 / belle_ocr_parallel_disable_fallback_v0 to create/delete N time-based triggers for belle_ocr_workerTick_fallback_v0. BELLE_OCR_PARALLEL_ENABLED gates tick execution and runner OCR is skipped with RUN_GUARD. Disable removes triggers only; enabled flag is unchanged.
 18. OCR parallel tuning (phase6): claim scans at most BELLE_OCR_CLAIM_SCAN_MAX_ROWS with round-robin cursor (BELLE_OCR_CLAIM_CURSOR). PERF_LOG is written to the integrations sheet when BELLE_INTEGRATIONS_SHEET_ID is set. Recommended start: workers=2, tick=1 minute; if LOCK_BUSY or 503 increases, reduce workers or extend interval.
 
 ## 3. Runner (A plan)

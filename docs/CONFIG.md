@@ -1,4 +1,4 @@
-﻿# CONFIG
+# CONFIG
 
 ## Script Properties (required)
 - BELLE_SHEET_ID
@@ -30,12 +30,12 @@
 - BELLE_OCR_CLAIM_CURSOR (auto-managed; do not set manually)
 - BELLE_OCR_PARALLEL_ENABLED (default: false)
 - BELLE_OCR_PARALLEL_WORKERS (default: 1)
-- BELLE_OCR_PARALLEL_TRIGGER_TAG (default: BELLE_OCR_PARALLEL_V0)
+- BELLE_OCR_PARALLEL_TRIGGER_TAG (default: BELLE_OCR_PARALLEL_V0)\r\n  - disable only removes triggers; BELLE_OCR_PARALLEL_ENABLED is not changed.
   - When true, runner OCR is guarded with RUN_GUARD: OCR_PARALLEL_ENABLED.
-- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
+- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: �ΏۊO)
   - The value must be a plain label (no extra description).
 - BELLE_FALLBACK_APPEND_INVOICE_SUFFIX (default: true)
-  - If false, do not append "適格" to tax kubun.
+  - If false, do not append "�K�i" to tax kubun.
 - BELLE_FISCAL_START_DATE (format: YYYY-MM-DD)
 - BELLE_FISCAL_END_DATE (format: YYYY-MM-DD)
   - Required for export; years must match and range must be valid.

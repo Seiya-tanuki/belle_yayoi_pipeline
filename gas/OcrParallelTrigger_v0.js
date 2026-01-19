@@ -119,6 +119,7 @@ function belle_ocr_parallel_enable_fallback_v0() {
 
 function belle_ocr_parallel_disable_fallback_v0() {
   const props = PropertiesService.getScriptProperties();
+  const enabledBefore = belle_parseBool(props.getProperty("BELLE_OCR_PARALLEL_ENABLED"), false);
   const idsRaw = props.getProperty("BELLE_OCR_PARALLEL_TRIGGER_IDS") || "[]";
   let ids = [];
   try {
@@ -130,6 +131,7 @@ function belle_ocr_parallel_disable_fallback_v0() {
 
   const handlerName = "belle_ocr_workerTick_fallback_v0";
   const triggers = belle_ocr_parallel_getTriggersByIds_(ids);
+  const existingByHandler = ids.length === 0 ? belle_ocr_parallel_getTriggersByHandler_(handlerName) : [];
   let deleted = 0;
   for (let i = 0; i < triggers.length; i++) {
     ScriptApp.deleteTrigger(triggers[i]);
@@ -137,15 +139,21 @@ function belle_ocr_parallel_disable_fallback_v0() {
   }
   const missing = ids.length - triggers.length;
   if (ids.length === 0) {
-    const byHandler = belle_ocr_parallel_getTriggersByHandler_(handlerName);
-    for (let i = 0; i < byHandler.length; i++) {
-      ScriptApp.deleteTrigger(byHandler[i]);
+    for (let i = 0; i < existingByHandler.length; i++) {
+      ScriptApp.deleteTrigger(existingByHandler[i]);
       deleted++;
     }
   }
-  props.deleteProperty("BELLE_OCR_PARALLEL_TRIGGER_IDS");
-  props.setProperty("BELLE_OCR_PARALLEL_ENABLED", "false");
-  const res = { phase: "OCR_PARALLEL_DISABLE", ok: true, deleted: deleted, missing: missing };
+  const existed = triggers.length + existingByHandler.length;
+  const res = {
+    phase: "OCR_PARALLEL_DISABLE",
+    ok: true,
+    deleted: deleted,
+    missing: missing,
+    existed: existed,
+    enabledBefore: enabledBefore,
+    note: "enabled_unchanged"
+  };
   Logger.log(res);
   return res;
 }
