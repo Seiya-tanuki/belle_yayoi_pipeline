@@ -371,6 +371,31 @@ function belle_ocr_classifyError(message) {
   return { retryable: true, code: "RETRYABLE" };
 }
 
+function belle_ocr_buildStaleRecovery_(row, headerMap, nowMs) {
+  const status = String(row[headerMap["status"]] || "");
+  if (status !== "PROCESSING") return null;
+  const lockUntil = String(row[headerMap["ocr_lock_until_iso"]] || "");
+  if (lockUntil) {
+    const t = Date.parse(lockUntil);
+    if (!isNaN(t) && t > nowMs) return null;
+  }
+  const owner = String(row[headerMap["ocr_lock_owner"]] || "");
+  const started = String(row[headerMap["ocr_processing_started_at_iso"]] || "");
+  const detail = {
+    previous_owner: owner,
+    lock_until_iso: lockUntil,
+    processing_started_at_iso: started
+  };
+  return {
+    statusOut: "ERROR_RETRYABLE",
+    errorCode: "WORKER_STALE_LOCK",
+    errorMessage: "WORKER_STALE_LOCK",
+    errorDetail: JSON.stringify(detail),
+    nextRetryIso: "",
+    clearLocks: true
+  };
+}
+
 function belle_configWarnOnce(key, detail) {
   try {
     const cache = CacheService.getScriptCache();
@@ -699,6 +724,31 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
     const values = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
     const nowMs = Date.now();
     const nowIso = new Date(nowMs).toISOString();
+
+    const staleFixed = [];
+    for (let i = 0; i < values.length; i++) {
+      const row = values[i];
+      const fileId = String(row[headerMap["file_id"]] || "");
+      if (!fileId) continue;
+      const recovery = belle_ocr_buildStaleRecovery_(row, headerMap, nowMs);
+      if (!recovery) continue;
+      const sheetRow = i + 2;
+      const detail = String(recovery.errorDetail || "").slice(0, 500);
+      sh.getRange(sheetRow, headerMap["status"] + 1).setValue(recovery.statusOut);
+      sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue(String(recovery.errorMessage || ""));
+      sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue(String(recovery.errorCode || ""));
+      sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue(detail);
+      sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+      if (recovery.clearLocks) {
+        sh.getRange(sheetRow, headerMap["ocr_lock_owner"] + 1).setValue("");
+        sh.getRange(sheetRow, headerMap["ocr_lock_until_iso"] + 1).setValue("");
+        sh.getRange(sheetRow, headerMap["ocr_processing_started_at_iso"] + 1).setValue("");
+      }
+      staleFixed.push(fileId);
+    }
+    if (staleFixed.length > 0) {
+      Logger.log({ phase: "OCR_REAP_STALE", fixed: staleFixed.length, sampleFileIds: staleFixed.slice(0, 5) });
+    }
 
     function isLockExpired(row) {
       const until = String(row[headerMap["ocr_lock_until_iso"]] || "");
