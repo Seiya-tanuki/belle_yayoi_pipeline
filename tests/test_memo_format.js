@@ -42,14 +42,16 @@ expect(memo2.includes('|ERR=ERROR_FINAL'), 'ERR should exist');
 expect(memo2.endsWith('FID=xyz789'), 'FID should be last');
 
 const memo4 = build({
-  reasonCode: 'OCR_ERROR_FINAL',
+  reasonCode: 'DATE_FALLBACK',
   fileId: 'err001',
   fileName: 'e.pdf',
-  fix: '全データ確認',
+  fix: '誤った取引日',
+  dtCode: 'NO_DATE',
   dm: true
 });
 expect(memo4.includes('RID=OCR_ERROR_FINAL|DM=1'), 'DM should follow RID');
 expect(memo4.startsWith('FIX=全データ確認|'), 'FIX should be override');
+expect(memo4.includes('|DT=NO_DATE'), 'DT should remain');
 
 const longFix = 'X'.repeat(200);
 const longName = 'Y'.repeat(200);

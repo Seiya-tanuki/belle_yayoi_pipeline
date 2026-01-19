@@ -418,15 +418,20 @@ function belle_yayoi_buildFallbackFixText(reasonCodes) {
 }
 
 function belle_yayoi_buildFallbackMemo(params) {
-  const reasonCode = params.reasonCode || "UNKNOWN";
+  let reasonCode = params.reasonCode || "UNKNOWN";
   const fileId = params.fileId || "";
   const fileNameRaw = params.fileName || "";
   const fileName = belle_yayoi_sanitizeFileName(fileNameRaw);
-  const fix = params.fix || "";
+  let fix = params.fix || "";
   const err = params.err || "";
+  const dmFlag = params.dm === true;
+  if (dmFlag) {
+    reasonCode = "OCR_ERROR_FINAL";
+    fix = "全データ確認";
+  }
   const errPart = err ? "|ERR=" + err : "";
   const dtPart = params.dtCode ? "|DT=" + params.dtCode : "";
-  const dmPart = params.dm ? "|DM=1" : "";
+  const dmPart = dmFlag ? "|DM=1" : "";
   const fnPart = fileName ? "|FN=" + fileName : "";
   const fidPart = "|FID=" + fileId;
   const fixPart = fix ? "FIX=" + fix + "|" : "";

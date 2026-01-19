@@ -306,6 +306,10 @@ function belle_exportYayoiCsvFallback(options) {
         dtCode = dateInfo.dateDt;
         Logger.log({ phase: "DATE_FALLBACK", file_id: fileId, original_date: dateInfo.original, resolved_date: date, dt_code: dtCode });
       }
+      if (dmFlag) {
+        rid = "OCR_ERROR_FINAL";
+        fix = "全データ確認";
+      }
 
       let gross = null;
       if (parsed && parsed.receipt_total_jpy !== null && parsed.receipt_total_jpy !== undefined) {
