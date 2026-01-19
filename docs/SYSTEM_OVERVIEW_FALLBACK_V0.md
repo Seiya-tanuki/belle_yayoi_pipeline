@@ -26,6 +26,7 @@
 - EXPORT_LOG: system-only (dedupe and audit)
   - Note: legacy sheet name IMPORT_LOG must be renamed manually before export.
 - EXPORT_SKIP_LOG: system-only (skipped reasons)
+- PERF_LOG (integrations sheet): system-only (OCR worker metrics; optional)
 - Review sheets are not used in fallback-v0.
 
 ## Queue sheet name resolution order
@@ -40,18 +41,20 @@
 
 ## OCR_RAW schema (latest)
 status, file_id, file_name, mime_type, drive_url, queued_at_iso, ocr_json, ocr_error,
-ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail
+ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail,
+ocr_lock_owner, ocr_lock_until_iso, ocr_processing_started_at_iso
 Notes:
 - ocr_json is written only on successful OCR (valid JSON schema).
 - errors are stored in ocr_error / ocr_error_detail, and ocr_json is cleared for ERROR_RETRYABLE/ERROR_FINAL.
+- lock columns are used by parallel OCR workers; stale locks are reaped back to ERROR_RETRYABLE.
 
 ## Export rules (fallback)
 - Output targets: DONE + ERROR_FINAL
 - 1 file = 1 row (no multi-rate split)
-- Debit/credit default: 借方=仮払金, 貸方=現金 (belle_yayoi_buildRow)
-- Debit tax default: BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
+- Debit/credit default: 借方=仮払��, 貸方=現釁E(belle_yayoi_buildRow)
+- Debit tax default: BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象夁E
 
-## Summary (摘要)
+## Summary (摘要E
 - Format: "merchant / registration_number"
 - merchant missing -> "BELLE"
 - item is not used
@@ -59,7 +62,7 @@ Notes:
 - If too long, merchant is trimmed to preserve registration_number (Shift-JIS 120 bytes)
 
 ## Memo format (V column)
-- Order: FIX (optional) -> BELLE|FBK=1|RID -> DT (optional) -> FN (optional) -> ERR (optional) -> FID (always last)
+- Order: FIX (optional) -> BELLE|FBK=1|RID -> DM (ERROR_FINAL only) -> DT (optional) -> FN (optional) -> ERR (optional) -> FID (always last)
 - FN is sanitized (replace "|", remove newlines, trim)
 - Trim rule: Shift-JIS 180 bytes, keep FIX + RID + DT + FN + ERR + FID in that order
 
@@ -74,24 +77,29 @@ Notes:
 Priority:
 1) tax_meta.tax_rate_printed
 2) receipt_total_jpy + tax_total_jpy (tolerance 1 yen)
-3) line_items description with tax amount (内消費税等/うち消費税 etc)
+3) line_items description with tax amount (冁E��費税筁EぁE��消費稁Eetc)
 4) unknown (RID=TAX_UNKNOWN or RID=MULTI_RATE)
 Note: overall_issues with only MISSING_TAX_INFO is treated as benign when tax rate is already confirmed (no FIX).
 
 ## 8% tax kubun (official wording)
-- From 2019-10-01 and later, 8% should use "課対仕入込軽減8%" in tax kubun notation.
-- Source: Yayoi Kaikei Next import format (tax kubun) lists 8% reduced as "軽減8%".
+- From 2019-10-01 and later, 8% should use "課対仕�E込軽渁E%" in tax kubun notation.
+- Source: Yayoi Kaikei Next import format (tax kubun) lists 8% reduced as "軽渁E%".
 - Invoice suffix (適格) can be appended, but may be disabled via BELLE_FALLBACK_APPEND_INVOICE_SUFFIX.
 
 ## Runner (time trigger)
 - belle_runPipelineBatch_v0 = Queue + OCR only (no export)
 - Guard: LOCK_BUSY if ScriptLock not available
 - Graceful stop: TIME_BUDGET_EXCEEDED
+- Parallel OCR ticks append PERF_LOG to the integrations sheet when BELLE_INTEGRATIONS_SHEET_ID is set.
 
 ## Script Properties (high impact)
 - BELLE_OCR_MAX_ATTEMPTS (default: 3)
 - BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
-- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
+- BELLE_OCR_LOCK_TTL_SECONDS (default: 300)
+- BELLE_OCR_WORKER_MAX_ITEMS (default: 1)
+- BELLE_OCR_CLAIM_SCAN_MAX_ROWS (default: 200)
+- BELLE_OCR_CLAIM_CURSOR (auto-managed)
+- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象夁E
 
 ## Deprecated entrypoints
 - belle_healthCheck

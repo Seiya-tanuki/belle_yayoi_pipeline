@@ -48,6 +48,12 @@ function belle_ocr_workerTick_fallback_v0() {
 
   const workerId = Utilities.getUuid();
   const result = belle_ocr_workerLoop_fallback_v0_({ workerId: workerId, maxItems: 1, lockMode: "try", lockWaitMs: 500 });
+  try {
+    belle_ocr_perf_appendFromSummary_(result);
+  } catch (e) {
+    const msg = e && e.message ? e.message : String(e);
+    Logger.log({ phase: "OCR_PARALLEL_PERF_LOG_ERROR", ok: false, message: msg });
+  }
   if (result && result.lastReason === "LOCK_BUSY") {
     const guard = { phase: "OCR_PARALLEL_GUARD", ok: true, reason: "LOCK_BUSY" };
     Logger.log(guard);
@@ -59,7 +65,8 @@ function belle_ocr_workerTick_fallback_v0() {
     ok: result && result.ok !== false,
     processed: result && result.processed ? result.processed : 0,
     done: result && result.done ? result.done : 0,
-    errors: result && result.errors ? result.errors : 0
+    errors: result && result.errors ? result.errors : 0,
+    lockBusySkipped: result && result.lockBusySkipped ? result.lockBusySkipped : 0
   };
   Logger.log(res);
   return res;

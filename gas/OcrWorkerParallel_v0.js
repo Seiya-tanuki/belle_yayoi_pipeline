@@ -19,7 +19,89 @@ function belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds) {
   return base * Math.min(Number(attempt) || 0, 6);
 }
 
+function belle_ocr_extractHttpStatus_(message) {
+  const msg = String(message || "");
+  const m = msg.match(/Gemini HTTP\s+(\d{3})/i);
+  if (m) return Number(m[1]);
+  return 0;
+}
+
+function belle_ocr_perf_truncate_(text, maxLen) {
+  const s = String(text || "");
+  if (s.length <= maxLen) return s;
+  return s.slice(0, maxLen) + "...(truncated)";
+}
+
+function belle_ocr_perf_ensureLogSheet_(ss) {
+  const name = "PERF_LOG";
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) sheet = ss.insertSheet(name);
+  const header = [
+    "ts_iso",
+    "phase",
+    "worker_id",
+    "processed",
+    "done",
+    "retryable",
+    "final",
+    "lock_busy",
+    "avg_gemini_ms",
+    "p95_gemini_ms",
+    "avg_total_ms",
+    "detail"
+  ];
+  const current = sheet.getRange(1, 1, 1, header.length).getValues()[0];
+  const mismatch = header.some(function (h, i) {
+    return String(current[i] || "") !== h;
+  });
+  if (mismatch) {
+    sheet.clear();
+    sheet.getRange(1, 1, 1, header.length).setValues([header]);
+  }
+  return sheet;
+}
+
+function belle_ocr_perf_appendFromSummary_(summary) {
+  if (!summary) return false;
+  const props = PropertiesService.getScriptProperties();
+  const integrationsSheetId = props.getProperty("BELLE_INTEGRATIONS_SHEET_ID");
+  if (!integrationsSheetId) return false;
+
+  let detail = "";
+  try {
+    detail = JSON.stringify(summary);
+  } catch (e) {
+    detail = String(summary);
+  }
+  detail = belle_ocr_perf_truncate_(detail, 2000);
+
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+    const ss = SpreadsheetApp.openById(integrationsSheetId);
+    const sheet = belle_ocr_perf_ensureLogSheet_(ss);
+    sheet.appendRow([
+      new Date().toISOString(),
+      String(summary.phase || "OCR_WORKER_SUMMARY"),
+      String(summary.workerId || ""),
+      Number(summary.processed || 0),
+      Number(summary.done || 0),
+      Number(summary.retryable || 0),
+      Number(summary.final || 0),
+      Number(summary.lockBusySkipped || 0),
+      Number(summary.avgGeminiMs || 0),
+      Number(summary.p95GeminiMs || 0),
+      Number(summary.avgTotalItemMs || 0),
+      detail
+    ]);
+  } finally {
+    lock.releaseLock();
+  }
+  return true;
+}
+
 function belle_ocr_workerOnce_fallback_v0_(opts) {
+  const totalStart = Date.now();
   const props = PropertiesService.getScriptProperties();
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
   const ttlSeconds = belle_ocr_worker_resolveTtlSeconds_(props.getProperty("BELLE_OCR_LOCK_TTL_SECONDS"));
@@ -38,7 +120,11 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
       ok: true,
       processed: 0,
       reason: claim && claim.reason ? claim.reason : "NO_TARGET",
-      claimElapsedMs: claimElapsedMs
+      claimElapsedMs: claimElapsedMs,
+      totalItemElapsedMs: Date.now() - totalStart,
+      geminiElapsedMs: 0,
+      classify: "",
+      httpStatus: 0
     };
   }
 
@@ -81,6 +167,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     const ownerNow = String(rowNow[headerMap["ocr_lock_owner"]] || "");
     const statusNow = String(rowNow[headerMap["status"]] || "");
     if (ownerNow !== workerId || statusNow !== "PROCESSING") {
+      const totalNow = Date.now() - totalStart;
       const res = {
         ok: true,
         processed: 0,
@@ -88,7 +175,11 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
         file_id: fileId,
         rowIndex: rowIndex,
         claimElapsedMs: claimElapsedMs,
-        statusBefore: statusBefore
+        statusBefore: statusBefore,
+        totalItemElapsedMs: totalNow,
+        geminiElapsedMs: 0,
+        classify: "",
+        httpStatus: 0
       };
       Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex });
       return res;
@@ -117,6 +208,11 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   let errorMessage = "";
   let nextRetryIso = "";
   let statusOut = "";
+  let geminiElapsedMs = 0;
+  let geminiStartMs = 0;
+  let httpStatus = 0;
+  let classify = "";
+  let totalItemElapsedMs = 0;
 
   try {
     if (mimeType === "application/pdf") {
@@ -128,7 +224,10 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     } else {
       const file = DriveApp.getFileById(fileId);
       const blob = file.getBlob();
+      geminiStartMs = Date.now();
       jsonStr = belle_callGeminiOcr(blob);
+      geminiElapsedMs = Date.now() - geminiStartMs;
+      httpStatus = 200;
       const MAX_CELL_CHARS = 45000;
       if (jsonStr.length > MAX_CELL_CHARS) {
         throw new Error("OCR JSON too long for single cell: " + jsonStr.length);
@@ -148,15 +247,19 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     }
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
+    if (geminiStartMs > 0 && geminiElapsedMs === 0) {
+      geminiElapsedMs = Date.now() - geminiStartMs;
+    }
     const detail = msg.slice(0, 500);
-    const classify = belle_ocr_classifyError(msg);
-    const retryable = classify.retryable === true;
+    const classified = belle_ocr_classifyError(msg);
+    const retryable = classified.retryable === true;
     statusOut = retryable ? "ERROR_RETRYABLE" : "ERROR_FINAL";
-    errorCode = classify.code;
+    errorCode = classified.code;
     if (retryable && attempt >= maxAttempts) {
       statusOut = "ERROR_FINAL";
       errorCode = "MAX_ATTEMPTS_EXCEEDED";
     }
+    httpStatus = belle_ocr_extractHttpStatus_(msg);
     errorMessage = msg.slice(0, 200);
     errorDetail = detail;
     if (statusOut === "ERROR_RETRYABLE") {
@@ -164,6 +267,12 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
       nextRetryIso = new Date(Date.now() + backoff).toISOString();
     }
     outcome = statusOut;
+  }
+
+  if (!classify) {
+    if (statusOut === "DONE") classify = "DONE";
+    else if (errorCode === "INVALID_SCHEMA") classify = "INVALID_SCHEMA";
+    else classify = statusOut || "";
   }
 
   lock = null;
@@ -174,6 +283,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     const ownerNow = String(rowNow[headerMap["ocr_lock_owner"]] || "");
     const statusNow = String(rowNow[headerMap["status"]] || "");
     if (ownerNow !== workerId || statusNow !== "PROCESSING") {
+      const totalNow = Date.now() - totalStart;
       const res = {
         ok: true,
         processed: 0,
@@ -181,7 +291,11 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
         file_id: fileId,
         rowIndex: rowIndex,
         claimElapsedMs: claimElapsedMs,
-        statusBefore: statusBefore
+        statusBefore: statusBefore,
+        totalItemElapsedMs: totalNow,
+        geminiElapsedMs: geminiElapsedMs,
+        classify: classify,
+        httpStatus: httpStatus
       };
       Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex });
       return res;
@@ -210,13 +324,18 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     if (lock) lock.releaseLock();
   }
 
+  totalItemElapsedMs = Date.now() - totalStart;
   Logger.log({
     phase: "OCR_WORKER_ITEM",
     file_id: fileId,
     rowIndex: rowIndex,
     outcome: outcome,
     attempt: attempt,
-    workerId: workerId
+    workerId: workerId,
+    geminiElapsedMs: geminiElapsedMs,
+    totalItemElapsedMs: totalItemElapsedMs,
+    classify: classify,
+    httpStatus: httpStatus
   });
 
   return {
@@ -226,7 +345,11 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     file_id: fileId,
     rowIndex: rowIndex,
     claimElapsedMs: claimElapsedMs,
-    statusBefore: statusBefore
+    statusBefore: statusBefore,
+    geminiElapsedMs: geminiElapsedMs,
+    totalItemElapsedMs: totalItemElapsedMs,
+    classify: classify,
+    httpStatus: httpStatus
   };
 }
 
@@ -243,28 +366,64 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
     processed: 0,
     done: 0,
     errors: 0,
+    retryable: 0,
+    final: 0,
     workerId: workerId,
     claimedRowIndex: null,
     claimedFileId: "",
     claimedStatusBefore: "",
     claimElapsedMs: 0,
-    lastReason: ""
+    lastReason: "",
+    lockBusySkipped: 0,
+    geminiElapsedMs: 0,
+    totalItemElapsedMs: 0,
+    avgGeminiMs: 0,
+    p95GeminiMs: 0,
+    avgTotalItemMs: 0,
+    p95TotalItemMs: 0,
+    classify: "",
+    httpStatus: 0
   };
+  const geminiSamples = [];
+  const totalSamples = [];
   for (let i = 0; i < maxItems; i++) {
     const r = belle_ocr_workerOnce_fallback_v0_({ workerId: workerId, lockMode: lockMode, lockWaitMs: lockWaitMs });
     if (!r || r.processed === 0) {
       summary.lastReason = r && r.reason ? r.reason : "NO_TARGET";
+      if (summary.lastReason === "LOCK_BUSY") summary.lockBusySkipped = 1;
       break;
     }
     summary.processed++;
     if (r.outcome === "DONE") summary.done++;
-    else summary.errors++;
+    else {
+      summary.errors++;
+      if (r.outcome === "ERROR_RETRYABLE") summary.retryable++;
+      if (r.outcome === "ERROR_FINAL") summary.final++;
+    }
+    if (typeof r.geminiElapsedMs === "number") geminiSamples.push(r.geminiElapsedMs);
+    if (typeof r.totalItemElapsedMs === "number") totalSamples.push(r.totalItemElapsedMs);
     if (summary.claimedRowIndex === null && r.rowIndex) {
       summary.claimedRowIndex = r.rowIndex;
       summary.claimedFileId = r.file_id || "";
       summary.claimedStatusBefore = r.statusBefore || "";
       summary.claimElapsedMs = r.claimElapsedMs || 0;
     }
+    summary.classify = r.classify || r.outcome || "";
+    summary.httpStatus = r.httpStatus || 0;
+  }
+  if (geminiSamples.length > 0) {
+    const sorted = geminiSamples.slice().sort(function (a, b) { return a - b; });
+    const sum = geminiSamples.reduce(function (a, b) { return a + b; }, 0);
+    summary.avgGeminiMs = Math.round(sum / geminiSamples.length);
+    summary.p95GeminiMs = sorted[Math.floor((sorted.length - 1) * 0.95)];
+    summary.geminiElapsedMs = summary.avgGeminiMs;
+  }
+  if (totalSamples.length > 0) {
+    const sorted = totalSamples.slice().sort(function (a, b) { return a - b; });
+    const sum = totalSamples.reduce(function (a, b) { return a + b; }, 0);
+    summary.avgTotalItemMs = Math.round(sum / totalSamples.length);
+    summary.p95TotalItemMs = sorted[Math.floor((sorted.length - 1) * 0.95)];
+    summary.totalItemElapsedMs = summary.avgTotalItemMs;
   }
   Logger.log(summary);
   return summary;

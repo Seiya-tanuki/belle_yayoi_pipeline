@@ -15,6 +15,7 @@
   - Note: legacy sheet name IMPORT_LOG must be renamed manually before export.
 - EXPORT_SKIP_LOG: BELLE_SKIP_LOG_SHEET_NAME or "EXPORT_SKIP_LOG" (belle_getSkipLogSheetName)
 - Output folder: BELLE_OUTPUT_FOLDER_ID or BELLE_DRIVE_FOLDER_ID (belle_getOutputFolderId)
+- PERF_LOG: integrations sheet "PERF_LOG" when BELLE_INTEGRATIONS_SHEET_ID is set (optional)
 
 ## 3. Sheet headers
 ### Queue sheet (OCR_RAW / queue)
@@ -32,6 +33,9 @@ Header used by queue/ocr/export:
 - ocr_next_retry_at_iso
 - ocr_error_code
 - ocr_error_detail
+- ocr_lock_owner
+- ocr_lock_until_iso
+- ocr_processing_started_at_iso
 Notes:
 - ocr_json is written only on successful OCR (valid JSON schema).
 - errors are stored in ocr_error / ocr_error_detail and ocr_json is cleared on ERROR_RETRYABLE/ERROR_FINAL.
@@ -52,6 +56,7 @@ Notes:
 - QUEUED -> ERROR_RETRYABLE -> DONE
 - QUEUED -> ERROR_RETRYABLE -> ERROR_FINAL
 - QUEUED -> ERROR_FINAL
+- QUEUED -> PROCESSING -> DONE/ERROR_RETRYABLE/ERROR_FINAL (parallel worker claim)
 - ERROR (legacy) is treated as ERROR_RETRYABLE
 
 ## 5. Entry points (belle_*)
@@ -62,11 +67,18 @@ Notes:
 - belle_runPipelineBatch_v0
 - belle_exportYayoiCsvFallback
 - belle_exportYayoiCsvFromReview_test
+- belle_ocr_workerTick_fallback_v0
 
 ### Debug / test
 - belle_queueFolderFilesToSheet_test
 - belle_processQueueOnce_test
 - belle_runPipelineBatch_v0_test
+- belle_ocr_claimNextRow_fallback_v0_test
+- belle_ocr_workerLoop_fallback_v0_test
+- belle_ocr_parallel_smoke_test
+- belle_ocr_parallel_enable_fallback_v0_test
+- belle_ocr_parallel_disable_fallback_v0_test
+- belle_ocr_parallel_status_fallback_v0_test
 
 ### Deprecated (do not use)
 - belle_healthCheck
@@ -98,7 +110,15 @@ Optional:
 - BELLE_RUN_DO_OCR (default: true)
 - BELLE_OCR_MAX_ATTEMPTS (default: 3)
 - BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
-- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
+- BELLE_OCR_LOCK_TTL_SECONDS (default: 300)
+- BELLE_OCR_WORKER_MAX_ITEMS (default: 1)
+- BELLE_OCR_CLAIM_SCAN_MAX_ROWS (default: 200)
+- BELLE_OCR_CLAIM_CURSOR (auto-managed)
+- BELLE_OCR_PARALLEL_ENABLED (default: false)
+- BELLE_OCR_PARALLEL_WORKERS (default: 1)
+- BELLE_OCR_PARALLEL_TRIGGER_TAG (default: BELLE_OCR_PARALLEL_V0)
+- BELLE_INTEGRATIONS_SHEET_ID (optional; PERF_LOG)
+- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象夁E
 
 ## 7. Export guards (code facts)
 - OCR_PENDING: queuedRemaining > 0
@@ -132,5 +152,5 @@ Reasons:
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not referenced by code.
 
 ## 10. Memo format (V column)
-- Order: FIX (optional) -> BELLE|FBK=1|RID -> DT (optional) -> FN (optional) -> ERR (optional) -> FID (always last)
+- Order: FIX (optional) -> BELLE|FBK=1|RID -> DM (ERROR_FINAL only) -> DT (optional) -> FN (optional) -> ERR (optional) -> FID (always last)
 - FN is sanitized (replace "|", remove newlines, trim)

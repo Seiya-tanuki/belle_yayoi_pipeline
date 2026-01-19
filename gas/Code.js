@@ -324,6 +324,26 @@ function belle_getQueueHeader_fallback_v0_() {
   ];
 }
 
+function belle_ocr_resolveClaimScanMax_(value, totalRows) {
+  const n = Number(value || "");
+  if (isNaN(n) || n <= 0) return totalRows;
+  return Math.min(Math.floor(n), totalRows);
+}
+
+function belle_ocr_buildClaimScanPlan_(totalRows, cursorValue, maxScanRows) {
+  const total = Math.max(0, Number(totalRows) || 0);
+  if (total === 0) return { indices: [], nextCursor: 0 };
+  const maxScan = belle_ocr_resolveClaimScanMax_(maxScanRows, total);
+  let cursor = Number(cursorValue || 0);
+  if (isNaN(cursor) || cursor < 0 || cursor >= total) cursor = 0;
+  const indices = [];
+  for (let i = 0; i < maxScan; i++) {
+    indices.push((cursor + i) % total);
+  }
+  const nextCursor = (cursor + maxScan) % total;
+  return { indices: indices, nextCursor: nextCursor };
+}
+
 function belle_ocr_classifyError(message) {
   const msg = String(message || "").toLowerCase();
   const retryable = [
@@ -734,9 +754,15 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
     const values = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
     const nowMs = Date.now();
     const nowIso = new Date(nowMs).toISOString();
+    const scanMaxRaw = props.getProperty("BELLE_OCR_CLAIM_SCAN_MAX_ROWS");
+    const cursorRaw = props.getProperty("BELLE_OCR_CLAIM_CURSOR");
+    const scanPlan = belle_ocr_buildClaimScanPlan_(values.length, cursorRaw, scanMaxRaw);
+    const scanIndices = scanPlan.indices;
+    props.setProperty("BELLE_OCR_CLAIM_CURSOR", String(scanPlan.nextCursor));
 
     const staleFixed = [];
-    for (let i = 0; i < values.length; i++) {
+    for (let s = 0; s < scanIndices.length; s++) {
+      const i = scanIndices[s];
       const row = values[i];
       const fileId = String(row[headerMap["file_id"]] || "");
       if (!fileId) continue;
@@ -754,17 +780,20 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
         sh.getRange(sheetRow, headerMap["ocr_lock_until_iso"] + 1).setValue("");
         sh.getRange(sheetRow, headerMap["ocr_processing_started_at_iso"] + 1).setValue("");
       }
+      row[headerMap["status"]] = recovery.statusOut;
+      row[headerMap["ocr_error"]] = String(recovery.errorMessage || "");
+      row[headerMap["ocr_error_code"]] = String(recovery.errorCode || "");
+      row[headerMap["ocr_error_detail"]] = detail;
+      row[headerMap["ocr_next_retry_at_iso"]] = "";
+      if (recovery.clearLocks) {
+        row[headerMap["ocr_lock_owner"]] = "";
+        row[headerMap["ocr_lock_until_iso"]] = "";
+        row[headerMap["ocr_processing_started_at_iso"]] = "";
+      }
       staleFixed.push(fileId);
     }
     if (staleFixed.length > 0) {
       Logger.log({ phase: "OCR_REAP_STALE", fixed: staleFixed.length, sampleFileIds: staleFixed.slice(0, 5) });
-    }
-
-    function isLockExpired(row) {
-      const until = String(row[headerMap["ocr_lock_until_iso"]] || "");
-      if (!until) return true;
-      const t = Date.parse(until);
-      return isNaN(t) || t <= nowMs;
     }
 
     function claimAt(index, statusBefore) {
@@ -792,7 +821,8 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
       return res;
     }
 
-    for (let i = 0; i < values.length; i++) {
+    for (let s = 0; s < scanIndices.length; s++) {
+      const i = scanIndices[s];
       const row = values[i];
       const status = String(row[headerMap["status"]] || "");
       const normalized = status || "QUEUED";
@@ -802,12 +832,10 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
       if (normalized === "QUEUED") {
         return claimAt(i, normalized);
       }
-      if (normalized === "PROCESSING" && isLockExpired(row)) {
-        return claimAt(i, normalized);
-      }
     }
 
-    for (let i = 0; i < values.length; i++) {
+    for (let s = 0; s < scanIndices.length; s++) {
+      const i = scanIndices[s];
       const row = values[i];
       const status = String(row[headerMap["status"]] || "");
       const normalized = status || "QUEUED";
@@ -1136,3 +1164,5 @@ function belle_resetSpreadsheetToInitialState_fallback_v0() {
 function belle_resetSpreadsheetToInitialState_fallback_v0_test() {
   return belle_resetSpreadsheetToInitialState_fallback_v0();
 }
+
+

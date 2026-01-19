@@ -24,6 +24,10 @@
 - BELLE_RUN_DO_OCR (default: true)
 - BELLE_OCR_MAX_ATTEMPTS (default: 3)
 - BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
+- BELLE_OCR_LOCK_TTL_SECONDS (default: 300)
+- BELLE_OCR_WORKER_MAX_ITEMS (default: 1)
+- BELLE_OCR_CLAIM_SCAN_MAX_ROWS (default: 200)
+- BELLE_OCR_CLAIM_CURSOR (auto-managed; do not set manually)
 - BELLE_OCR_PARALLEL_ENABLED (default: false)
 - BELLE_OCR_PARALLEL_WORKERS (default: 1)
 - BELLE_OCR_PARALLEL_TRIGGER_TAG (default: BELLE_OCR_PARALLEL_V0)
@@ -45,7 +49,7 @@
 - BELLE_CHATWORK_WEBHOOK_ENABLED (default: false)
 - BELLE_CHATWORK_WEBHOOK_TOKEN (URL token for webhook; set same value as ?token=...)
 - BELLE_CHATWORK_WEBHOOK_ROUTE (default: chatwork)
-- BELLE_INTEGRATIONS_SHEET_ID (required for webhook log persistence)
+- BELLE_INTEGRATIONS_SHEET_ID (required for webhook log and PERF_LOG persistence)
 
 ## Notes
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.
