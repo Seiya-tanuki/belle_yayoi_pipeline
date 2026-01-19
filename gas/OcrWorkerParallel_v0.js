@@ -23,9 +23,16 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   const props = PropertiesService.getScriptProperties();
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
   const ttlSeconds = belle_ocr_worker_resolveTtlSeconds_(props.getProperty("BELLE_OCR_LOCK_TTL_SECONDS"));
+  const claimStart = Date.now();
   const claim = belle_ocr_claimNextRow_fallback_v0_({ workerId: workerId, ttlSeconds: ttlSeconds });
+  const claimElapsedMs = Date.now() - claimStart;
   if (!claim || claim.claimed !== true) {
-    return { ok: true, processed: 0, reason: claim && claim.reason ? claim.reason : "NO_TARGET" };
+    return {
+      ok: true,
+      processed: 0,
+      reason: claim && claim.reason ? claim.reason : "NO_TARGET",
+      claimElapsedMs: claimElapsedMs
+    };
   }
 
   const sheetId = props.getProperty("BELLE_SHEET_ID");
@@ -67,7 +74,15 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     const ownerNow = String(rowNow[headerMap["ocr_lock_owner"]] || "");
     const statusNow = String(rowNow[headerMap["status"]] || "");
     if (ownerNow !== workerId || statusNow !== "PROCESSING") {
-      const res = { ok: true, processed: 0, reason: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex };
+      const res = {
+        ok: true,
+        processed: 0,
+        reason: "CLAIM_LOST",
+        file_id: fileId,
+        rowIndex: rowIndex,
+        claimElapsedMs: claimElapsedMs,
+        statusBefore: statusBefore
+      };
       Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex });
       return res;
     }
@@ -152,7 +167,15 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     const ownerNow = String(rowNow[headerMap["ocr_lock_owner"]] || "");
     const statusNow = String(rowNow[headerMap["status"]] || "");
     if (ownerNow !== workerId || statusNow !== "PROCESSING") {
-      const res = { ok: true, processed: 0, reason: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex };
+      const res = {
+        ok: true,
+        processed: 0,
+        reason: "CLAIM_LOST",
+        file_id: fileId,
+        rowIndex: rowIndex,
+        claimElapsedMs: claimElapsedMs,
+        statusBefore: statusBefore
+      };
       Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex });
       return res;
     }
@@ -189,20 +212,46 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     workerId: workerId
   });
 
-  return { ok: true, processed: 1, outcome: outcome, file_id: fileId, rowIndex: rowIndex };
+  return {
+    ok: true,
+    processed: 1,
+    outcome: outcome,
+    file_id: fileId,
+    rowIndex: rowIndex,
+    claimElapsedMs: claimElapsedMs,
+    statusBefore: statusBefore
+  };
 }
 
 function belle_ocr_workerLoop_fallback_v0_(opts) {
   const props = PropertiesService.getScriptProperties();
-  const maxItems = belle_ocr_worker_resolveMaxItems_(props.getProperty("BELLE_OCR_WORKER_MAX_ITEMS"));
+  const maxItemsValue = opts && opts.maxItems !== undefined ? opts.maxItems : props.getProperty("BELLE_OCR_WORKER_MAX_ITEMS");
+  const maxItems = belle_ocr_worker_resolveMaxItems_(maxItemsValue);
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
-  const summary = { phase: "OCR_WORKER_SUMMARY", ok: true, processed: 0, done: 0, errors: 0, workerId: workerId };
+  const summary = {
+    phase: "OCR_WORKER_SUMMARY",
+    ok: true,
+    processed: 0,
+    done: 0,
+    errors: 0,
+    workerId: workerId,
+    claimedRowIndex: null,
+    claimedFileId: "",
+    claimedStatusBefore: "",
+    claimElapsedMs: 0
+  };
   for (let i = 0; i < maxItems; i++) {
     const r = belle_ocr_workerOnce_fallback_v0_({ workerId: workerId });
     if (!r || r.processed === 0) break;
     summary.processed++;
     if (r.outcome === "DONE") summary.done++;
     else summary.errors++;
+    if (summary.claimedRowIndex === null && r.rowIndex) {
+      summary.claimedRowIndex = r.rowIndex;
+      summary.claimedFileId = r.file_id || "";
+      summary.claimedStatusBefore = r.statusBefore || "";
+      summary.claimElapsedMs = r.claimElapsedMs || 0;
+    }
   }
   Logger.log(summary);
   return summary;
@@ -210,6 +259,23 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
 
 function belle_ocr_workerLoop_fallback_v0_test() {
   const res = belle_ocr_workerLoop_fallback_v0_({ workerId: Utilities.getUuid() });
+  Logger.log(res);
+  return res;
+}
+
+function belle_ocr_parallel_smoke_test() {
+  const workerId1 = Utilities.getUuid();
+  const workerId2 = Utilities.getUuid();
+  const r1 = belle_ocr_workerLoop_fallback_v0_({ workerId: workerId1, maxItems: 1 });
+  Utilities.sleep(200);
+  const r2 = belle_ocr_workerLoop_fallback_v0_({ workerId: workerId2, maxItems: 1 });
+  const sameClaim = r1 && r2 && r1.claimedFileId && r1.claimedFileId === r2.claimedFileId;
+  const res = {
+    phase: "OCR_PARALLEL_SMOKE",
+    worker1: { claimedFileId: r1.claimedFileId || "", claimedRowIndex: r1.claimedRowIndex },
+    worker2: { claimedFileId: r2.claimedFileId || "", claimedRowIndex: r2.claimedRowIndex },
+    sameClaim: sameClaim
+  };
   Logger.log(res);
   return res;
 }
