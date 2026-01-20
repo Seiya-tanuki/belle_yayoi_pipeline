@@ -13,6 +13,12 @@
 - belle_processQueueOnce: process QUEUED or ERROR_RETRYABLE rows
 - status transitions: QUEUED -> DONE, QUEUED -> ERROR_RETRYABLE -> DONE/ERROR_FINAL
 - invalid/empty OCR responses are treated as retryable and stored in error columns (not ocr_json)
+- parallel OCR mode (worker tick):
+  - claim sets status=PROCESSING and lock columns (ocr_lock_owner, ocr_lock_until_iso)
+  - Gemini runs outside ScriptLock
+  - writeback requires owner match and clears lock columns
+  - stale PROCESSING is reaped to ERROR_RETRYABLE (WORKER_STALE_LOCK)
+  - PERF_LOG is written to integrations sheet when BELLE_INTEGRATIONS_SHEET_ID is set
 
 3) Export (manual only)
 - belle_exportYayoiCsvFallback (primary)
@@ -90,6 +96,7 @@ Note: overall_issues with only MISSING_TAX_INFO is treated as benign when tax ra
 - belle_runPipelineBatch_v0 = Queue + OCR only (no export)
 - Guard: LOCK_BUSY if ScriptLock not available
 - Graceful stop: TIME_BUDGET_EXCEEDED
+- Runner OCR is skipped when BELLE_OCR_PARALLEL_ENABLED is true (RUN_GUARD: OCR_PARALLEL_ENABLED).
 - Parallel OCR ticks append PERF_LOG to the integrations sheet when BELLE_INTEGRATIONS_SHEET_ID is set.
 
 ## Script Properties (high impact)
@@ -99,6 +106,7 @@ Note: overall_issues with only MISSING_TAX_INFO is treated as benign when tax ra
 - BELLE_OCR_WORKER_MAX_ITEMS (default: 1)
 - BELLE_OCR_CLAIM_SCAN_MAX_ROWS (default: 200)
 - BELLE_OCR_CLAIM_CURSOR (auto-managed)
+- BELLE_OCR_PARALLEL_TRIGGER_IDS (auto-managed)
 - BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象夁E
 
 ## Deprecated entrypoints

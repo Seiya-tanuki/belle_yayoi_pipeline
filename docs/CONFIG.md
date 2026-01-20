@@ -24,14 +24,6 @@
 - BELLE_RUN_DO_OCR (default: true)
 - BELLE_OCR_MAX_ATTEMPTS (default: 3)
 - BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
-- BELLE_OCR_LOCK_TTL_SECONDS (default: 300)
-- BELLE_OCR_WORKER_MAX_ITEMS (default: 1)
-- BELLE_OCR_CLAIM_SCAN_MAX_ROWS (default: 200)
-- BELLE_OCR_CLAIM_CURSOR (auto-managed; do not set manually)
-- BELLE_OCR_PARALLEL_ENABLED (default: false)
-- BELLE_OCR_PARALLEL_WORKERS (default: 1)
-- BELLE_OCR_PARALLEL_TRIGGER_TAG (default: BELLE_OCR_PARALLEL_V0)\r\n  - disable only removes triggers; BELLE_OCR_PARALLEL_ENABLED is not changed.
-  - When true, runner OCR is guarded with RUN_GUARD: OCR_PARALLEL_ENABLED.
 - BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: �ΏۊO)
   - The value must be a plain label (no extra description).
 - BELLE_FALLBACK_APPEND_INVOICE_SUFFIX (default: true)
@@ -49,7 +41,20 @@
 - BELLE_CHATWORK_WEBHOOK_ENABLED (default: false)
 - BELLE_CHATWORK_WEBHOOK_TOKEN (URL token for webhook; set same value as ?token=...)
 - BELLE_CHATWORK_WEBHOOK_ROUTE (default: chatwork)
-- BELLE_INTEGRATIONS_SHEET_ID (required for webhook log and PERF_LOG persistence)
+
+### Parallel OCR (v0)
+- BELLE_OCR_PARALLEL_ENABLED (boolean, default: false): enables parallel tick execution.
+- BELLE_OCR_PARALLEL_WORKERS (number string, default: "1"): number of triggers to create (1-5).
+- BELLE_OCR_PARALLEL_TRIGGER_TAG (string, default: "BELLE_OCR_PARALLEL_V0"): log tag for trigger management.
+- BELLE_OCR_PARALLEL_TRIGGER_IDS (internal): auto-managed trigger IDs; do not edit.
+- BELLE_OCR_LOCK_TTL_SECONDS (number string, default: 300): lock TTL for claim.
+- BELLE_OCR_WORKER_MAX_ITEMS (number string, default: 1): max items per worker loop.
+- BELLE_OCR_CLAIM_SCAN_MAX_ROWS (number string; unset = scan all rows).
+- BELLE_OCR_CLAIM_CURSOR (internal): auto-managed scan cursor; do not edit.
+- BELLE_INTEGRATIONS_SHEET_ID (optional): required to write PERF_LOG (also used by webhook logs).
+Notes:
+- When parallel enabled, runner OCR is guarded with RUN_GUARD: OCR_PARALLEL_ENABLED.
+- Disable removes triggers only; BELLE_OCR_PARALLEL_ENABLED is unchanged.
 
 ## Notes
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.

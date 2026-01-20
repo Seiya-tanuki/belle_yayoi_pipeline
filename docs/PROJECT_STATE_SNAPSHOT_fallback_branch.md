@@ -45,17 +45,27 @@ Notes:
 - exported_at_iso
 - csv_file_id
 
-### EXPORT_SKIP_LOG
-- exported_at_iso
-- file_id
-- file_name
-- reason
+
+### PERF_LOG (integrations sheet, optional)
+- ts_iso
+- phase
+- worker_id
+- processed
+- done
+- retryable
+- final
+- lock_busy
+- avg_gemini_ms
+- p95_gemini_ms
+- avg_total_ms
+- detail
 
 ## 4. Status values and transitions (OCR_RAW)
 - QUEUED -> DONE
 - QUEUED -> ERROR_RETRYABLE -> DONE
 - QUEUED -> ERROR_RETRYABLE -> ERROR_FINAL
 - QUEUED -> ERROR_FINAL
+- PROCESSING -> ERROR_RETRYABLE (stale lock reaper, WORKER_STALE_LOCK)
 - QUEUED -> PROCESSING -> DONE/ERROR_RETRYABLE/ERROR_FINAL (parallel worker claim)
 - ERROR (legacy) is treated as ERROR_RETRYABLE
 
@@ -117,6 +127,7 @@ Optional:
 - BELLE_OCR_PARALLEL_ENABLED (default: false)
 - BELLE_OCR_PARALLEL_WORKERS (default: 1)
 - BELLE_OCR_PARALLEL_TRIGGER_TAG (default: BELLE_OCR_PARALLEL_V0)
+- BELLE_OCR_PARALLEL_TRIGGER_IDS (internal; auto-managed)
 - BELLE_INTEGRATIONS_SHEET_ID (optional; PERF_LOG)
 - BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象夁E
 
