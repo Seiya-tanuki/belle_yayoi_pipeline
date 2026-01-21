@@ -213,11 +213,63 @@ function belle_getGeminiConfig() {
   return { apiKey: apiKey, model: model, sleepMs: sleepMs, maxItems: maxItems };
 }
 
+function belle_ocr_clampTemperature_(value) {
+  const n = Number(value);
+  if (isNaN(n)) return 0.0;
+  if (n < 0) return 0.0;
+  if (n > 2) return 2.0;
+  return n;
+}
+
+function belle_ocr_parseTemperatureValue_(value, fallback) {
+  const raw = String(value || "").trim();
+  if (!raw) return fallback;
+  const n = Number(raw);
+  if (isNaN(n)) return fallback;
+  return belle_ocr_clampTemperature_(n);
+}
+
+function belle_ocr_computeGeminiTemperatureWithConfig_(ctx, config) {
+  const defaultTemp = belle_ocr_parseTemperatureValue_(config && config.defaultRaw, 0.0);
+  const addTemp = belle_ocr_parseTemperatureValue_(config && config.addRaw, 0.0);
+  const attempt = Number((ctx && ctx.attempt) || 0);
+  const maxAttempts = Number((ctx && ctx.maxAttempts) || 0);
+  const statusBefore = String((ctx && ctx.statusBefore) || "");
+  const prevErrorCode = String((ctx && ctx.prevErrorCode) || "");
+  const prevError = String((ctx && ctx.prevError) || "");
+  const prevErrorDetail = String((ctx && ctx.prevErrorDetail) || "");
+  const combined = (prevError + " " + prevErrorDetail);
+  const isRetry = statusBefore === "ERROR_RETRYABLE" || statusBefore === "ERROR";
+  const isFinalAttempt = attempt > 0 && maxAttempts > 0 && attempt === maxAttempts;
+  const isInvalidSchema = prevErrorCode === "INVALID_SCHEMA" || combined.indexOf("INVALID_SCHEMA") >= 0;
+  const is503 = combined.indexOf("503") >= 0;
+
+  let temperature = defaultTemp;
+  let overridden = false;
+  if (isRetry && isFinalAttempt && isInvalidSchema && !is503 && addTemp > 0) {
+    temperature = belle_ocr_clampTemperature_(defaultTemp + addTemp);
+    overridden = true;
+  }
+  return {
+    temperature: temperature,
+    overridden: overridden,
+    defaultTemp: defaultTemp,
+    addTemp: addTemp
+  };
+}
+
+function belle_ocr_computeGeminiTemperature_(ctx) {
+  const props = PropertiesService.getScriptProperties();
+  const defaultRaw = props.getProperty("BELLE_GEMINI_TEMPERATURE_DEFAULT");
+  const addRaw = props.getProperty("BELLE_GEMINI_TEMPERATURE_FINAL_RETRY_ADD");
+  return belle_ocr_computeGeminiTemperatureWithConfig_(ctx, { defaultRaw: defaultRaw, addRaw: addRaw });
+}
+
 /**
  * Call Gemini generateContent with image inline data.
  * NOTE: Endpoint may vary by your setup. This uses Generative Language API style.
  */
-function belle_callGeminiOcr(imageBlob) {
+function belle_callGeminiOcr(imageBlob, opt) {
   const cfg = belle_getGeminiConfig();
   const prompt = (typeof BELLE_OCR_PROMPT_V0 !== "undefined") ? BELLE_OCR_PROMPT_V0 : "";
   if (!prompt) throw new Error("Missing OCR prompt constant: BELLE_OCR_PROMPT_V0");
@@ -225,6 +277,9 @@ function belle_callGeminiOcr(imageBlob) {
   const mimeType = imageBlob.getContentType();
   const b64 = Utilities.base64Encode(imageBlob.getBytes());
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(cfg.model) + ":generateContent?key=" + encodeURIComponent(cfg.apiKey);
+  const temp = (opt && typeof opt.temperature === "number" && !isNaN(opt.temperature))
+    ? belle_ocr_clampTemperature_(opt.temperature)
+    : 0.0;
 
   const payload = {
     contents: [{
@@ -235,7 +290,7 @@ function belle_callGeminiOcr(imageBlob) {
       ]
     }],
     generationConfig: {
-      temperature: 0.0
+      temperature: temp
     }
   };
 
@@ -576,6 +631,8 @@ function belle_processQueueOnce(options) {
       const mimeType = String(row[headerMap["mime_type"]] || "");
       const ocrJson = String(row[headerMap["ocr_json"]] || "");
       const ocrErr = String(row[headerMap["ocr_error"]] || "");
+      const ocrErrCode = String(row[headerMap["ocr_error_code"]] || "");
+      const ocrErrDetail = String(row[headerMap["ocr_error_detail"]] || "");
       const nextRetryAt = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
 
       if (!fileId) continue;
@@ -616,7 +673,27 @@ function belle_processQueueOnce(options) {
 
         const file = DriveApp.getFileById(fileId);
         const blob = file.getBlob();
-        const jsonStr = belle_callGeminiOcr(blob);
+        const tempInfo = belle_ocr_computeGeminiTemperature_({
+          attempt: attempt,
+          maxAttempts: maxAttempts,
+          statusBefore: normalized,
+          prevErrorCode: ocrErrCode,
+          prevError: ocrErr,
+          prevErrorDetail: ocrErrDetail
+        });
+        if (tempInfo.overridden) {
+          Logger.log({
+            phase: "GEMINI_TEMPERATURE_POLICY",
+            temperature: tempInfo.temperature,
+            defaultTemp: tempInfo.defaultTemp,
+            addTemp: tempInfo.addTemp,
+            attempt: attempt,
+            maxAttempts: maxAttempts,
+            statusBefore: normalized,
+            prevErrorCode: ocrErrCode
+          });
+        }
+        const jsonStr = belle_callGeminiOcr(blob, { temperature: tempInfo.temperature });
         const MAX_CELL_CHARS = 45000;
         if (jsonStr.length > MAX_CELL_CHARS) {
           throw new Error("OCR JSON too long for single cell: " + jsonStr.length);

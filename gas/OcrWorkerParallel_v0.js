@@ -155,6 +155,8 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   const statusBefore = claim.statusBefore || status;
   const ocrJson = String(row[headerMap["ocr_json"]] || "");
   const ocrError = String(row[headerMap["ocr_error"]] || "");
+  const ocrErrorCode = String(row[headerMap["ocr_error_code"]] || "");
+  const ocrErrorDetail = String(row[headerMap["ocr_error_detail"]] || "");
   const attemptsPrev = Number(row[headerMap["ocr_attempts"]] || 0) || 0;
 
   let attempt = attemptsPrev;
@@ -224,8 +226,28 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     } else {
       const file = DriveApp.getFileById(fileId);
       const blob = file.getBlob();
+      const tempInfo = belle_ocr_computeGeminiTemperature_({
+        attempt: attempt,
+        maxAttempts: maxAttempts,
+        statusBefore: statusBefore,
+        prevErrorCode: ocrErrorCode,
+        prevError: ocrError,
+        prevErrorDetail: ocrErrorDetail
+      });
+      if (tempInfo.overridden) {
+        Logger.log({
+          phase: "GEMINI_TEMPERATURE_POLICY",
+          temperature: tempInfo.temperature,
+          defaultTemp: tempInfo.defaultTemp,
+          addTemp: tempInfo.addTemp,
+          attempt: attempt,
+          maxAttempts: maxAttempts,
+          statusBefore: statusBefore,
+          prevErrorCode: ocrErrorCode
+        });
+      }
       geminiStartMs = Date.now();
-      jsonStr = belle_callGeminiOcr(blob);
+      jsonStr = belle_callGeminiOcr(blob, { temperature: tempInfo.temperature });
       geminiElapsedMs = Date.now() - geminiStartMs;
       httpStatus = 200;
       const MAX_CELL_CHARS = 45000;
