@@ -224,12 +224,98 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   let totalItemElapsedMs = 0;
 
   try {
-    if (mimeType === "application/pdf") {
+    if (mimeType === "application/pdf" && !belle_ocr_allowPdfForDocType_(docType)) {
       outcome = "ERROR_FINAL";
       statusOut = "ERROR_FINAL";
       errorCode = "UNSUPPORTED_PDF";
       errorMessage = "PDF not supported in v0";
       errorDetail = "PDF not supported in v0";
+    } else if (docType === "cc_statement") {
+      const file = DriveApp.getFileById(fileId);
+      const blob = file.getBlob();
+      const tempInfo = belle_ocr_computeGeminiTemperature_({
+        attempt: attempt,
+        maxAttempts: maxAttempts,
+        statusBefore: statusBefore,
+        prevErrorCode: ocrErrorCode,
+        prevError: ocrError,
+        prevErrorDetail: ocrErrorDetail
+      });
+      if (tempInfo.overridden) {
+        Logger.log({
+          phase: "GEMINI_TEMPERATURE_POLICY",
+          temperature: tempInfo.temperature,
+          defaultTemp: tempInfo.defaultTemp,
+          addTemp: tempInfo.addTemp,
+          attempt: attempt,
+          maxAttempts: maxAttempts,
+          statusBefore: statusBefore,
+          prevErrorCode: ocrErrorCode
+        });
+      }
+      const stage1Prompt = belle_ocr_getCcStage1Prompt_();
+      const stage1StartMs = Date.now();
+      const stage1JsonStr = belle_callGeminiOcr(blob, { temperature: tempInfo.temperature, promptText: stage1Prompt, responseMimeType: "application/json" });
+      geminiElapsedMs += Date.now() - stage1StartMs;
+      httpStatus = 200;
+      jsonStr = stage1JsonStr;
+      let stage1Parsed;
+      try {
+        stage1Parsed = JSON.parse(stage1JsonStr);
+      } catch (e) {
+        throw new Error("INVALID_SCHEMA: CC_STAGE1_PARSE_ERROR");
+      }
+      const stage1Validation = belle_ocr_validateCcStage1_(stage1Parsed);
+      if (!stage1Validation.ok) {
+        throw new Error("INVALID_SCHEMA: " + stage1Validation.reason);
+      }
+      const stage1Decision = belle_ocr_cc_classifyStage1Page_(stage1Parsed.page_type);
+      if (!stage1Decision.proceed) {
+        outcome = stage1Decision.statusOut;
+        statusOut = stage1Decision.statusOut;
+        errorCode = stage1Decision.errorCode;
+        errorMessage = stage1Decision.errorMessage;
+        errorDetail = belle_ocr_buildInvalidSchemaLogDetail_(stage1JsonStr);
+        if (statusOut === "ERROR_RETRYABLE") {
+          const backoff = belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds);
+          nextRetryIso = new Date(Date.now() + backoff).toISOString();
+        }
+      } else {
+        const stage2Prompt = belle_ocr_getCcStage2Prompt_();
+        const stage2StartMs = Date.now();
+        const stage2JsonStr = belle_callGeminiOcr(blob, { temperature: tempInfo.temperature, promptText: stage2Prompt, responseMimeType: "application/json" });
+        geminiElapsedMs += Date.now() - stage2StartMs;
+        httpStatus = 200;
+        jsonStr = stage2JsonStr;
+        const MAX_CELL_CHARS = 45000;
+        if (jsonStr.length > MAX_CELL_CHARS) {
+          throw new Error("OCR JSON too long for single cell: " + jsonStr.length);
+        }
+        let parsed;
+        try {
+          parsed = JSON.parse(stage2JsonStr);
+        } catch (e) {
+          throw new Error("INVALID_SCHEMA: PARSE_ERROR");
+        }
+        const validation = belle_ocr_validateCcStage2_(parsed);
+        if (!validation.ok) {
+          throw new Error("INVALID_SCHEMA: " + validation.reason);
+        }
+        const extractedCount = Array.isArray(parsed.transactions) ? parsed.transactions.length : 0;
+        const visibleCount = parsed.visible_row_count;
+        if (belle_ocr_cc_isIncompleteRows_(visibleCount, extractedCount)) {
+          outcome = "ERROR_RETRYABLE";
+          statusOut = "ERROR_RETRYABLE";
+          errorCode = "CC_INCOMPLETE_ROWS";
+          errorMessage = belle_ocr_cc_buildIncompleteMessage_(extractedCount, visibleCount).slice(0, 200);
+          errorDetail = belle_ocr_buildInvalidSchemaLogDetail_(stage2JsonStr);
+          const backoff = belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds);
+          nextRetryIso = new Date(Date.now() + backoff).toISOString();
+        } else {
+          outcome = "DONE";
+          statusOut = "DONE";
+        }
+      }
     } else {
       const file = DriveApp.getFileById(fileId);
       const blob = file.getBlob();

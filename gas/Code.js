@@ -439,9 +439,50 @@ function belle_ocr_computeGeminiTemperature_(ctx) {
  * Call Gemini generateContent with image inline data.
  * NOTE: Endpoint may vary by your setup. This uses Generative Language API style.
  */
+function belle_ocr_getCcStage1Prompt_() {
+  const prompt = (typeof BELLE_OCR_CC_STAGE1_PROMPT_V0 !== "undefined") ? BELLE_OCR_CC_STAGE1_PROMPT_V0 : "";
+  if (!prompt) throw new Error("Missing OCR prompt constant: BELLE_OCR_CC_STAGE1_PROMPT_V0");
+  return prompt;
+}
+
+function belle_ocr_getCcStage2Prompt_() {
+  const prompt = (typeof BELLE_OCR_CC_STAGE2_PROMPT_V0 !== "undefined") ? BELLE_OCR_CC_STAGE2_PROMPT_V0 : "";
+  if (!prompt) throw new Error("Missing OCR prompt constant: BELLE_OCR_CC_STAGE2_PROMPT_V0");
+  return prompt;
+}
+
+function belle_ocr_allowPdfForDocType_(docType) {
+  return String(docType || "") === "cc_statement";
+}
+
+function belle_ocr_cc_classifyStage1Page_(pageType) {
+  const t = String(pageType || "");
+  if (t === "transactions") {
+    return { proceed: true, statusOut: "", errorCode: "", errorMessage: "" };
+  }
+  if (t === "non_transactions") {
+    return { proceed: false, statusOut: "ERROR_FINAL", errorCode: "CC_NON_TRANSACTION_PAGE", errorMessage: "cc_statement page_type=non_transactions" };
+  }
+  return { proceed: false, statusOut: "ERROR_RETRYABLE", errorCode: "CC_PAGE_UNKNOWN", errorMessage: "cc_statement page_type=unknown" };
+}
+
+function belle_ocr_cc_isIncompleteRows_(visibleCount, extractedCount) {
+  if (typeof visibleCount !== "number" || isNaN(visibleCount)) return false;
+  if (typeof extractedCount !== "number" || isNaN(extractedCount)) return false;
+  if (visibleCount <= 0) return false;
+  return extractedCount < visibleCount;
+}
+
+function belle_ocr_cc_buildIncompleteMessage_(extractedCount, visibleCount) {
+  const extracted = Number(extractedCount) || 0;
+  const visible = Number(visibleCount) || 0;
+  return "incomplete rows: extracted=" + extracted + " visible=" + visible;
+}
+
 function belle_callGeminiOcr(imageBlob, opt) {
   const cfg = belle_getGeminiConfig();
-  const prompt = (typeof BELLE_OCR_PROMPT_V0 !== "undefined") ? BELLE_OCR_PROMPT_V0 : "";
+  const defaultPrompt = (typeof BELLE_OCR_PROMPT_V0 !== "undefined") ? BELLE_OCR_PROMPT_V0 : "";
+  const prompt = (opt && opt.promptText) ? String(opt.promptText) : defaultPrompt;
   if (!prompt) throw new Error("Missing OCR prompt constant: BELLE_OCR_PROMPT_V0");
 
   const mimeType = imageBlob.getContentType();
@@ -450,6 +491,7 @@ function belle_callGeminiOcr(imageBlob, opt) {
   const temp = (opt && typeof opt.temperature === "number" && !isNaN(opt.temperature))
     ? belle_ocr_clampTemperature_(opt.temperature)
     : 0.0;
+  const responseMimeType = opt && opt.responseMimeType ? String(opt.responseMimeType) : "";
 
   const payload = {
     contents: [{
@@ -463,6 +505,9 @@ function belle_callGeminiOcr(imageBlob, opt) {
       temperature: temp
     }
   };
+  if (responseMimeType) {
+    payload.generationConfig.responseMimeType = responseMimeType;
+  }
 
   const res = UrlFetchApp.fetch(url, {
     method: "post",

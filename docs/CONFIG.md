@@ -15,6 +15,7 @@
   - using BELLE_SHEET_NAME logs CONFIG_WARN (BELLE_SHEET_NAME_DEPRECATED)
 - BELLE_ACTIVE_DOC_TYPES (comma-separated; default: receipt)
   - Allowed values: receipt, cc_statement, bank_statement
+  - Include cc_statement to enable OCR_CC queue + OCR processing.
 - BELLE_OUTPUT_FOLDER_ID (resolve order: BELLE_OUTPUT_FOLDER_ID -> BELLE_DRIVE_FOLDER_ID)
 - BELLE_SKIP_LOG_SHEET_NAME (default: EXPORT_SKIP_LOG)
 - BELLE_EXPORT_BATCH_MAX_ROWS (default: 5000)
