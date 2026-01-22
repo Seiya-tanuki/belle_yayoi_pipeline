@@ -399,6 +399,13 @@ function belle_ocr_buildClaimScanPlan_(totalRows, cursorValue, maxScanRows) {
   return { indices: indices, nextCursor: nextCursor };
 }
 
+function belle_ocr_buildInvalidSchemaLogDetail_(jsonStr) {
+  const MAX_CELL_CHARS = 45000;
+  const s = String(jsonStr || "");
+  if (s.length <= MAX_CELL_CHARS) return s;
+  return s.slice(0, MAX_CELL_CHARS);
+}
+
 function belle_ocr_classifyError(message) {
   const msg = String(message || "").toLowerCase();
   const retryable = [
@@ -657,6 +664,7 @@ function belle_processQueueOnce(options) {
         nextRetryIso: nextRetryAt
       });
 
+      let jsonStr = "";
       try {
         if (mimeType === "application/pdf") {
           sh.getRange(sheetRow, headerMap["status"] + 1).setValue("ERROR_FINAL");
@@ -693,7 +701,7 @@ function belle_processQueueOnce(options) {
             prevErrorCode: ocrErrCode
           });
         }
-        const jsonStr = belle_callGeminiOcr(blob, { temperature: tempInfo.temperature });
+        jsonStr = belle_callGeminiOcr(blob, { temperature: tempInfo.temperature });
         const MAX_CELL_CHARS = 45000;
         if (jsonStr.length > MAX_CELL_CHARS) {
           throw new Error("OCR JSON too long for single cell: " + jsonStr.length);
@@ -721,7 +729,7 @@ function belle_processQueueOnce(options) {
         if (cfg.sleepMs > 0) Utilities.sleep(cfg.sleepMs);
       } catch (e) {
         const msg = String(e && e.message ? e.message : e);
-        const detail = msg.slice(0, 500);
+        let detail = msg.slice(0, 500);
         const classify = belle_ocr_classifyError(msg);
         const retryable = classify.retryable === true;
         let statusOut = retryable ? "ERROR_RETRYABLE" : "ERROR_FINAL";
@@ -729,6 +737,9 @@ function belle_processQueueOnce(options) {
         if (retryable && attempt >= maxAttempts) {
           statusOut = "ERROR_FINAL";
           errorCode = "MAX_ATTEMPTS_EXCEEDED";
+        }
+        if (errorCode === "INVALID_SCHEMA" && jsonStr) {
+          detail = belle_ocr_buildInvalidSchemaLogDetail_(jsonStr);
         }
         sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue(msg.slice(0, 200));
         sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue(errorCode);

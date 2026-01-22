@@ -121,6 +121,7 @@ Optional:
 - BELLE_OCR_MAX_ATTEMPTS (default: 3)
 - BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
 - BELLE_OCR_LOCK_TTL_SECONDS (default: 300)
+  - Effective TTL comes from the caller (worker loop uses this property); claim defaults to 180 only when invoked without ttlSeconds (manual use).
 - BELLE_OCR_WORKER_MAX_ITEMS (default: 1)
 - BELLE_OCR_CLAIM_SCAN_MAX_ROWS (default: 200)
 - BELLE_OCR_CLAIM_CURSOR (auto-managed)

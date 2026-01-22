@@ -272,7 +272,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     if (geminiStartMs > 0 && geminiElapsedMs === 0) {
       geminiElapsedMs = Date.now() - geminiStartMs;
     }
-    const detail = msg.slice(0, 500);
+    let detail = msg.slice(0, 500);
     const classified = belle_ocr_classifyError(msg);
     const retryable = classified.retryable === true;
     statusOut = retryable ? "ERROR_RETRYABLE" : "ERROR_FINAL";
@@ -283,6 +283,9 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     }
     httpStatus = belle_ocr_extractHttpStatus_(msg);
     errorMessage = msg.slice(0, 200);
+    if (errorCode === "INVALID_SCHEMA" && jsonStr) {
+      detail = belle_ocr_buildInvalidSchemaLogDetail_(jsonStr);
+    }
     errorDetail = detail;
     if (statusOut === "ERROR_RETRYABLE") {
       const backoff = belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds);

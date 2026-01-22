@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "npm run test:rate && npm run test:summary && npm run test:rid && npm run test:memo && npm run test:date && npm run test:ocr && npm run test:ocr-temperature && npm run test:reset && npm run test:chatwork && npm run test:webhook && npm run test:webhook-body && npm run test:ocr-claim && npm run test:ocr-claim-cursor && npm run test:ocr-reap && npm run test:ocr-parallel-disable",
+    "test": "npm run test:rate && npm run test:summary && npm run test:rid && npm run test:memo && npm run test:date && npm run test:ocr && npm run test:ocr-invalid-schema-log && npm run test:ocr-temperature && npm run test:reset && npm run test:chatwork && npm run test:webhook && npm run test:webhook-body && npm run test:ocr-claim && npm run test:ocr-claim-cursor && npm run test:ocr-reap && npm run test:ocr-parallel-disable",
     "typecheck": "tsc -p tsconfig.json",
     "test:rate": "node tests/test_rate_inference.js",
     "test:summary": "node tests/test_summary_format.js",
@@ -15,6 +15,7 @@
     "test:memo": "node tests/test_memo_format.js",
     "test:date": "node tests/test_date_fallback.js",
     "test:ocr": "node tests/test_ocr_validation.js",
+    "test:ocr-invalid-schema-log": "node tests/test_ocr_invalid_schema_log_detail.js",
     "test:ocr-temperature": "node tests/test_ocr_temperature_policy.js",
     "test:reset": "node tests/test_reset_headers.js",
     "test:chatwork": "node tests/test_chatwork_latest_csv.js",
