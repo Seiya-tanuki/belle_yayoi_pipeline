@@ -1234,7 +1234,8 @@ function belle_ocr_claimNextRowByDocTypes_(opts) {
     });
     last = res;
     if (res && res.claimed === true) return res;
-    if (res && res.reason && res.reason !== "NO_TARGET") return res;
+    const reason = res && res.reason ? String(res.reason) : "";
+    if (reason && reason !== "NO_TARGET" && reason !== "NO_ROWS") return res;
   }
   return last || { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "NO_TARGET" };
 }
