@@ -104,15 +104,19 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   const totalStart = Date.now();
   const props = PropertiesService.getScriptProperties();
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
+  const docTypes = opts && Array.isArray(opts.docTypes) && opts.docTypes.length > 0
+    ? opts.docTypes
+    : belle_ocr_getActiveDocTypes_(props);
   const ttlSeconds = belle_ocr_worker_resolveTtlSeconds_(props.getProperty("BELLE_OCR_LOCK_TTL_SECONDS"));
   const lockMode = opts && opts.lockMode ? String(opts.lockMode) : "wait";
   const lockWaitMs = Number((opts && opts.lockWaitMs) || "30000");
   const claimStart = Date.now();
-  const claim = belle_ocr_claimNextRow_fallback_v0_({
+  const claim = belle_ocr_claimNextRowByDocTypes_({
     workerId: workerId,
     ttlSeconds: ttlSeconds,
     lockMode: lockMode,
-    lockWaitMs: lockWaitMs
+    lockWaitMs: lockWaitMs,
+    docTypes: docTypes
   });
   const claimElapsedMs = Date.now() - claimStart;
   if (!claim || claim.claimed !== true) {
@@ -129,7 +133,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   }
 
   const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const queueSheetName = belle_getQueueSheetName(props);
+  const queueSheetName = claim.queueSheetName || belle_getQueueSheetName(props);
   const maxAttempts = Number(props.getProperty("BELLE_OCR_MAX_ATTEMPTS") || "3");
   const backoffSeconds = Number(props.getProperty("BELLE_OCR_RETRY_BACKOFF_SECONDS") || "300");
   if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
@@ -138,9 +142,8 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   const sh = ss.getSheetByName(queueSheetName);
   if (!sh) throw new Error("Sheet not found: " + queueSheetName);
 
-  const headerAll = belle_getQueueHeader_fallback_v0_();
-  const baseHeader = headerAll.slice(0, 8);
-  const extraHeader = headerAll.slice(8);
+  const baseHeader = belle_getQueueHeaderColumns_v0();
+  const extraHeader = belle_getQueueLockHeaderColumns_v0_();
   const headerMap = belle_queue_ensureHeaderMap(sh, baseHeader, extraHeader);
   if (!headerMap) {
     return { ok: false, processed: 0, reason: "INVALID_QUEUE_HEADER" };
@@ -153,6 +156,8 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   const mimeType = String(row[headerMap["mime_type"]] || "");
   const status = String(row[headerMap["status"]] || "");
   const statusBefore = claim.statusBefore || status;
+  const rowDocType = headerMap["doc_type"] !== undefined ? String(row[headerMap["doc_type"]] || "") : "";
+  const docType = rowDocType || claim.docType || "";
   const ocrJson = String(row[headerMap["ocr_json"]] || "");
   const ocrError = String(row[headerMap["ocr_error"]] || "");
   const ocrErrorCode = String(row[headerMap["ocr_error_code"]] || "");
@@ -181,9 +186,11 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
         totalItemElapsedMs: totalNow,
         geminiElapsedMs: 0,
         classify: "",
-        httpStatus: 0
+        httpStatus: 0,
+        docType: docType,
+        queueSheetName: queueSheetName
       };
-      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex });
+      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex, docType: docType });
       return res;
     }
 
@@ -320,9 +327,11 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
         totalItemElapsedMs: totalNow,
         geminiElapsedMs: geminiElapsedMs,
         classify: classify,
-        httpStatus: httpStatus
+        httpStatus: httpStatus,
+        docType: docType,
+        queueSheetName: queueSheetName
       };
-      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex });
+      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex, docType: docType });
       return res;
     }
 
@@ -360,7 +369,9 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     geminiElapsedMs: geminiElapsedMs,
     totalItemElapsedMs: totalItemElapsedMs,
     classify: classify,
-    httpStatus: httpStatus
+    httpStatus: httpStatus,
+    docType: docType,
+    queueSheetName: queueSheetName
   });
 
   return {
@@ -374,7 +385,9 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     geminiElapsedMs: geminiElapsedMs,
     totalItemElapsedMs: totalItemElapsedMs,
     classify: classify,
-    httpStatus: httpStatus
+    httpStatus: httpStatus,
+    docType: docType,
+    queueSheetName: queueSheetName
   };
 }
 
@@ -383,6 +396,9 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
   const maxItemsValue = opts && opts.maxItems !== undefined ? opts.maxItems : props.getProperty("BELLE_OCR_WORKER_MAX_ITEMS");
   const maxItems = belle_ocr_worker_resolveMaxItems_(maxItemsValue);
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
+  const docTypes = opts && Array.isArray(opts.docTypes) && opts.docTypes.length > 0
+    ? opts.docTypes
+    : belle_ocr_getActiveDocTypes_(props);
   const lockMode = opts && opts.lockMode ? String(opts.lockMode) : "wait";
   const lockWaitMs = Number((opts && opts.lockWaitMs) || "30000");
   const summary = {
@@ -397,6 +413,7 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
     claimedRowIndex: null,
     claimedFileId: "",
     claimedStatusBefore: "",
+    claimedDocType: "",
     claimElapsedMs: 0,
     lastReason: "",
     lockBusySkipped: 0,
@@ -407,12 +424,15 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
     avgTotalItemMs: 0,
     p95TotalItemMs: 0,
     classify: "",
-    httpStatus: 0
+    httpStatus: 0,
+    docType: "",
+    queueSheetName: "",
+    docTypes: docTypes.slice()
   };
   const geminiSamples = [];
   const totalSamples = [];
   for (let i = 0; i < maxItems; i++) {
-    const r = belle_ocr_workerOnce_fallback_v0_({ workerId: workerId, lockMode: lockMode, lockWaitMs: lockWaitMs });
+    const r = belle_ocr_workerOnce_fallback_v0_({ workerId: workerId, lockMode: lockMode, lockWaitMs: lockWaitMs, docTypes: docTypes });
     if (!r || r.processed === 0) {
       summary.lastReason = r && r.reason ? r.reason : "NO_TARGET";
       if (summary.lastReason === "LOCK_BUSY") summary.lockBusySkipped = 1;
@@ -431,10 +451,15 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
       summary.claimedRowIndex = r.rowIndex;
       summary.claimedFileId = r.file_id || "";
       summary.claimedStatusBefore = r.statusBefore || "";
+      summary.claimedDocType = r.docType || "";
       summary.claimElapsedMs = r.claimElapsedMs || 0;
     }
     summary.classify = r.classify || r.outcome || "";
     summary.httpStatus = r.httpStatus || 0;
+    if (!summary.docType && r.docType) {
+      summary.docType = r.docType;
+      summary.queueSheetName = r.queueSheetName || "";
+    }
   }
   if (geminiSamples.length > 0) {
     const sorted = geminiSamples.slice().sort(function (a, b) { return a - b; });

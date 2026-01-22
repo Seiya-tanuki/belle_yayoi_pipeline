@@ -12,6 +12,8 @@ function expect(cond, msg) {
 
 const header = sandbox.belle_getQueueHeader_fallback_v0_();
 expect(Array.isArray(header), 'header should be array');
+expect(header.indexOf('doc_type') >= 0, 'missing doc_type');
+expect(header.indexOf('source_subfolder') >= 0, 'missing source_subfolder');
 expect(header.indexOf('ocr_lock_owner') >= 0, 'missing ocr_lock_owner');
 expect(header.indexOf('ocr_lock_until_iso') >= 0, 'missing ocr_lock_until_iso');
 expect(header.indexOf('ocr_processing_started_at_iso') >= 0, 'missing ocr_processing_started_at_iso');

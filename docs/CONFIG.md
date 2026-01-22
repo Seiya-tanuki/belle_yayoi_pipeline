@@ -3,14 +3,18 @@
 ## Script Properties (required)
 - BELLE_SHEET_ID
 - BELLE_DRIVE_FOLDER_ID
+  - Input root folder. Files must be placed under subfolders: receipt, cc_statement, bank_statement.
+  - Root-level files are skipped (logged to EXPORT_SKIP_LOG).
 - BELLE_GEMINI_API_KEY
 - BELLE_GEMINI_MODEL
 
 ## Script Properties (optional)
-- BELLE_QUEUE_SHEET_NAME (preferred queue sheet)
-- BELLE_SHEET_NAME (legacy fallback for queue sheet)
-  - resolve order: BELLE_QUEUE_SHEET_NAME -> BELLE_SHEET_NAME -> OCR_RAW
+- BELLE_QUEUE_SHEET_NAME (preferred queue sheet for receipt)
+- BELLE_SHEET_NAME (legacy fallback for receipt queue sheet)
+  - resolve order: BELLE_QUEUE_SHEET_NAME -> BELLE_SHEET_NAME -> OCR_RECEIPT
   - using BELLE_SHEET_NAME logs CONFIG_WARN (BELLE_SHEET_NAME_DEPRECATED)
+- BELLE_ACTIVE_DOC_TYPES (comma-separated; default: receipt)
+  - Allowed values: receipt, cc_statement, bank_statement
 - BELLE_OUTPUT_FOLDER_ID (resolve order: BELLE_OUTPUT_FOLDER_ID -> BELLE_DRIVE_FOLDER_ID)
 - BELLE_SKIP_LOG_SHEET_NAME (default: EXPORT_SKIP_LOG)
 - BELLE_EXPORT_BATCH_MAX_ROWS (default: 5000)
@@ -44,13 +48,15 @@
 
 ### Parallel OCR (v0)
 - BELLE_OCR_PARALLEL_ENABLED (boolean, default: false): enables parallel tick execution.
-- BELLE_OCR_PARALLEL_WORKERS (number string, default: "1"): number of triggers to create (1-5).
+- BELLE_OCR_PARALLEL_WORKERS (number string, default: "1"): number of triggers to create (1-20).
 - BELLE_OCR_PARALLEL_TRIGGER_TAG (string, default: "BELLE_OCR_PARALLEL_V0"): log tag for trigger management.
 - BELLE_OCR_PARALLEL_TRIGGER_IDS (internal): auto-managed trigger IDs; do not edit.
+- BELLE_OCR_PARALLEL_STAGGER_WINDOW_MS (number string, default: 50000): stagger window in ms (clamped to 0-59000).
 - BELLE_OCR_LOCK_TTL_SECONDS (number string, default: 300): lock TTL for claim.
 - BELLE_OCR_WORKER_MAX_ITEMS (number string, default: 1): max items per worker loop.
 - BELLE_OCR_CLAIM_SCAN_MAX_ROWS (number string; unset = scan all rows).
-- BELLE_OCR_CLAIM_CURSOR (internal): auto-managed scan cursor; do not edit.
+- BELLE_OCR_CLAIM_CURSOR__<doc_type> (internal): auto-managed scan cursor; do not edit.
+- BELLE_OCR_CLAIM_CURSOR (legacy internal, receipt only).
 - BELLE_INTEGRATIONS_SHEET_ID (optional): required to write PERF_LOG (also used by webhook logs).
 Notes:
 - When parallel enabled, runner OCR is guarded with RUN_GUARD: OCR_PARALLEL_ENABLED.
@@ -58,7 +64,8 @@ Notes:
 
 ## Notes
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.
-- OCR_RAW columns are extended (append-only): ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail.
+- Queue sheets are split by doc_type: OCR_RECEIPT (receipt), OCR_CC (cc_statement), OCR_BANK (bank_statement).
+- Queue sheet columns are extended (append-only): ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail.
 - Export log sheet name is fixed: EXPORT_LOG (legacy IMPORT_LOG must be renamed manually).
 
 ## References

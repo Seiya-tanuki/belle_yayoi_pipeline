@@ -58,7 +58,7 @@ function belle_getOrCreateExportLogSheet(ss) {
 function belle_exportYayoiCsvFallback(options) {
   const props = PropertiesService.getScriptProperties();
   const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const queueSheetName = belle_getQueueSheetName(props);
+  const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, "receipt");
   const outputFolderId = belle_getOutputFolderId(props);
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
@@ -88,9 +88,8 @@ function belle_exportYayoiCsvFallback(options) {
       return res;
     }
 
-    const headerAll = belle_getQueueHeader_fallback_v0_();
-    const baseHeader = headerAll.slice(0, 8);
-    const extraHeader = headerAll.slice(8);
+    const baseHeader = belle_getQueueHeaderColumns_v0();
+    const extraHeader = belle_getQueueLockHeaderColumns_v0_();
     const lastRow = queue.getLastRow();
     if (lastRow < 2) {
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "NO_ROWS", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
@@ -222,6 +221,9 @@ function belle_exportYayoiCsvFallback(options) {
       const status = statusRaw || "QUEUED";
       const fileId = String(row[headerMap["file_id"]] || "");
       const fileName = String(row[headerMap["file_name"]] || "");
+      const docType = String(row[headerMap["doc_type"]] || "");
+      const sourceSubfolder = String(row[headerMap["source_subfolder"]] || "");
+      const driveUrl = String(row[headerMap["drive_url"]] || "");
       const queuedAt = String(row[headerMap["queued_at_iso"]] || "");
       const ocrJson = String(row[headerMap["ocr_json"]] || "");
       const errorCode = String(row[headerMap["ocr_error_code"]] || "");
@@ -234,9 +236,14 @@ function belle_exportYayoiCsvFallback(options) {
         continue;
       }
 
+      if (docType && docType !== "receipt") {
+        skipped++;
+        skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "DOC_TYPE_NOT_RECEIPT" });
+        continue;
+      }
       if (status !== "DONE" && status !== "ERROR_FINAL") {
         skipped++;
-        skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_NOT_DONE:" + status });
+        skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "OCR_NOT_DONE:" + status });
         continue;
       }
 
@@ -247,7 +254,7 @@ function belle_exportYayoiCsvFallback(options) {
         if (!ocrJson) {
           errors++;
           skipped++;
-          skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_JSON_MISSING" });
+          skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "OCR_JSON_MISSING" });
           continue;
         }
         try {
@@ -255,7 +262,7 @@ function belle_exportYayoiCsvFallback(options) {
         } catch (e) {
           errors++;
           skipped++;
-          skippedDetails.push({ file_id: fileId, file_name: fileName, reason: "OCR_JSON_PARSE_ERROR" });
+          skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "OCR_JSON_PARSE_ERROR" });
           continue;
         }
       } else {
@@ -348,7 +355,7 @@ function belle_exportYayoiCsvFallback(options) {
 
     if (csvRows.length === 0) {
       if (skippedDetails.length > 0) {
-        belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso);
+        belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
       }
       const res = { phase: "EXPORT_DONE", ok: true, reason: "NO_EXPORT_ROWS", exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, csvFileId: "" };
       Logger.log(res);
@@ -373,7 +380,7 @@ function belle_exportYayoiCsvFallback(options) {
     }
 
     if (skippedDetails.length > 0) {
-      belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso);
+      belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
     }
 
     const result = {

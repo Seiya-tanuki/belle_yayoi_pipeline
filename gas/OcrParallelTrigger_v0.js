@@ -109,6 +109,7 @@ function belle_ocr_workerTick_fallback_v0(e) {
   const triggerUid = e && e.triggerUid ? String(e.triggerUid) : "";
   let workerCount = belle_ocr_parallel_getWorkerCount_(props);
   if (!workerCount || workerCount < 1) workerCount = 1;
+  const docTypes = belle_ocr_getActiveDocTypes_(props);
   const triggerIds = belle_ocr_parallel_parseTriggerIds_(props);
   const workerSlot = belle_ocr_parallel_resolveStaggerSlot_(triggerUid, triggerIds, workerCount);
   const staggerWindowMs = belle_ocr_parallel_resolveStaggerWindowMs_(props);
@@ -116,7 +117,7 @@ function belle_ocr_workerTick_fallback_v0(e) {
   if (staggerMs > 0) Utilities.sleep(staggerMs);
 
   const workerId = Utilities.getUuid();
-  const result = belle_ocr_workerLoop_fallback_v0_({ workerId: workerId, maxItems: 1, lockMode: "try", lockWaitMs: 500 });
+  const result = belle_ocr_workerLoop_fallback_v0_({ workerId: workerId, maxItems: 1, lockMode: "try", lockWaitMs: 500, docTypes: docTypes });
   try {
     belle_ocr_perf_appendFromSummary_(result);
   } catch (e) {
@@ -139,7 +140,9 @@ function belle_ocr_workerTick_fallback_v0(e) {
     workerCount: workerCount,
     workerSlot: workerSlot,
     staggerMs: staggerMs,
-    triggerUid: triggerUid
+    triggerUid: triggerUid,
+    docType: result && result.docType ? result.docType : "",
+    docTypes: docTypes
   };
   Logger.log(res);
   return res;
