@@ -103,11 +103,21 @@ function belle_export_runDocTypes_(handlers) {
 
 function belle_export_flushExportLog_(exportLog, fileIds, nowIso, csvFileId, chunkSize) {
   if (!exportLog || !fileIds || fileIds.length === 0) return 0;
-  const rows = [];
+  const sizeRaw = Number(chunkSize);
+  const size = sizeRaw && isFinite(sizeRaw) && sizeRaw > 0 ? Math.floor(sizeRaw) : 200;
+  let written = 0;
+  let buffer = [];
   for (let i = 0; i < fileIds.length; i++) {
-    rows.push([fileIds[i], nowIso, csvFileId]);
+    buffer.push([fileIds[i], nowIso, csvFileId]);
+    if (buffer.length >= size) {
+      written += belle_sheet_appendRowsInChunks_(exportLog, buffer, size);
+      buffer = [];
+    }
   }
-  return belle_sheet_appendRowsInChunks_(exportLog, rows, chunkSize);
+  if (buffer.length > 0) {
+    written += belle_sheet_appendRowsInChunks_(exportLog, buffer, size);
+  }
+  return written;
 }
 
 function belle_exportYayoiCsvFallback(options) {

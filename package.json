@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "npm run test:rate && npm run test:summary && npm run test:rid && npm run test:memo && npm run test:date && npm run test:ocr && npm run test:ocr-invalid-schema-log && npm run test:ocr-temperature && npm run test:reset && npm run test:chatwork && npm run test:webhook && npm run test:webhook-body && npm run test:ocr-claim && npm run test:ocr-claim-cursor && npm run test:doc-type && npm run test:cc-validation && npm run test:cc-flow && npm run test:cc-export && npm run test:export-folder && npm run test:export-orchestration && npm run test:export-log-multi && npm run test:export-batch && npm run test:ocr-worker-no-target && npm run test:ocr-reap && npm run test:ocr-parallel-stagger && npm run test:ocr-parallel-disable",
+    "test": "npm run test:rate && npm run test:summary && npm run test:rid && npm run test:memo && npm run test:date && npm run test:ocr && npm run test:ocr-invalid-schema-log && npm run test:ocr-temperature && npm run test:reset && npm run test:chatwork && npm run test:webhook && npm run test:webhook-body && npm run test:ocr-claim && npm run test:ocr-claim-cursor && npm run test:doc-type && npm run test:cc-validation && npm run test:cc-flow && npm run test:cc-export && npm run test:export-folder && npm run test:export-orchestration && npm run test:export-log-multi && npm run test:export-log-flush && npm run test:export-batch && npm run test:ocr-worker-no-target && npm run test:ocr-reap && npm run test:ocr-parallel-stagger && npm run test:ocr-parallel-disable",
     "typecheck": "tsc -p tsconfig.json",
     "test:rate": "node tests/test_rate_inference.js",
     "test:summary": "node tests/test_summary_format.js",
@@ -30,6 +30,7 @@
     "test:export-folder": "node tests/test_export_folder_resolution.js",
     "test:export-orchestration": "node tests/test_export_doc_type_orchestration.js",
     "test:export-log-multi": "node tests/test_export_log_multi_doc_type.js",
+    "test:export-log-flush": "node tests/test_export_log_flush.js",
     "test:export-batch": "node tests/test_sheet_append_rows.js",
     "test:ocr-worker-no-target": "node tests/test_ocr_worker_no_target.js",
     "test:ocr-reap": "node tests/test_ocr_reap_stale.js",
