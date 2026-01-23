@@ -479,6 +479,155 @@ function belle_ocr_cc_buildIncompleteMessage_(extractedCount, visibleCount) {
   return "incomplete rows: extracted=" + extracted + " visible=" + visible;
 }
 
+function belle_ocr_cc_detectStageFromCache_(ocrJsonStr) {
+  const raw = String(ocrJsonStr || "").trim();
+  if (!raw) return { stage: "stage1", cacheInvalid: false };
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && parsed.task === "page_classification" && parsed.page_type === "transactions") {
+      return { stage: "stage2", cacheInvalid: false };
+    }
+    return { stage: "stage1", cacheInvalid: true };
+  } catch (e) {
+    return { stage: "stage1", cacheInvalid: false };
+  }
+}
+
+function belle_ocr_cc_buildStage1Writeback_(pageType, stage1JsonStr) {
+  const decision = belle_ocr_cc_classifyStage1Page_(pageType);
+  if (decision.proceed) {
+    return {
+      statusOut: "QUEUED",
+      errorCode: "",
+      errorMessage: "",
+      errorDetail: "",
+      cacheJson: stage1JsonStr,
+      clearErrors: true,
+      retryable: false
+    };
+  }
+  return {
+    statusOut: decision.statusOut,
+    errorCode: decision.errorCode,
+    errorMessage: decision.errorMessage,
+    errorDetail: belle_ocr_buildInvalidSchemaLogDetail_(stage1JsonStr),
+    cacheJson: "",
+    clearErrors: false,
+    retryable: decision.statusOut === "ERROR_RETRYABLE"
+  };
+}
+
+function belle_ocr_cc_buildStage2SuccessWriteback_(stage2JsonStr) {
+  return { statusOut: "DONE", errorCode: "", errorMessage: "", errorDetail: "", nextJson: stage2JsonStr, clearErrors: true };
+}
+
+function belle_ocr_cc_buildStage2IncompleteWriteback_(stage2JsonStr, extractedCount, visibleCount) {
+  return {
+    statusOut: "ERROR_RETRYABLE",
+    errorCode: "CC_INCOMPLETE_ROWS",
+    errorMessage: belle_ocr_cc_buildIncompleteMessage_(extractedCount, visibleCount),
+    errorDetail: belle_ocr_buildInvalidSchemaLogDetail_(stage2JsonStr),
+    keepCache: true
+  };
+}
+
+function belle_ocr_cc_parseGenCfg_(raw, fallback) {
+  if (!raw) return fallback;
+  try {
+    const parsed = JSON.parse(String(raw));
+    if (!parsed || typeof parsed !== "object") return fallback;
+    return parsed;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function belle_ocr_cc_mergeGenCfg_(baseCfg, overrideCfg) {
+  const base = baseCfg && typeof baseCfg === "object" ? baseCfg : {};
+  const out = {};
+  const keys = Object.keys(base);
+  for (let i = 0; i < keys.length; i++) out[keys[i]] = base[keys[i]];
+  if (overrideCfg && typeof overrideCfg === "object") {
+    const overrideKeys = Object.keys(overrideCfg);
+    for (let j = 0; j < overrideKeys.length; j++) {
+      out[overrideKeys[j]] = overrideCfg[overrideKeys[j]];
+    }
+  }
+  return out;
+}
+
+function belle_ocr_cc_getStage1GenCfg_(props) {
+  const p = props || PropertiesService.getScriptProperties();
+  const defaults = { temperature: 0.0, topP: 0.1, maxOutputTokens: 512, thinkingConfig: { thinkingLevel: "low" } };
+  const override = belle_ocr_cc_parseGenCfg_(p.getProperty("BELLE_CC_STAGE1_GENCFG_JSON"), null);
+  return belle_ocr_cc_mergeGenCfg_(defaults, override);
+}
+
+function belle_ocr_cc_getStage2GenCfg_(props) {
+  const p = props || PropertiesService.getScriptProperties();
+  const defaults = { temperature: 0.0, topP: 0.1, maxOutputTokens: 8192, thinkingConfig: { thinkingLevel: "low" } };
+  const override = belle_ocr_cc_parseGenCfg_(p.getProperty("BELLE_CC_STAGE2_GENCFG_JSON"), null);
+  return belle_ocr_cc_mergeGenCfg_(defaults, override);
+}
+
+function belle_ocr_cc_enableResponseJsonSchema_(props) {
+  const p = props || PropertiesService.getScriptProperties();
+  return belle_parseBool(p.getProperty("BELLE_CC_ENABLE_RESPONSE_JSON_SCHEMA"), false);
+}
+
+function belle_ocr_cc_enableResponseMimeType_(props) {
+  const p = props || PropertiesService.getScriptProperties();
+  return belle_parseBool(p.getProperty("BELLE_CC_ENABLE_RESPONSE_MIME_TYPE"), false);
+}
+
+function belle_ocr_cc_getStage1ResponseJsonSchema_() {
+  return {
+    type: "object",
+    properties: {
+      task: { type: "string", enum: ["page_classification"] },
+      page_type: { type: "string", enum: ["transactions", "non_transactions", "unknown"] },
+      reason_codes: { type: "array", items: { type: "string" } },
+      page_issues: { type: "array", items: { type: "string" } }
+    },
+    required: ["task", "page_type", "reason_codes", "page_issues"],
+    additionalProperties: false
+  };
+}
+
+function belle_ocr_cc_getStage2ResponseJsonSchema_() {
+  return {
+    type: "object",
+    properties: {
+      task: { type: "string", enum: ["transaction_extraction"] },
+      visible_row_count: { type: "number" },
+      transactions: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            row_no: { type: "number" },
+            raw_use_date_text: { type: "string" },
+            use_month: { type: "number" },
+            use_day: { type: "number" },
+            merchant: { type: "string" },
+            amount_yen: { type: "number" },
+            amount_sign: { type: "string", enum: ["debit", "credit"] },
+            issues: { type: "array", items: { type: "string" } }
+          },
+          required: ["row_no", "raw_use_date_text", "use_month", "use_day", "merchant", "amount_yen", "amount_sign", "issues"],
+          additionalProperties: false
+        }
+      }
+    },
+    required: ["task", "visible_row_count", "transactions"],
+    additionalProperties: false
+  };
+}
+
+function belle_ocr_shouldStopAfterItem_(docType) {
+  return String(docType || "") === "cc_statement";
+}
+
 function belle_callGeminiOcr(imageBlob, opt) {
   const cfg = belle_getGeminiConfig();
   const defaultPrompt = (typeof BELLE_OCR_PROMPT_V0 !== "undefined") ? BELLE_OCR_PROMPT_V0 : "";
@@ -492,6 +641,22 @@ function belle_callGeminiOcr(imageBlob, opt) {
     ? belle_ocr_clampTemperature_(opt.temperature)
     : 0.0;
   const responseMimeType = opt && opt.responseMimeType ? String(opt.responseMimeType) : "";
+  const responseJsonSchema = opt && opt.responseJsonSchema ? opt.responseJsonSchema : null;
+  const generationConfigOverride = opt && opt.generationConfig ? opt.generationConfig : null;
+
+  const generationConfig = { temperature: temp };
+  if (generationConfigOverride && typeof generationConfigOverride === "object") {
+    const overrideKeys = Object.keys(generationConfigOverride);
+    for (let i = 0; i < overrideKeys.length; i++) {
+      generationConfig[overrideKeys[i]] = generationConfigOverride[overrideKeys[i]];
+    }
+  }
+  if (responseMimeType) {
+    generationConfig.responseMimeType = responseMimeType;
+  }
+  if (responseJsonSchema && typeof responseJsonSchema === "object") {
+    generationConfig.responseJsonSchema = responseJsonSchema;
+  }
 
   const payload = {
     contents: [{
@@ -501,13 +666,8 @@ function belle_callGeminiOcr(imageBlob, opt) {
         { inline_data: { mime_type: mimeType, data: b64 } }
       ]
     }],
-    generationConfig: {
-      temperature: temp
-    }
+    generationConfig: generationConfig
   };
-  if (responseMimeType) {
-    payload.generationConfig.responseMimeType = responseMimeType;
-  }
 
   const res = UrlFetchApp.fetch(url, {
     method: "post",
@@ -1092,12 +1252,17 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
 
     const lastRow = sh.getLastRow();
     if (lastRow < 2) {
-      const res = { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "NO_ROWS" };
+      const res = { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "NO_ROWS", processingCount: 0 };
       Logger.log(res);
       return res;
     }
 
     const values = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
+    let processingCount = 0;
+    for (let i = 0; i < values.length; i++) {
+      const status = String(values[i][headerMap["status"]] || "");
+      if (status === "PROCESSING") processingCount++;
+    }
     const nowMs = Date.now();
     const nowIso = new Date(nowMs).toISOString();
     const scanMaxRaw = props.getProperty("BELLE_OCR_CLAIM_SCAN_MAX_ROWS");
@@ -1168,7 +1333,8 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
         workerId: workerId,
         lockUntilIso: lockUntilIso,
         docType: docType,
-        queueSheetName: queueSheetName
+        queueSheetName: queueSheetName,
+        processingCount: processingCount
       };
       Logger.log(res);
       return res;
@@ -1203,7 +1369,7 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
       }
     }
 
-    const res = { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "NO_TARGET" };
+    const res = { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "NO_TARGET", processingCount: processingCount };
     Logger.log(res);
     return res;
   } finally {

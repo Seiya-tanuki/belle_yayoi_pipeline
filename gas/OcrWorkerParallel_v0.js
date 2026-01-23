@@ -128,7 +128,8 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
       totalItemElapsedMs: Date.now() - totalStart,
       geminiElapsedMs: 0,
       classify: "",
-      httpStatus: 0
+      httpStatus: 0,
+      processingCount: processingCount
     };
   }
 
@@ -158,7 +159,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   const statusBefore = claim.statusBefore || status;
   const rowDocType = headerMap["doc_type"] !== undefined ? String(row[headerMap["doc_type"]] || "") : "";
   const docType = rowDocType || claim.docType || "";
-  const ocrJson = String(row[headerMap["ocr_json"]] || "");
+  const ocrJsonBefore = String(row[headerMap["ocr_json"]] || "");
   const ocrError = String(row[headerMap["ocr_error"]] || "");
   const ocrErrorCode = String(row[headerMap["ocr_error_code"]] || "");
   const ocrErrorDetail = String(row[headerMap["ocr_error_detail"]] || "");
@@ -188,14 +189,15 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
         classify: "",
         httpStatus: 0,
         docType: docType,
-        queueSheetName: queueSheetName
+        queueSheetName: queueSheetName,
+        processingCount: processingCount
       };
       Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex, docType: docType });
       return res;
     }
 
-    if ((statusBefore === "ERROR_RETRYABLE" || statusBefore === "ERROR") && ocrJson && !ocrError) {
-      const detail = String(ocrJson).slice(0, 500);
+    if ((statusBefore === "ERROR_RETRYABLE" || statusBefore === "ERROR") && ocrJsonBefore && !ocrError) {
+      const detail = String(ocrJsonBefore).slice(0, 500);
       const summary = detail.slice(0, 200);
       sh.getRange(rowIndex, headerMap["ocr_error_code"] + 1).setValue("LEGACY_ERROR_IN_OCR_JSON");
       sh.getRange(rowIndex, headerMap["ocr_error_detail"] + 1).setValue(detail);
@@ -222,6 +224,12 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   let httpStatus = 0;
   let classify = "";
   let totalItemElapsedMs = 0;
+  let ccStage = "";
+  let ccCacheHit = false;
+  let ccGeminiMs = 0;
+  let ccStage2Attempted = false;
+  let keepOcrJsonOnError = false;
+  let processingCount = claim && claim.processingCount ? Number(claim.processingCount) : 0;
 
   try {
     if (mimeType === "application/pdf" && !belle_ocr_allowPdfForDocType_(docType)) {
@@ -253,38 +261,71 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
           prevErrorCode: ocrErrorCode
         });
       }
-      const stage1Prompt = belle_ocr_getCcStage1Prompt_();
-      const stage1StartMs = Date.now();
-      const stage1JsonStr = belle_callGeminiOcr(blob, { temperature: tempInfo.temperature, promptText: stage1Prompt, responseMimeType: "application/json" });
-      geminiElapsedMs += Date.now() - stage1StartMs;
-      httpStatus = 200;
-      jsonStr = stage1JsonStr;
-      let stage1Parsed;
-      try {
-        stage1Parsed = JSON.parse(stage1JsonStr);
-      } catch (e) {
-        throw new Error("INVALID_SCHEMA: CC_STAGE1_PARSE_ERROR");
+
+      const cacheInfo = belle_ocr_cc_detectStageFromCache_(ocrJsonBefore);
+      ccStage = cacheInfo.stage;
+      ccCacheHit = ccStage === "stage2";
+
+      if (cacheInfo.cacheInvalid) {
+        errorCode = "CC_STAGE1_CACHE_INVALID";
+        errorMessage = "cc_statement stage1 cache invalid";
+        errorDetail = belle_ocr_buildInvalidSchemaLogDetail_(ocrJsonBefore);
       }
-      const stage1Validation = belle_ocr_validateCcStage1_(stage1Parsed);
-      if (!stage1Validation.ok) {
-        throw new Error("INVALID_SCHEMA: " + stage1Validation.reason);
-      }
-      const stage1Decision = belle_ocr_cc_classifyStage1Page_(stage1Parsed.page_type);
-      if (!stage1Decision.proceed) {
-        outcome = stage1Decision.statusOut;
-        statusOut = stage1Decision.statusOut;
-        errorCode = stage1Decision.errorCode;
-        errorMessage = stage1Decision.errorMessage;
-        errorDetail = belle_ocr_buildInvalidSchemaLogDetail_(stage1JsonStr);
+
+      if (ccStage === "stage1") {
+        const stage1Prompt = belle_ocr_getCcStage1Prompt_();
+        const stage1Options = {
+          temperature: tempInfo.temperature,
+          promptText: stage1Prompt,
+          generationConfig: belle_ocr_cc_getStage1GenCfg_(props)
+        };
+        if (belle_ocr_cc_enableResponseMimeType_(props)) stage1Options.responseMimeType = "application/json";
+        if (belle_ocr_cc_enableResponseJsonSchema_(props)) stage1Options.responseJsonSchema = belle_ocr_cc_getStage1ResponseJsonSchema_();
+
+        geminiStartMs = Date.now();
+        const stage1JsonStr = belle_callGeminiOcr(blob, stage1Options);
+        geminiElapsedMs = Date.now() - geminiStartMs;
+        ccGeminiMs = geminiElapsedMs;
+        httpStatus = 200;
+        jsonStr = stage1JsonStr;
+        let stage1Parsed;
+        try {
+          stage1Parsed = JSON.parse(stage1JsonStr);
+        } catch (e) {
+          throw new Error("INVALID_SCHEMA: CC_STAGE1_PARSE_ERROR");
+        }
+        const stage1Validation = belle_ocr_validateCcStage1_(stage1Parsed);
+        if (!stage1Validation.ok) {
+          throw new Error("INVALID_SCHEMA: " + stage1Validation.reason);
+        }
+        const stage1Writeback = belle_ocr_cc_buildStage1Writeback_(stage1Parsed.page_type, stage1JsonStr);
+        statusOut = stage1Writeback.statusOut;
+        outcome = statusOut === "QUEUED" ? "STAGE1_CACHED" : statusOut;
+        errorCode = stage1Writeback.errorCode;
+        errorMessage = stage1Writeback.errorMessage;
+        errorDetail = stage1Writeback.errorDetail;
         if (statusOut === "ERROR_RETRYABLE") {
           const backoff = belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds);
           nextRetryIso = new Date(Date.now() + backoff).toISOString();
         }
+        if (statusOut === "QUEUED") {
+          jsonStr = stage1Writeback.cacheJson;
+        }
       } else {
+        ccStage2Attempted = true;
         const stage2Prompt = belle_ocr_getCcStage2Prompt_();
-        const stage2StartMs = Date.now();
-        const stage2JsonStr = belle_callGeminiOcr(blob, { temperature: tempInfo.temperature, promptText: stage2Prompt, responseMimeType: "application/json" });
-        geminiElapsedMs += Date.now() - stage2StartMs;
+        const stage2Options = {
+          temperature: tempInfo.temperature,
+          promptText: stage2Prompt,
+          generationConfig: belle_ocr_cc_getStage2GenCfg_(props)
+        };
+        if (belle_ocr_cc_enableResponseMimeType_(props)) stage2Options.responseMimeType = "application/json";
+        if (belle_ocr_cc_enableResponseJsonSchema_(props)) stage2Options.responseJsonSchema = belle_ocr_cc_getStage2ResponseJsonSchema_();
+
+        geminiStartMs = Date.now();
+        const stage2JsonStr = belle_callGeminiOcr(blob, stage2Options);
+        geminiElapsedMs = Date.now() - geminiStartMs;
+        ccGeminiMs = geminiElapsedMs;
         httpStatus = 200;
         jsonStr = stage2JsonStr;
         const MAX_CELL_CHARS = 45000;
@@ -304,16 +345,23 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
         const extractedCount = Array.isArray(parsed.transactions) ? parsed.transactions.length : 0;
         const visibleCount = parsed.visible_row_count;
         if (belle_ocr_cc_isIncompleteRows_(visibleCount, extractedCount)) {
-          outcome = "ERROR_RETRYABLE";
-          statusOut = "ERROR_RETRYABLE";
-          errorCode = "CC_INCOMPLETE_ROWS";
-          errorMessage = belle_ocr_cc_buildIncompleteMessage_(extractedCount, visibleCount).slice(0, 200);
-          errorDetail = belle_ocr_buildInvalidSchemaLogDetail_(stage2JsonStr);
+          const incomplete = belle_ocr_cc_buildStage2IncompleteWriteback_(stage2JsonStr, extractedCount, visibleCount);
+          statusOut = incomplete.statusOut;
+          outcome = statusOut;
+          errorCode = incomplete.errorCode;
+          errorMessage = incomplete.errorMessage.slice(0, 200);
+          errorDetail = incomplete.errorDetail;
+          keepOcrJsonOnError = true;
           const backoff = belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds);
           nextRetryIso = new Date(Date.now() + backoff).toISOString();
         } else {
+          const stage2Writeback = belle_ocr_cc_buildStage2SuccessWriteback_(stage2JsonStr);
+          statusOut = stage2Writeback.statusOut;
           outcome = "DONE";
-          statusOut = "DONE";
+          jsonStr = stage2Writeback.nextJson;
+          errorCode = "";
+          errorMessage = "";
+          errorDetail = "";
         }
       }
     } else {
@@ -365,6 +413,9 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     if (geminiStartMs > 0 && geminiElapsedMs === 0) {
       geminiElapsedMs = Date.now() - geminiStartMs;
     }
+    if (docType === "cc_statement" && ccGeminiMs === 0 && geminiElapsedMs > 0) {
+      ccGeminiMs = geminiElapsedMs;
+    }
     let detail = msg.slice(0, 500);
     const classified = belle_ocr_classifyError(msg);
     const retryable = classified.retryable === true;
@@ -380,6 +431,9 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
       detail = belle_ocr_buildInvalidSchemaLogDetail_(jsonStr);
     }
     errorDetail = detail;
+    if (docType === "cc_statement" && ccStage2Attempted) {
+      keepOcrJsonOnError = true;
+    }
     if (statusOut === "ERROR_RETRYABLE") {
       const backoff = belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds);
       nextRetryIso = new Date(Date.now() + backoff).toISOString();
@@ -415,7 +469,8 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
         classify: classify,
         httpStatus: httpStatus,
         docType: docType,
-        queueSheetName: queueSheetName
+        queueSheetName: queueSheetName,
+        processingCount: processingCount
       };
       Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex, docType: docType });
       return res;
@@ -432,11 +487,20 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
       sh.getRange(rowIndex, headerMap["ocr_error_detail"] + 1).setValue("");
       sh.getRange(rowIndex, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
       sh.getRange(rowIndex, headerMap["status"] + 1).setValue("DONE");
+    } else if (statusOut === "QUEUED") {
+      sh.getRange(rowIndex, headerMap["ocr_json"] + 1).setValue(jsonStr);
+      sh.getRange(rowIndex, headerMap["ocr_error"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["ocr_error_code"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["ocr_error_detail"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["status"] + 1).setValue("QUEUED");
     } else {
       sh.getRange(rowIndex, headerMap["ocr_error"] + 1).setValue(errorMessage);
       sh.getRange(rowIndex, headerMap["ocr_error_code"] + 1).setValue(errorCode);
       sh.getRange(rowIndex, headerMap["ocr_error_detail"] + 1).setValue(errorDetail);
-      sh.getRange(rowIndex, headerMap["ocr_json"] + 1).setValue("");
+      if (!keepOcrJsonOnError) {
+        sh.getRange(rowIndex, headerMap["ocr_json"] + 1).setValue("");
+      }
       sh.getRange(rowIndex, headerMap["ocr_next_retry_at_iso"] + 1).setValue(nextRetryIso);
       sh.getRange(rowIndex, headerMap["status"] + 1).setValue(statusOut);
     }
@@ -457,7 +521,13 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     classify: classify,
     httpStatus: httpStatus,
     docType: docType,
-    queueSheetName: queueSheetName
+    queueSheetName: queueSheetName,
+    ccStage: ccStage,
+    ccCacheHit: ccCacheHit,
+    ccGeminiMs: ccGeminiMs,
+    ccHttpStatus: httpStatus,
+    ccErrorCode: errorCode,
+    processingCount: processingCount
   });
 
   return {
@@ -473,7 +543,13 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     classify: classify,
     httpStatus: httpStatus,
     docType: docType,
-    queueSheetName: queueSheetName
+    queueSheetName: queueSheetName,
+    ccStage: ccStage,
+    ccCacheHit: ccCacheHit,
+    ccGeminiMs: ccGeminiMs,
+    ccHttpStatus: httpStatus,
+    ccErrorCode: errorCode,
+    processingCount: processingCount
   };
 }
 
@@ -492,6 +568,7 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
     ok: true,
     processed: 0,
     done: 0,
+    stage1Cached: 0,
     errors: 0,
     retryable: 0,
     final: 0,
@@ -513,7 +590,13 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
     httpStatus: 0,
     docType: "",
     queueSheetName: "",
-    docTypes: docTypes.slice()
+    docTypes: docTypes.slice(),
+    ccStage: "",
+    ccCacheHit: false,
+    ccGeminiMs: 0,
+    ccHttpStatus: 0,
+    ccErrorCode: "",
+    processingCount: 0
   };
   const geminiSamples = [];
   const totalSamples = [];
@@ -526,6 +609,7 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
     }
     summary.processed++;
     if (r.outcome === "DONE") summary.done++;
+    else if (r.outcome === "STAGE1_CACHED") summary.stage1Cached++;
     else {
       summary.errors++;
       if (r.outcome === "ERROR_RETRYABLE") summary.retryable++;
@@ -542,10 +626,19 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
     }
     summary.classify = r.classify || r.outcome || "";
     summary.httpStatus = r.httpStatus || 0;
+    if (typeof r.processingCount === "number") summary.processingCount = r.processingCount;
     if (!summary.docType && r.docType) {
       summary.docType = r.docType;
       summary.queueSheetName = r.queueSheetName || "";
     }
+    if (r.docType === "cc_statement") {
+      summary.ccStage = r.ccStage || "";
+      summary.ccCacheHit = r.ccCacheHit === true;
+      summary.ccGeminiMs = typeof r.ccGeminiMs === "number" ? r.ccGeminiMs : 0;
+      summary.ccHttpStatus = r.ccHttpStatus || r.httpStatus || 0;
+      summary.ccErrorCode = r.ccErrorCode || "";
+    }
+    if (belle_ocr_shouldStopAfterItem_(r.docType)) break;
   }
   if (geminiSamples.length > 0) {
     const sorted = geminiSamples.slice().sort(function (a, b) { return a - b; });

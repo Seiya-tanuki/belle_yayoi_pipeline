@@ -16,6 +16,11 @@
 - BELLE_ACTIVE_DOC_TYPES (comma-separated; default: receipt)
   - Allowed values: receipt, cc_statement, bank_statement
   - Include cc_statement to enable OCR_CC queue + OCR processing.
+- BELLE_CC_STAGE1_GENCFG_JSON (optional; JSON string for generationConfig overrides)
+- BELLE_CC_STAGE2_GENCFG_JSON (optional; JSON string for generationConfig overrides)
+- BELLE_CC_ENABLE_RESPONSE_JSON_SCHEMA (default: false)
+- BELLE_CC_ENABLE_RESPONSE_MIME_TYPE (default: false)
+  - Enable only if the model accepts responseMimeType/responseJsonSchema; invalid argument may return 400.
 - BELLE_OUTPUT_FOLDER_ID (resolve order: BELLE_OUTPUT_FOLDER_ID -> BELLE_DRIVE_FOLDER_ID)
 - BELLE_SKIP_LOG_SHEET_NAME (default: EXPORT_SKIP_LOG)
 - BELLE_EXPORT_BATCH_MAX_ROWS (default: 5000)
@@ -64,6 +69,7 @@ Notes:
 - Disable removes triggers only; BELLE_OCR_PARALLEL_ENABLED is unchanged.
 
 ## Notes
+- cc_statement uses ocr_json as stage1 cache or stage2 final JSON.
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.
 - Queue sheets are split by doc_type: OCR_RECEIPT (receipt), OCR_CC (cc_statement), OCR_BANK (bank_statement).
 - Queue sheet columns are extended (append-only): ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail.

@@ -11,3 +11,5 @@ This file tracks known drifts between docs and current implementation.
 - Claim cursor is per doc_type: BELLE_OCR_CLAIM_CURSOR__<doc_type> (legacy BELLE_OCR_CLAIM_CURSOR for receipt).
 - CC uses 2-stage OCR (Stage1 classification -> Stage2 extraction) and does not extract description.
 - CC allows PDF input; current flow assumes one page per PDF (multi-page PDF may need future handling).
+- CC now caches Stage1 JSON in ocr_json and runs Stage2 in a later worker (ocr_json may hold stage1 cache or stage2 final JSON).
+- CC can send responseMimeType/responseJsonSchema only when enabled via BELLE_CC_* properties.
