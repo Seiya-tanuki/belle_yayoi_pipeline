@@ -308,11 +308,13 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
       if (docType && docType !== "receipt") {
         skipped++;
         skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "DOC_TYPE_NOT_RECEIPT" });
+        flushSkipDetails();
         continue;
       }
       if (status !== "DONE" && status !== "ERROR_FINAL") {
         skipped++;
         skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "OCR_NOT_DONE:" + status });
+        flushSkipDetails();
         continue;
       }
 
@@ -324,6 +326,7 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
           errors++;
           skipped++;
           skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "OCR_JSON_MISSING" });
+          flushSkipDetails();
           continue;
         }
         try {
@@ -332,6 +335,7 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
           errors++;
           skipped++;
           skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "OCR_JSON_PARSE_ERROR" });
+          flushSkipDetails();
           continue;
         }
       } else {
@@ -467,8 +471,12 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
     const file = folderRes.folder.createFile(blob);
     const csvFileId = file.getId();
 
-    for (let i = 0; i < exportFileIds.length; i++) {
-      exportLog.appendRow([exportFileIds[i], nowIso, csvFileId]);
+    if (exportFileIds.length > 0) {
+      const exportLogRows = [];
+      for (let i = 0; i < exportFileIds.length; i++) {
+        exportLogRows.push([exportFileIds[i], nowIso, csvFileId]);
+      }
+      belle_sheet_appendRowsInChunks_(exportLog, exportLogRows, logChunkSize);
     }
 
     if (skippedDetails.length > 0) {
@@ -653,6 +661,14 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     const processed = new Set();
     const skippedDetails = [];
     const nowIso = new Date().toISOString();
+    const logChunkSize = 200;
+    const skipFlushThreshold = 200;
+    function flushSkipDetails() {
+      if (skippedDetails.length >= skipFlushThreshold) {
+        belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+        skippedDetails.length = 0;
+      }
+    }
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -675,11 +691,13 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
       if (docType && docType !== "cc_statement") {
         skipped++;
         skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "DOC_TYPE_NOT_CC_STATEMENT" });
+        flushSkipDetails();
         continue;
       }
       if (status !== "DONE") {
         skipped++;
         skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "OCR_NOT_DONE:" + status });
+        flushSkipDetails();
         continue;
       }
 
@@ -687,6 +705,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
         errors++;
         skipped++;
         skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "OCR_JSON_MISSING" });
+        flushSkipDetails();
         continue;
       }
       let parsed = null;
@@ -696,6 +715,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
         errors++;
         skipped++;
         skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "OCR_JSON_PARSE_ERROR" });
+        flushSkipDetails();
         continue;
       }
 
@@ -704,6 +724,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
         errors++;
         skipped++;
         skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "CC_INVALID_SCHEMA:" + valid.reason });
+        flushSkipDetails();
         continue;
       }
 
@@ -721,12 +742,14 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
             reason: sd.reason || "CC_ROW_SKIPPED",
             detail: sd.detail || ""
           });
+          flushSkipDetails();
         }
       }
 
       if (!built.rows || built.rows.length === 0) {
         skipped++;
         skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "CC_NO_DEBIT_ROWS" });
+        flushSkipDetails();
         continue;
       }
 
@@ -782,8 +805,12 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     const file = folderRes.folder.createFile(blob);
     const csvFileId = file.getId();
 
-    for (let i = 0; i < exportFileIds.length; i++) {
-      exportLog.appendRow([exportFileIds[i], nowIso, csvFileId]);
+    if (exportFileIds.length > 0) {
+      const exportLogRows = [];
+      for (let i = 0; i < exportFileIds.length; i++) {
+        exportLogRows.push([exportFileIds[i], nowIso, csvFileId]);
+      }
+      belle_sheet_appendRowsInChunks_(exportLog, exportLogRows, logChunkSize);
     }
 
     if (skippedDetails.length > 0) {

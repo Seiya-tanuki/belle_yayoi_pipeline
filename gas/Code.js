@@ -1406,6 +1406,23 @@ function belle_ocr_claimNextRowByDocTypes_(opts) {
   return last || { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "NO_TARGET" };
 }
 
+function belle_sheet_appendRowsInChunks_(sh, rows, chunkSize) {
+  if (!rows || rows.length === 0) return 0;
+  const sizeRaw = Number(chunkSize);
+  const size = sizeRaw && isFinite(sizeRaw) && sizeRaw > 0 ? Math.floor(sizeRaw) : 200;
+  let written = 0;
+  let startRow = sh.getLastRow() + 1;
+  for (let i = 0; i < rows.length; i += size) {
+    const chunk = rows.slice(i, i + size);
+    const width = chunk[0] ? chunk[0].length : 0;
+    if (!width) continue;
+    sh.getRange(startRow, 1, chunk.length, width).setValues(chunk);
+    startRow += chunk.length;
+    written += chunk.length;
+  }
+  return written;
+}
+
 /**
  * Append skip details to a sheet (append-only).
  */
@@ -1446,8 +1463,7 @@ function belle_appendSkipLogRows(ss, sheetName, details, loggedAtIso, phase) {
       d.detail || ""
     ]);
   }
-  sh.getRange(sh.getLastRow() + 1, 1, rows.length, header.length).setValues(rows);
-  return rows.length;
+  return belle_sheet_appendRowsInChunks_(sh, rows, 200);
 }
 
 function belle_parseBool(value, defaultValue) {
