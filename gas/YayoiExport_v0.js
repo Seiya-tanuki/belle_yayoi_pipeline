@@ -90,6 +90,14 @@ function belle_yayoi_validateFiscalRange(startStr, endStr) {
   return { ok: true, reason: "", start: start, end: end };
 }
 
+function belle_yayoi_parseFiscalRangeAllowCrossYear_(startStr, endStr) {
+  const start = belle_yayoi_parseYmd(startStr);
+  const end = belle_yayoi_parseYmd(endStr);
+  if (!start || !end) return { ok: false, reason: "FISCAL_RANGE_NOT_CONFIGURED" };
+  if (start.ymd > end.ymd) return { ok: false, reason: "FISCAL_RANGE_NOT_CONFIGURED" };
+  return { ok: true, reason: "", start: start, end: end };
+}
+
 function belle_yayoi_resolveTransactionDate(parsed, fiscal) {
   const result = { dateYmdSlash: "", dateFix: "", dateRid: "", dateDt: "", original: "" };
   const fiscalEnd = fiscal.end.ymd;
@@ -126,6 +134,38 @@ function belle_yayoi_resolveTransactionDate(parsed, fiscal) {
   }
 
   result.dateYmdSlash = belle_yayoi_formatDate(parsedParts.ymd);
+  return result;
+}
+
+function belle_yayoi_resolveCcTransactionDate_(useMonth, useDay, fiscal) {
+  const result = { dateYmdSlash: "", fallback: false };
+  if (!fiscal || !fiscal.start || !fiscal.end) {
+    result.fallback = true;
+    return result;
+  }
+  const m = Number(useMonth);
+  const d = Number(useDay);
+  if (!isFinite(m) || !isFinite(d)) {
+    result.dateYmdSlash = belle_yayoi_formatDate(fiscal.end.ymd);
+    result.fallback = true;
+    return result;
+  }
+
+  let year = fiscal.start.y;
+  if (fiscal.start.y !== fiscal.end.y) {
+    const startMd = fiscal.start.m * 100 + fiscal.start.d;
+    const md = m * 100 + d;
+    year = md >= startMd ? fiscal.start.y : fiscal.end.y;
+  }
+  if (!belle_yayoi_isValidDateParts(year, m, d)) {
+    result.dateYmdSlash = belle_yayoi_formatDate(fiscal.end.ymd);
+    result.fallback = true;
+    return result;
+  }
+
+  const mm = String(m).padStart(2, "0");
+  const dd = String(d).padStart(2, "0");
+  result.dateYmdSlash = year + "/" + mm + "/" + dd;
   return result;
 }
 
@@ -369,6 +409,98 @@ function belle_yayoi_buildRow(params) {
     "", // 24
     "NO" // 25
   ];
+}
+
+function belle_yayoi_buildCcRow_(params) {
+  return [
+    "2000", // 1
+    "", // 2
+    "", // 3
+    params.date, // 4
+    "仮払金", // 5
+    "", // 6
+    "", // 7
+    params.debitTaxKubun, // 8
+    params.gross, // 9
+    "", // 10
+    "未払金", // 11
+    "", // 12
+    "", // 13
+    "対象外", // 14
+    params.gross, // 15
+    "", // 16
+    params.summary, // 17
+    "", // 18
+    "", // 19
+    "0", // 20
+    "", // 21
+    params.memo, // 22
+    "", // 23
+    "", // 24
+    "NO" // 25
+  ];
+}
+
+function belle_yayoi_buildCcSummary_(merchant) {
+  const label = merchant ? String(merchant) : "CARD";
+  return belle_yayoi_trimTextShiftJis(label, 120);
+}
+
+function belle_yayoi_buildCcMemo_(params) {
+  const parts = ["CC", "DT=cc_statement"];
+  const rowNo = params.rowNo !== undefined && params.rowNo !== null ? String(params.rowNo) : "";
+  if (rowNo) parts.push("ROW=" + rowNo);
+  if (params.fileId) parts.push("FID=" + params.fileId);
+  const name = belle_yayoi_sanitizeFileName(params.fileName || "");
+  if (name) parts.push("FN=" + name);
+  const issues = Array.isArray(params.issues) ? params.issues.filter(Boolean) : [];
+  if (issues.length > 0) parts.push("ISS=" + issues.join(","));
+  if (params.dateFallback) parts.push("DATE_FALLBACK");
+  return belle_yayoi_trimShiftJis(parts.join("|"), 180);
+}
+
+function belle_yayoi_buildCcRowsFromStage2_(parsed, ctx, fiscal) {
+  const result = { rows: [], skipped: 0, skipDetails: [] };
+  if (!parsed || !Array.isArray(parsed.transactions)) return result;
+  const fileId = ctx && ctx.fileId ? String(ctx.fileId) : "";
+  const fileName = ctx && ctx.fileName ? String(ctx.fileName) : "";
+  const debitTaxKubun = "課対仕入込10%適格";
+  for (let i = 0; i < parsed.transactions.length; i++) {
+    const row = parsed.transactions[i] || {};
+    const rowNo = row.row_no;
+    const amountSign = String(row.amount_sign || "");
+    if (amountSign === "credit") {
+      const detail = "row_no=" + rowNo + " amount_sign=credit amount_yen=" + row.amount_yen;
+      result.skipped++;
+      result.skipDetails.push({ reason: "CC_CREDIT_UNSUPPORTED", detail: detail, row_no: rowNo });
+      continue;
+    }
+    const amount = belle_yayoi_isNumber(row.amount_yen);
+    if (amount === null || amount <= 0) {
+      const detail = "row_no=" + rowNo + " amount_sign=" + amountSign + " amount_yen=" + row.amount_yen;
+      result.skipped++;
+      result.skipDetails.push({ reason: "CC_AMOUNT_INVALID", detail: detail, row_no: rowNo });
+      continue;
+    }
+    const dateInfo = belle_yayoi_resolveCcTransactionDate_(row.use_month, row.use_day, fiscal);
+    const memo = belle_yayoi_buildCcMemo_({
+      fileId: fileId,
+      fileName: fileName,
+      rowNo: rowNo,
+      issues: row.issues,
+      dateFallback: dateInfo.fallback
+    });
+    const summary = belle_yayoi_buildCcSummary_(row.merchant);
+    const row25 = belle_yayoi_buildCcRow_({
+      date: dateInfo.dateYmdSlash,
+      debitTaxKubun: debitTaxKubun,
+      gross: String(amount),
+      summary: summary,
+      memo: memo
+    });
+    result.rows.push(row25);
+  }
+  return result;
 }
 
 

@@ -22,6 +22,8 @@
 - BELLE_CC_ENABLE_RESPONSE_MIME_TYPE (default: false)
   - Enable only if the model accepts responseMimeType/responseJsonSchema; invalid argument may return 400.
 - BELLE_OUTPUT_FOLDER_ID (resolve order: BELLE_OUTPUT_FOLDER_ID -> BELLE_DRIVE_FOLDER_ID)
+  - CSV outputs are written under doc_type subfolders: receipt/, cc_statement/, bank_statement/.
+  - Subfolders are created when missing (first match is used if duplicates exist).
 - BELLE_SKIP_LOG_SHEET_NAME (default: EXPORT_SKIP_LOG)
 - BELLE_EXPORT_BATCH_MAX_ROWS (default: 5000)
 - BELLE_CSV_ENCODING (default: SHIFT_JIS)

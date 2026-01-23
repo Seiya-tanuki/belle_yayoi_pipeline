@@ -13,3 +13,4 @@ This file tracks known drifts between docs and current implementation.
 - CC allows PDF input; current flow assumes one page per PDF (multi-page PDF may need future handling).
 - CC now caches Stage1 JSON in ocr_json and runs Stage2 in a later worker (ocr_json may hold stage1 cache or stage2 final JSON).
 - CC can send responseMimeType/responseJsonSchema only when enabled via BELLE_CC_* properties.
+- Export writes CSVs under doc_type subfolders (receipt/, cc_statement/). CC export uses Stage2 transactions (1 file -> multiple rows).
