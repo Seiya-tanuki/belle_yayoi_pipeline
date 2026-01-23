@@ -55,29 +55,73 @@ function belle_getOrCreateExportLogSheet(ss) {
   return { sheet: created, guard: null };
 }
 
-function belle_export_getOutputFolderByDocType_(outputFolderId, docType) {
+function belle_export_pickSingleFolder_(folders, folderName, docType, parentFolderId) {
+  const list = Array.isArray(folders) ? folders : [];
+  const count = list.length;
+  if (count === 0) return { ok: true, folder: null, foundCount: 0 };
+  if (count === 1) return { ok: true, folder: list[0], foundCount: 1 };
+  return {
+    ok: false,
+    reason: "DUPLICATE_OUTPUT_SUBFOLDER_NAME",
+    folderName: String(folderName || ""),
+    docType: String(docType || ""),
+    parentFolderId: String(parentFolderId || ""),
+    foundCount: count
+  };
+}
+
+function belle_export_resolveOutputFolderByDocType_(outputFolderId, docType) {
   const root = DriveApp.getFolderById(outputFolderId);
   const name = docType ? String(docType) : "receipt";
+  const folders = [];
   const it = root.getFoldersByName(name);
-  if (it.hasNext()) return it.next();
-  return root.createFolder(name);
+  while (it.hasNext()) folders.push(it.next());
+  const picked = belle_export_pickSingleFolder_(folders, name, docType, outputFolderId);
+  if (!picked.ok) return picked;
+  if (picked.folder) return { ok: true, folder: picked.folder, foundCount: picked.foundCount };
+  return { ok: true, folder: root.createFolder(name), foundCount: picked.foundCount, created: true };
+}
+
+function belle_export_runDocTypes_(handlers) {
+  const results = {};
+  if (!handlers || typeof handlers !== "object") return results;
+  const keys = Object.keys(handlers);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const fn = handlers[key];
+    if (typeof fn !== "function") continue;
+    try {
+      results[key] = { ok: true, result: fn() };
+    } catch (e) {
+      const msg = String(e && e.message ? e.message : e);
+      const stack = e && e.stack ? String(e.stack).split("\n")[0] : "";
+      results[key] = { ok: false, errorMessage: msg, stackTop: stack };
+    }
+  }
+  return results;
 }
 
 function belle_exportYayoiCsvFallback(options) {
-  let ccResult = null;
-  try {
-    ccResult = belle_exportYayoiCsvCcStatementFallback_(options);
-  } catch (e) {
-    const msg = String(e && e.message ? e.message : e);
-    const stack = e && e.stack ? String(e.stack).split("\n")[0] : "";
-    Logger.log({ phase: "EXPORT_CC_ERROR", ok: false, errorMessage: msg, stackTop: stack });
+  const results = belle_export_runDocTypes_({
+    cc_statement: function () { return belle_exportYayoiCsvCcStatementFallback_(options); },
+    receipt: function () { return belle_exportYayoiCsvReceiptFallback_(options); }
+  });
+  const ccWrap = results.cc_statement;
+  const receiptWrap = results.receipt;
+  if (ccWrap && ccWrap.ok === false) {
+    Logger.log({ phase: "EXPORT_DOC_ERROR", ok: false, doc_type: "cc_statement", errorMessage: ccWrap.errorMessage || "", stackTop: ccWrap.stackTop || "" });
   }
-
-  const receiptResult = belle_exportYayoiCsvReceiptFallback_(options);
+  if (receiptWrap && receiptWrap.ok === false) {
+    Logger.log({ phase: "EXPORT_DOC_ERROR", ok: false, doc_type: "receipt", errorMessage: receiptWrap.errorMessage || "", stackTop: receiptWrap.stackTop || "" });
+  }
+  const ccResult = ccWrap && ccWrap.ok ? ccWrap.result : null;
+  const receiptResult = receiptWrap && receiptWrap.ok ? receiptWrap.result : null;
   if (receiptResult && ccResult) {
     receiptResult.cc_statement = ccResult;
   }
-  return receiptResult;
+  if (receiptResult) return receiptResult;
+  if (ccResult) return ccResult;
+  return { phase: "EXPORT_ERROR", ok: false, reason: "EXPORT_DOC_ERROR", errors: results };
 }
 
 function belle_exportYayoiCsvReceiptFallback_(options) {
@@ -397,8 +441,30 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
     } else {
       blob.setDataFromString(csvText, "Shift_JIS");
     }
-    const outputFolder = belle_export_getOutputFolderByDocType_(outputFolderId, "receipt");
-    const file = outputFolder.createFile(blob);
+    const folderRes = belle_export_resolveOutputFolderByDocType_(outputFolderId, "receipt");
+    if (!folderRes.ok) {
+      Logger.log({
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: folderRes.reason,
+        doc_type: "receipt",
+        folder_name: folderRes.folderName || "receipt",
+        found_count: folderRes.foundCount || 0,
+        parent_folder_id: folderRes.parentFolderId || outputFolderId
+      });
+      return {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: folderRes.reason,
+        doc_type: "receipt",
+        exportedRows: 0,
+        exportedFiles: 0,
+        skipped: skipped,
+        errors: errors,
+        csvFileId: ""
+      };
+    }
+    const file = folderRes.folder.createFile(blob);
     const csvFileId = file.getId();
 
     for (let i = 0; i < exportFileIds.length; i++) {
@@ -690,8 +756,30 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     } else {
       blob.setDataFromString(csvText, "Shift_JIS");
     }
-    const outputFolder = belle_export_getOutputFolderByDocType_(outputFolderId, "cc_statement");
-    const file = outputFolder.createFile(blob);
+    const folderRes = belle_export_resolveOutputFolderByDocType_(outputFolderId, "cc_statement");
+    if (!folderRes.ok) {
+      Logger.log({
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: folderRes.reason,
+        doc_type: "cc_statement",
+        folder_name: folderRes.folderName || "cc_statement",
+        found_count: folderRes.foundCount || 0,
+        parent_folder_id: folderRes.parentFolderId || outputFolderId
+      });
+      return {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: folderRes.reason,
+        doc_type: "cc_statement",
+        exportedRows: 0,
+        exportedFiles: 0,
+        skipped: skipped,
+        errors: errors,
+        csvFileId: ""
+      };
+    }
+    const file = folderRes.folder.createFile(blob);
     const csvFileId = file.getId();
 
     for (let i = 0; i < exportFileIds.length; i++) {
