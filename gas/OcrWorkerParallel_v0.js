@@ -104,6 +104,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   const totalStart = Date.now();
   const props = PropertiesService.getScriptProperties();
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
+  let processingCount = 0;
   const docTypes = opts && Array.isArray(opts.docTypes) && opts.docTypes.length > 0
     ? opts.docTypes
     : belle_ocr_getActiveDocTypes_(props);
@@ -118,6 +119,9 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     lockWaitMs: lockWaitMs,
     docTypes: docTypes
   });
+  if (claim && claim.processingCount !== undefined) {
+    processingCount = Number(claim.processingCount) || 0;
+  }
   const claimElapsedMs = Date.now() - claimStart;
   if (!claim || claim.claimed !== true) {
     return {
@@ -229,7 +233,6 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   let ccGeminiMs = 0;
   let ccStage2Attempted = false;
   let keepOcrJsonOnError = false;
-  let processingCount = claim && claim.processingCount ? Number(claim.processingCount) : 0;
 
   try {
     if (mimeType === "application/pdf" && !belle_ocr_allowPdfForDocType_(docType)) {

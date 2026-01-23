@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "npm run test:rate && npm run test:summary && npm run test:rid && npm run test:memo && npm run test:date && npm run test:ocr && npm run test:ocr-invalid-schema-log && npm run test:ocr-temperature && npm run test:reset && npm run test:chatwork && npm run test:webhook && npm run test:webhook-body && npm run test:ocr-claim && npm run test:ocr-claim-cursor && npm run test:doc-type && npm run test:cc-validation && npm run test:cc-flow && npm run test:ocr-reap && npm run test:ocr-parallel-stagger && npm run test:ocr-parallel-disable",
+    "test": "npm run test:rate && npm run test:summary && npm run test:rid && npm run test:memo && npm run test:date && npm run test:ocr && npm run test:ocr-invalid-schema-log && npm run test:ocr-temperature && npm run test:reset && npm run test:chatwork && npm run test:webhook && npm run test:webhook-body && npm run test:ocr-claim && npm run test:ocr-claim-cursor && npm run test:doc-type && npm run test:cc-validation && npm run test:cc-flow && npm run test:ocr-worker-no-target && npm run test:ocr-reap && npm run test:ocr-parallel-stagger && npm run test:ocr-parallel-disable",
     "typecheck": "tsc -p tsconfig.json",
     "test:rate": "node tests/test_rate_inference.js",
     "test:summary": "node tests/test_summary_format.js",
@@ -26,6 +26,7 @@
     "test:doc-type": "node tests/test_doc_type_pipeline_helpers.js",
     "test:cc-validation": "node tests/test_cc_statement_validation.js",
     "test:cc-flow": "node tests/test_cc_statement_flow.js",
+    "test:ocr-worker-no-target": "node tests/test_ocr_worker_no_target.js",
     "test:ocr-reap": "node tests/test_ocr_reap_stale.js",
     "test:ocr-parallel-stagger": "node tests/test_ocr_parallel_stagger.js",
     "test:ocr-parallel-disable": "node tests/test_ocr_parallel_disable.js"
