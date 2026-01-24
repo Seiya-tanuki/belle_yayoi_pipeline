@@ -12,11 +12,11 @@ Output rules (STRICT):
 1) Output a SINGLE JSON object only. No prose, no markdown, no code fences.
 2) Do NOT include any extra keys.
 3) Do NOT hallucinate. If unclear, output null/empty and add to issues.
+4) Extract ALL transaction rows you can see. Do NOT drop rows to ?fit? any count.
 
 Schema:
 {
   "task": "transaction_extraction",
-  "visible_row_count": number,
   "transactions": [
     {
       "row_no": number,
@@ -32,12 +32,13 @@ Schema:
 }
 
 Field rules:
-- visible_row_count: number of transaction rows you can see in the table on the page (best estimate). If unsure, still provide your best estimate and add "row_count_uncertain" in issues of the JSON's last transaction (or in the first transaction if only one row).
-- raw_use_date_text: keep the original printed token (e.g., "6月21日").
-- use_month/use_day: integers parsed from raw_use_date_text.
+- raw_use_date_text: keep the original printed token (e.g., "6?21?", "2025 2 3").
+- use_month/use_day: integers parsed from raw_use_date_text. If year is not printed, add "year_missing" to issues.
 - merchant: keep as close to the printed merchant as possible (no reclassification).
-- amount_yen: JPY integer (remove commas). If negative 표시 or refund, set amount_sign="credit" and amount_yen as positive integer.
-- issues: e.g., "year_missing" (if year not printed), "merchant_uncertain", "amount_uncertain", "row_split_uncertain", "row_count_uncertain", "possible_pii_masked".
+- amount_yen: JPY integer (remove commas).
+- If the row indicates a refund/cancellation/negative amount, set amount_sign="credit" and amount_yen as a positive integer.
+- issues: e.g., "year_missing", "merchant_uncertain", "amount_uncertain", "row_split_uncertain", "possible_pii_masked".
+- If you suspect the page is cut off / not fully visible, add "possible_page_truncation" to issues of the last extracted transaction.
 
 Sorting & numbering:
 - Preserve the table order from top to bottom.

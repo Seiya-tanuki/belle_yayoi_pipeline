@@ -203,7 +203,6 @@ ccSheet.appendRow(buildRow({
   source_subfolder: 'cc_statement',
   ocr_json: JSON.stringify({
     task: 'transaction_extraction',
-    visible_row_count: 1,
     transactions: [
       {
         row_no: 1,

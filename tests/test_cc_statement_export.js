@@ -28,7 +28,6 @@ expect(fiscal.ok, 'fiscal range should allow cross-year');
 
 const parsed = {
   task: 'transaction_extraction',
-  visible_row_count: 3,
   transactions: [
     {
       row_no: 1,

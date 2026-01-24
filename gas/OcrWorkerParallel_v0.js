@@ -341,23 +341,22 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
         } catch (e) {
           throw new Error("INVALID_SCHEMA: PARSE_ERROR");
         }
-        const validation = belle_ocr_validateCcStage2_(parsed);
-        if (!validation.ok) {
-          throw new Error("INVALID_SCHEMA: " + validation.reason);
-        }
-        const extractedCount = Array.isArray(parsed.transactions) ? parsed.transactions.length : 0;
-        const visibleCount = parsed.visible_row_count;
-        if (belle_ocr_cc_isIncompleteRows_(visibleCount, extractedCount)) {
-          const incomplete = belle_ocr_cc_buildStage2IncompleteWriteback_(stage2JsonStr, extractedCount, visibleCount);
-          statusOut = incomplete.statusOut;
+        const transactions = parsed && parsed.transactions;
+        if (!Array.isArray(transactions) || transactions.length === 0) {
+          const noRows = belle_ocr_cc_buildStage2NoRowsWriteback_(stage2JsonStr);
+          statusOut = noRows.statusOut;
           outcome = statusOut;
-          errorCode = incomplete.errorCode;
-          errorMessage = incomplete.errorMessage.slice(0, 200);
-          errorDetail = incomplete.errorDetail;
+          errorCode = noRows.errorCode;
+          errorMessage = noRows.errorMessage.slice(0, 200);
+          errorDetail = noRows.errorDetail;
           keepOcrJsonOnError = true;
           const backoff = belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds);
           nextRetryIso = new Date(Date.now() + backoff).toISOString();
         } else {
+          const validation = belle_ocr_validateCcStage2_(parsed);
+          if (!validation.ok) {
+            throw new Error("INVALID_SCHEMA: " + validation.reason);
+          }
           const stage2Writeback = belle_ocr_cc_buildStage2SuccessWriteback_(stage2JsonStr);
           statusOut = stage2Writeback.statusOut;
           outcome = "DONE";

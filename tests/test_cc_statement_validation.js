@@ -15,11 +15,10 @@ expect(typeof validateStage2 === 'function', 'missing belle_ocr_validateCcStage2
 
 const valid = {
   task: "transaction_extraction",
-  visible_row_count: 2,
   transactions: [
     {
       row_no: 1,
-      raw_use_date_text: "6月21日",
+      raw_use_date_text: "6?21?",
       use_month: 6,
       use_day: 21,
       merchant: "SHOP A",
@@ -29,7 +28,7 @@ const valid = {
     },
     {
       row_no: 2,
-      raw_use_date_text: "6月22日",
+      raw_use_date_text: "6?22?",
       use_month: 6,
       use_day: 22,
       merchant: "SHOP B",

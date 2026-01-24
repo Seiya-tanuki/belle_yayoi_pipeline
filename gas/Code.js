@@ -472,19 +472,6 @@ function belle_ocr_cc_classifyStage1Page_(pageType) {
   return { proceed: false, statusOut: "ERROR_RETRYABLE", errorCode: "CC_PAGE_UNKNOWN", errorMessage: "cc_statement page_type=unknown" };
 }
 
-function belle_ocr_cc_isIncompleteRows_(visibleCount, extractedCount) {
-  if (typeof visibleCount !== "number" || isNaN(visibleCount)) return false;
-  if (typeof extractedCount !== "number" || isNaN(extractedCount)) return false;
-  if (visibleCount <= 0) return false;
-  return extractedCount < visibleCount;
-}
-
-function belle_ocr_cc_buildIncompleteMessage_(extractedCount, visibleCount) {
-  const extracted = Number(extractedCount) || 0;
-  const visible = Number(visibleCount) || 0;
-  return "incomplete rows: extracted=" + extracted + " visible=" + visible;
-}
-
 function belle_ocr_cc_detectStageFromCache_(ocrJsonStr) {
   const raw = String(ocrJsonStr || "").trim();
   if (!raw) return { stage: "stage1", cacheInvalid: false };
@@ -527,12 +514,12 @@ function belle_ocr_cc_buildStage2SuccessWriteback_(stage2JsonStr) {
   return { statusOut: "DONE", errorCode: "", errorMessage: "", errorDetail: "", nextJson: stage2JsonStr, clearErrors: true };
 }
 
-function belle_ocr_cc_buildStage2IncompleteWriteback_(stage2JsonStr, extractedCount, visibleCount) {
+function belle_ocr_cc_buildStage2NoRowsWriteback_(stage2JsonStr) {
   return {
     statusOut: "ERROR_RETRYABLE",
-    errorCode: "CC_INCOMPLETE_ROWS",
-    errorMessage: belle_ocr_cc_buildIncompleteMessage_(extractedCount, visibleCount),
-    errorDetail: belle_ocr_buildInvalidSchemaLogDetail_(stage2JsonStr),
+    errorCode: "CC_NO_ROWS_EXTRACTED",
+    errorMessage: "transactions empty",
+    errorDetail: "transactions empty",
     keepCache: true
   };
 }
@@ -605,7 +592,6 @@ function belle_ocr_cc_getStage2ResponseJsonSchema_() {
     type: "object",
     properties: {
       task: { type: "string", enum: ["transaction_extraction"] },
-      visible_row_count: { type: "number" },
       transactions: {
         type: "array",
         items: {
@@ -625,7 +611,7 @@ function belle_ocr_cc_getStage2ResponseJsonSchema_() {
         }
       }
     },
-    required: ["task", "visible_row_count", "transactions"],
+    required: ["task", "transactions"],
     additionalProperties: false
   };
 }

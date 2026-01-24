@@ -32,8 +32,6 @@ function belle_ocr_validateCcStage2_(obj) {
   if (!obj || typeof obj !== "object") return { ok: false, reason: "NOT_OBJECT" };
   if (obj.task !== "transaction_extraction") return { ok: false, reason: "INVALID_TASK" };
   if ("description" in obj) return { ok: false, reason: "UNEXPECTED_DESCRIPTION" };
-  const visible = obj.visible_row_count;
-  if (typeof visible !== "number" || isNaN(visible)) return { ok: false, reason: "INVALID_VISIBLE_ROW_COUNT" };
   if (!Array.isArray(obj.transactions)) return { ok: false, reason: "INVALID_TRANSACTIONS" };
   for (let i = 0; i < obj.transactions.length; i++) {
     const row = obj.transactions[i];

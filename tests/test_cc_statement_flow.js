@@ -13,9 +13,7 @@ function expect(cond, msg) {
 const detectStage = sandbox.belle_ocr_cc_detectStageFromCache_;
 const stage1Writeback = sandbox.belle_ocr_cc_buildStage1Writeback_;
 const stage2Success = sandbox.belle_ocr_cc_buildStage2SuccessWriteback_;
-const stage2Incomplete = sandbox.belle_ocr_cc_buildStage2IncompleteWriteback_;
-const isIncomplete = sandbox.belle_ocr_cc_isIncompleteRows_;
-const buildMsg = sandbox.belle_ocr_cc_buildIncompleteMessage_;
+const stage2NoRows = sandbox.belle_ocr_cc_buildStage2NoRowsWriteback_;
 const allowPdf = sandbox.belle_ocr_allowPdfForDocType_;
 const classifyStage1 = sandbox.belle_ocr_cc_classifyStage1Page_;
 const shouldStop = sandbox.belle_ocr_shouldStopAfterItem_;
@@ -23,9 +21,7 @@ const shouldStop = sandbox.belle_ocr_shouldStopAfterItem_;
 expect(typeof detectStage === 'function', 'missing belle_ocr_cc_detectStageFromCache_');
 expect(typeof stage1Writeback === 'function', 'missing belle_ocr_cc_buildStage1Writeback_');
 expect(typeof stage2Success === 'function', 'missing belle_ocr_cc_buildStage2SuccessWriteback_');
-expect(typeof stage2Incomplete === 'function', 'missing belle_ocr_cc_buildStage2IncompleteWriteback_');
-expect(typeof isIncomplete === 'function', 'missing belle_ocr_cc_isIncompleteRows_');
-expect(typeof buildMsg === 'function', 'missing belle_ocr_cc_buildIncompleteMessage_');
+expect(typeof stage2NoRows === 'function', 'missing belle_ocr_cc_buildStage2NoRowsWriteback_');
 expect(typeof allowPdf === 'function', 'missing belle_ocr_allowPdfForDocType_');
 expect(typeof classifyStage1 === 'function', 'missing belle_ocr_cc_classifyStage1Page_');
 expect(typeof shouldStop === 'function', 'missing belle_ocr_shouldStopAfterItem_');
@@ -38,11 +34,10 @@ const stage1Json = JSON.stringify({
 });
 const stage2Json = JSON.stringify({
   task: "transaction_extraction",
-  visible_row_count: 1,
   transactions: [
     {
       row_no: 1,
-      raw_use_date_text: "6月21日",
+      raw_use_date_text: "6?21?",
       use_month: 6,
       use_day: 21,
       merchant: "SHOP A",
@@ -51,6 +46,10 @@ const stage2Json = JSON.stringify({
       issues: []
     }
   ]
+});
+const stage2EmptyJson = JSON.stringify({
+  task: "transaction_extraction",
+  transactions: []
 });
 
 const emptyStage = detectStage("");
@@ -80,14 +79,10 @@ expect(stage2Ok.statusOut === 'DONE', 'stage2 success should be DONE');
 expect(stage2Ok.nextJson === stage2Json, 'stage2 success should overwrite json');
 expect(stage2Ok.clearErrors === true, 'stage2 success should clear errors');
 
-const incomplete = stage2Incomplete(stage2Json, 1, 2);
-expect(incomplete.statusOut === 'ERROR_RETRYABLE', 'incomplete should be ERROR_RETRYABLE');
-expect(incomplete.errorCode === 'CC_INCOMPLETE_ROWS', 'incomplete errorCode mismatch');
-expect(incomplete.keepCache === true, 'incomplete should keep cache');
-
-expect(isIncomplete(30, 17) === true, 'incomplete rows should be true');
-expect(isIncomplete(10, 10) === false, 'incomplete rows should be false when equal');
-expect(buildMsg(17, 30) === 'incomplete rows: extracted=17 visible=30', 'incomplete message mismatch');
+const noRows = stage2NoRows(stage2EmptyJson);
+expect(noRows.statusOut === 'ERROR_RETRYABLE', 'no rows should be ERROR_RETRYABLE');
+expect(noRows.errorCode === 'CC_NO_ROWS_EXTRACTED', 'no rows errorCode mismatch');
+expect(noRows.keepCache === true, 'no rows should keep cache');
 
 expect(allowPdf('cc_statement') === true, 'cc_statement should allow PDF');
 expect(allowPdf('receipt') === false, 'receipt should not allow PDF');
