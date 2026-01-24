@@ -1627,15 +1627,38 @@ function belle_ensureSkipLogSheet_(ss, sheetName, header) {
   return ensured.sheet;
 }
 
+function belle_export_skip_makeKey_(fileId, reason, detail) {
+  return String(fileId || "") + "||" + String(reason || "") + "||" + String(detail || "");
+}
+
 function belle_appendSkipLogRows(ss, sheetName, details, loggedAtIso, phase) {
   if (!details || details.length === 0) return 0;
   const header = belle_getSkipLogHeader_();
   const sh = belle_ensureSkipLogSheet_(ss, sheetName, header);
-  const rows = [];
   const phaseName = phase || "SKIP_LOG";
   const ts = loggedAtIso || new Date().toISOString();
+  const rows = [];
+  const dedupe = phaseName === "EXPORT_SKIP";
+  const existing = dedupe ? new Set() : null;
+  if (dedupe) {
+    const lastRow = sh.getLastRow();
+    if (lastRow >= 2) {
+      const idValues = sh.getRange(2, 3, lastRow - 1, 1).getValues();
+      const reasonValues = sh.getRange(2, 8, lastRow - 1, 1).getValues();
+      const detailValues = sh.getRange(2, 9, lastRow - 1, 1).getValues();
+      for (let i = 0; i < idValues.length; i++) {
+        const key = belle_export_skip_makeKey_(idValues[i][0], reasonValues[i][0], detailValues[i][0]);
+        existing.add(key);
+      }
+    }
+  }
   for (let i = 0; i < details.length; i++) {
     const d = details[i] || {};
+    if (dedupe) {
+      const key = belle_export_skip_makeKey_(d.file_id, d.reason, d.detail);
+      if (existing.has(key)) continue;
+      existing.add(key);
+    }
     rows.push([
       ts,
       phaseName,
