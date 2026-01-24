@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "npm run test:rate && npm run test:summary && npm run test:rid && npm run test:memo && npm run test:date && npm run test:ocr && npm run test:ocr-invalid-schema-log && npm run test:ocr-temperature && npm run test:reset && npm run test:chatwork && npm run test:webhook && npm run test:webhook-body && npm run test:ocr-claim && npm run test:ocr-claim-cursor && npm run test:doc-type && npm run test:cc-validation && npm run test:cc-flow && npm run test:cc-export && npm run test:export-folder && npm run test:export-orchestration && npm run test:export-log-multi && npm run test:export-log-flush && npm run test:queue-skip-log && npm run test:pdf-page-count && npm run test:queue-pdf-guard && npm run test:queue-skip-dedupe && npm run test:export-batch && npm run test:ocr-worker-no-target && npm run test:ocr-reap && npm run test:ocr-parallel-stagger && npm run test:ocr-parallel-disable",
+    "test": "npm run test:rate && npm run test:summary && npm run test:rid && npm run test:memo && npm run test:date && npm run test:ocr && npm run test:ocr-invalid-schema-log && npm run test:ocr-temperature && npm run test:perf-log && npm run test:reset && npm run test:chatwork && npm run test:webhook && npm run test:webhook-body && npm run test:ocr-claim && npm run test:ocr-claim-cursor && npm run test:doc-type && npm run test:cc-validation && npm run test:cc-flow && npm run test:cc-export && npm run test:export-folder && npm run test:export-orchestration && npm run test:export-log-multi && npm run test:export-log-flush && npm run test:export-guard && npm run test:queue-skip-log && npm run test:pdf-page-count && npm run test:queue-pdf-guard && npm run test:queue-skip-dedupe && npm run test:export-batch && npm run test:ocr-worker-no-target && npm run test:ocr-reap && npm run test:ocr-parallel-stagger && npm run test:ocr-parallel-disable",
     "typecheck": "tsc -p tsconfig.json",
     "test:rate": "node tests/test_rate_inference.js",
     "test:summary": "node tests/test_summary_format.js",
@@ -17,6 +17,7 @@
     "test:ocr": "node tests/test_ocr_validation.js",
     "test:ocr-invalid-schema-log": "node tests/test_ocr_invalid_schema_log_detail.js",
     "test:ocr-temperature": "node tests/test_ocr_temperature_policy.js",
+    "test:perf-log": "node tests/test_perf_log_v2.js",
     "test:reset": "node tests/test_reset_headers.js",
     "test:chatwork": "node tests/test_chatwork_latest_csv.js",
     "test:webhook": "node tests/test_chatwork_webhook.js",
@@ -31,6 +32,7 @@
     "test:export-orchestration": "node tests/test_export_doc_type_orchestration.js",
     "test:export-log-multi": "node tests/test_export_log_multi_doc_type.js",
     "test:export-log-flush": "node tests/test_export_log_flush.js",
+    "test:export-guard": "node tests/test_export_guard_log.js",
     "test:queue-skip-log": "node tests/test_queue_skip_log_routing.js",
     "test:pdf-page-count": "node tests/test_pdf_page_count.js",
     "test:queue-pdf-guard": "node tests/test_queue_pdf_guard.js",

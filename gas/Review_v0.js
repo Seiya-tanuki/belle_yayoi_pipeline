@@ -163,14 +163,35 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
 
   const ss = SpreadsheetApp.openById(sheetId);
   try {
+    function buildCountsJson(counts) {
+      if (!counts) return "";
+      return JSON.stringify({
+        total: counts.totalCount,
+        done: counts.doneCount,
+        retryable: counts.errorRetryableCount,
+        error_final: counts.errorFinalCount,
+        queued: counts.queuedRemaining
+      });
+    }
+    function logGuard(reason, counts, detail) {
+      belle_export_appendGuardLogRow_(ss, props, {
+        doc_type: "receipt",
+        queue_sheet_name: queueSheetName,
+        reason: reason,
+        counts_json: buildCountsJson(counts),
+        detail: detail || ""
+      });
+    }
     const fiscalRange = belle_yayoi_validateFiscalRange(fiscalStart, fiscalEnd);
     if (!fiscalRange.ok) {
+      logGuard(fiscalRange.reason || "FISCAL_RANGE_INVALID", null, "");
       const res = { phase: "EXPORT_GUARD", ok: true, reason: fiscalRange.reason, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
     }
     const queue = ss.getSheetByName(queueSheetName);
     if (!queue) {
+      logGuard("QUEUE_SHEET_NOT_FOUND", null, "");
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "QUEUE_SHEET_NOT_FOUND", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
@@ -180,12 +201,14 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
     const extraHeader = belle_getQueueLockHeaderColumns_v0_();
     const lastRow = queue.getLastRow();
     if (lastRow < 2) {
+      logGuard("NO_ROWS", null, "");
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "NO_ROWS", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
     }
     const headerMap = belle_queue_ensureHeaderMapForExport(queue, baseHeader, extraHeader);
     if (!headerMap) {
+      logGuard("INVALID_QUEUE_HEADER: missing required columns", null, "");
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: missing required columns", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
@@ -271,6 +294,7 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
 
     const exportLogResult = belle_getOrCreateExportLogSheet(ss);
     if (exportLogResult.guard) {
+      logGuard(exportLogResult.guard.reason || "EXPORT_LOG_GUARD", null, exportLogResult.guard.message || "");
       Logger.log(exportLogResult.guard);
       return {
         phase: exportLogResult.guard.phase,
@@ -540,14 +564,35 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
 
   const ss = SpreadsheetApp.openById(sheetId);
   try {
+    function buildCountsJson(counts) {
+      if (!counts) return "";
+      return JSON.stringify({
+        total: counts.totalCount,
+        done: counts.doneCount,
+        retryable: counts.errorRetryableCount,
+        error_final: counts.errorFinalCount,
+        queued: counts.queuedRemaining
+      });
+    }
+    function logGuard(reason, counts, detail) {
+      belle_export_appendGuardLogRow_(ss, props, {
+        doc_type: "cc_statement",
+        queue_sheet_name: queueSheetName,
+        reason: reason,
+        counts_json: buildCountsJson(counts),
+        detail: detail || ""
+      });
+    }
     const fiscalRange = belle_yayoi_parseFiscalRangeAllowCrossYear_(fiscalStart, fiscalEnd);
     if (!fiscalRange.ok) {
+      logGuard(fiscalRange.reason || "FISCAL_RANGE_INVALID", null, "");
       const res = { phase: "EXPORT_GUARD", ok: true, reason: fiscalRange.reason, doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
     }
     const queue = ss.getSheetByName(queueSheetName);
     if (!queue) {
+      logGuard("QUEUE_SHEET_NOT_FOUND", null, "");
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "QUEUE_SHEET_NOT_FOUND", doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
@@ -557,12 +602,14 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     const extraHeader = belle_getQueueLockHeaderColumns_v0_();
     const lastRow = queue.getLastRow();
     if (lastRow < 2) {
+      logGuard("NO_ROWS", null, "");
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "NO_ROWS", doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
     }
     const headerMap = belle_queue_ensureHeaderMapForExport(queue, baseHeader, extraHeader);
     if (!headerMap) {
+      logGuard("INVALID_QUEUE_HEADER: missing required columns", null, "");
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: missing required columns", doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
@@ -613,6 +660,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     });
 
     if (counts.queuedRemaining > 0) {
+      logGuard("OCR_PENDING", counts, "");
       const res = {
         phase: "EXPORT_GUARD",
         ok: true,
@@ -631,6 +679,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
       return res;
     }
     if (counts.errorRetryableCount > 0) {
+      logGuard("OCR_RETRYABLE_REMAINING", counts, "");
       const res = {
         phase: "EXPORT_GUARD",
         ok: true,
@@ -651,6 +700,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
 
     const exportLogResult = belle_getOrCreateExportLogSheet(ss);
     if (exportLogResult.guard) {
+      logGuard(exportLogResult.guard.reason || "EXPORT_LOG_GUARD", null, exportLogResult.guard.message || "");
       Logger.log(exportLogResult.guard);
       return {
         phase: exportLogResult.guard.phase,

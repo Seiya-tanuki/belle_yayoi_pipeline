@@ -35,6 +35,11 @@ class MockRange {
     }
     return out;
   }
+  setValue(value) {
+    if (!this.sheet.data[this.row - 1]) this.sheet.data[this.row - 1] = [];
+    this.sheet.data[this.row - 1][this.col - 1] = value;
+    return this;
+  }
   setValues(values) {
     for (let r = 0; r < values.length; r++) {
       const rowIdx = this.row - 1 + r;
@@ -99,11 +104,15 @@ appendQueue(ss, [detail], '2025-01-01T00:00:00Z', props);
 const sh = ss.getSheetByName('QUEUE_SKIP_LOG');
 expect(sh, 'QUEUE_SKIP_LOG should be created');
 expect(sh.data.length === 2, 'should write header + 1 row');
+expect(sh.data[1][11] === 1, 'seen_count should start at 1');
 
-appendQueue(ss, [detail], '2025-01-01T00:00:00Z', props);
+appendQueue(ss, [detail], '2025-01-02T00:00:00Z', props);
 expect(sh.data.length === 2, 'duplicate should not append');
+expect(sh.data[1][10] === '2025-01-02T00:00:00Z', 'last_seen_at_iso should update');
+expect(sh.data[1][11] === 2, 'seen_count should increment');
 
 appendQueue(ss, [{ ...detail, reason: 'PDF_PAGECOUNT_UNKNOWN' }], '2025-01-01T00:00:00Z', props);
 expect(sh.data.length === 3, 'different reason should append');
+expect(sh.data[2][11] === 1, 'new reason should start seen_count at 1');
 
 console.log('OK: test_queue_skip_log_dedupe');

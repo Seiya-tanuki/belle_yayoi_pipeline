@@ -10,10 +10,10 @@ function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-const appendQueue = sandbox.belle_appendQueueSkipLogRows_;
-const appendSkip = sandbox.belle_appendSkipLogRows;
-expect(typeof appendQueue === 'function', 'missing belle_appendQueueSkipLogRows_');
-expect(typeof appendSkip === 'function', 'missing belle_appendSkipLogRows');
+const appendGuard = sandbox.belle_export_appendGuardLogRow_;
+const getHeader = sandbox.belle_getExportGuardLogHeader_;
+expect(typeof appendGuard === 'function', 'missing belle_export_appendGuardLogRow_');
+expect(typeof getHeader === 'function', 'missing belle_getExportGuardLogHeader_');
 
 class MockRange {
   constructor(sheet, row, col, numRows, numCols) {
@@ -36,11 +36,6 @@ class MockRange {
       out.push(vals);
     }
     return out;
-  }
-  setValue(value) {
-    if (!this.sheet.data[this.row - 1]) this.sheet.data[this.row - 1] = [];
-    this.sheet.data[this.row - 1][this.col - 1] = value;
-    return this;
   }
   setValues(values) {
     for (let r = 0; r < values.length; r++) {
@@ -70,8 +65,8 @@ class MockSheet {
     this.data.push(row.slice());
     return this;
   }
-  clear() {
-    this.data = [];
+  setName(name) {
+    this.name = name;
   }
 }
 
@@ -90,29 +85,30 @@ class MockSpreadsheet {
 }
 
 const ss = new MockSpreadsheet();
-const details = [{
-  file_id: 'f1',
-  file_name: 'root.pdf',
-  drive_url: 'https://drive.google.com/file/d/f1/view',
-  doc_type: '',
-  source_subfolder: '',
-  reason: 'ROOT_LEVEL_FILE',
-  detail: ''
-}];
 const props = { getProperty: () => '' };
+const header = getHeader();
 
-appendQueue(ss, details, '2025-01-01T00:00:00Z', props);
+appendGuard(ss, props, {
+  doc_type: 'receipt',
+  queue_sheet_name: 'OCR_RECEIPT',
+  reason: 'OCR_PENDING',
+  counts_json: '{"done":0}',
+  detail: 'pending'
+});
+appendGuard(ss, props, {
+  doc_type: 'cc_statement',
+  queue_sheet_name: 'OCR_CC',
+  reason: 'NO_ROWS',
+  counts_json: '{"done":0}',
+  detail: ''
+});
 
-const queueSheet = ss.getSheetByName('QUEUE_SKIP_LOG');
-const exportSheet = ss.getSheetByName('EXPORT_SKIP_LOG');
-expect(queueSheet, 'queue skip log sheet missing');
-expect(!exportSheet, 'export skip log should not be created by queue skip');
-expect(queueSheet.data.length === 2, 'queue skip should write header + 1 row');
-expect(queueSheet.data[1][1] === 'QUEUE_SKIP', 'phase should be QUEUE_SKIP');
+const sheet = ss.getSheetByName('EXPORT_GUARD_LOG');
+expect(sheet, 'EXPORT_GUARD_LOG should be created');
+expect(sheet.data.length === 3, 'should write header + 2 rows');
+expect(JSON.stringify(sheet.data[0]) === JSON.stringify(header), 'header mismatch');
+expect(sheet.data[1][1] === 'EXPORT_GUARD', 'phase should be EXPORT_GUARD');
+expect(sheet.data[1][2] === 'receipt', 'doc_type mismatch');
+expect(sheet.data[2][2] === 'cc_statement', 'doc_type mismatch');
 
-appendSkip(ss, 'EXPORT_SKIP_LOG', details, '2025-01-01T00:00:00Z', 'EXPORT_SKIP');
-const exportSheetAfter = ss.getSheetByName('EXPORT_SKIP_LOG');
-expect(exportSheetAfter, 'export skip log sheet missing after export skip');
-expect(queueSheet.data.length === 2, 'queue skip log should remain unchanged by export skip');
-
-console.log('OK: test_queue_skip_log_routing');
+console.log('OK: test_export_guard_log');

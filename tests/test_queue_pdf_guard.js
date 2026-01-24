@@ -52,6 +52,11 @@ class MockRange {
     }
     return out;
   }
+  setValue(value) {
+    if (!this.sheet.data[this.row - 1]) this.sheet.data[this.row - 1] = [];
+    this.sheet.data[this.row - 1][this.col - 1] = value;
+    return this;
+  }
   setValues(values) {
     for (let r = 0; r < values.length; r++) {
       const rowIdx = this.row - 1 + r;

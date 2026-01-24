@@ -32,33 +32,59 @@ function belle_ocr_perf_truncate_(text, maxLen) {
   return s.slice(0, maxLen) + "...(truncated)";
 }
 
-function belle_ocr_perf_ensureLogSheet_(ss) {
-  const name = "PERF_LOG";
-  let sheet = ss.getSheetByName(name);
-  if (!sheet) sheet = ss.insertSheet(name);
-  const header = [
-    "ts_iso",
+function belle_perf_getHeaderV2_() {
+  return [
+    "logged_at_iso",
     "phase",
-    "worker_id",
-    "processed",
-    "done",
-    "retryable",
-    "final",
-    "lock_busy",
-    "avg_gemini_ms",
-    "p95_gemini_ms",
-    "avg_total_ms",
-    "detail"
+    "ok",
+    "doc_type",
+    "queue_sheet_name",
+    "last_reason",
+    "lock_busy_skipped",
+    "http_status",
+    "cc_error_code",
+    "cc_stage",
+    "cc_cache_hit",
+    "processing_count",
+    "detail_json"
   ];
-  const current = sheet.getRange(1, 1, 1, header.length).getValues()[0];
-  const mismatch = header.some(function (h, i) {
-    return String(current[i] || "") !== h;
-  });
-  if (mismatch) {
-    sheet.clear();
-    sheet.getRange(1, 1, 1, header.length).setValues([header]);
+}
+
+function belle_perf_buildRowV2_(evt) {
+  const e = evt || {};
+  let detail = "";
+  try {
+    detail = JSON.stringify(e);
+  } catch (err) {
+    detail = String(e);
   }
-  return sheet;
+  detail = belle_ocr_perf_truncate_(detail, 2000);
+  const okValue = (e.ok === undefined || e.ok === null) ? "" : (e.ok === true ? "true" : "false");
+  const cacheValue = (e.ccCacheHit === undefined || e.ccCacheHit === null) ? "" : (e.ccCacheHit === true ? "true" : "false");
+  const httpStatus = (typeof e.httpStatus === "number" && !isNaN(e.httpStatus)) ? e.httpStatus : "";
+  const lockBusySkipped = (typeof e.lockBusySkipped === "number" && !isNaN(e.lockBusySkipped)) ? e.lockBusySkipped : "";
+  const processingCount = (typeof e.processingCount === "number" && !isNaN(e.processingCount)) ? e.processingCount : "";
+  return [
+    new Date().toISOString(),
+    String(e.phase || "OCR_WORKER_SUMMARY"),
+    okValue,
+    String(e.docType || e.doc_type || ""),
+    String(e.queueSheetName || e.queue_sheet_name || ""),
+    String(e.lastReason || ""),
+    lockBusySkipped,
+    httpStatus,
+    String(e.ccErrorCode || ""),
+    String(e.ccStage || ""),
+    cacheValue,
+    processingCount,
+    detail
+  ];
+}
+
+function belle_ocr_perf_ensureLogSheet_(ss) {
+  const header = belle_perf_getHeaderV2_();
+  const ensured = belle_log_ensureSheetWithHeader_(ss, "PERF_LOG", header);
+  return ensured.sheet;
 }
 
 function belle_ocr_perf_appendFromSummary_(summary) {
@@ -67,33 +93,14 @@ function belle_ocr_perf_appendFromSummary_(summary) {
   const integrationsSheetId = props.getProperty("BELLE_INTEGRATIONS_SHEET_ID");
   if (!integrationsSheetId) return false;
 
-  let detail = "";
-  try {
-    detail = JSON.stringify(summary);
-  } catch (e) {
-    detail = String(summary);
-  }
-  detail = belle_ocr_perf_truncate_(detail, 2000);
+  const row = belle_perf_buildRowV2_(summary);
 
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
     const ss = SpreadsheetApp.openById(integrationsSheetId);
     const sheet = belle_ocr_perf_ensureLogSheet_(ss);
-    sheet.appendRow([
-      new Date().toISOString(),
-      String(summary.phase || "OCR_WORKER_SUMMARY"),
-      String(summary.workerId || ""),
-      Number(summary.processed || 0),
-      Number(summary.done || 0),
-      Number(summary.retryable || 0),
-      Number(summary.final || 0),
-      Number(summary.lockBusySkipped || 0),
-      Number(summary.avgGeminiMs || 0),
-      Number(summary.p95GeminiMs || 0),
-      Number(summary.avgTotalItemMs || 0),
-      detail
-    ]);
+    belle_sheet_appendRowsInChunks_(sheet, [row], 200);
   } finally {
     lock.releaseLock();
   }

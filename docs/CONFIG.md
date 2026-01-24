@@ -28,6 +28,7 @@
   - Duplicate subfolder names are treated as errors and export is skipped per doc_type.
 - BELLE_SKIP_LOG_SHEET_NAME (default: EXPORT_SKIP_LOG)
 - BELLE_QUEUE_SKIP_LOG_SHEET_NAME (default: QUEUE_SKIP_LOG)
+- BELLE_EXPORT_GUARD_LOG_SHEET_NAME (default: EXPORT_GUARD_LOG)
 - BELLE_EXPORT_BATCH_MAX_ROWS (default: 5000)
 - BELLE_CSV_ENCODING (default: SHIFT_JIS)
 - BELLE_CSV_EOL (default: CRLF)
@@ -70,6 +71,9 @@
 - BELLE_OCR_CLAIM_CURSOR (legacy internal, receipt only).
 - BELLE_INTEGRATIONS_SHEET_ID (optional): required to write PERF_LOG (also used by webhook logs).
 Notes:
+- PERF_LOG v2 columns: logged_at_iso, phase, ok, doc_type, queue_sheet_name, last_reason, lock_busy_skipped, http_status, cc_error_code, cc_stage, cc_cache_hit, processing_count, detail_json.
+- QUEUE_SKIP_LOG columns: logged_at_iso, phase, file_id, file_name, drive_url, doc_type, source_subfolder, reason, detail, first_seen_at_iso, last_seen_at_iso, seen_count.
+- EXPORT_GUARD_LOG columns: logged_at_iso, phase, doc_type, queue_sheet_name, reason, counts_json, detail.
 - When parallel enabled, runner OCR is guarded with RUN_GUARD: OCR_PARALLEL_ENABLED.
 - Disable removes triggers only; BELLE_OCR_PARALLEL_ENABLED is unchanged.
 
