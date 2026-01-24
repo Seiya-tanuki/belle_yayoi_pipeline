@@ -258,6 +258,7 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
     });
 
     if (counts.queuedRemaining > 0) {
+      logGuard("OCR_PENDING", counts, "");
       const res = {
         phase: "EXPORT_GUARD",
         ok: true,
@@ -275,6 +276,7 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
       return res;
     }
     if (counts.errorRetryableCount > 0) {
+      logGuard("OCR_RETRYABLE_REMAINING", counts, "");
       const res = {
         phase: "EXPORT_GUARD",
         ok: true,
