@@ -340,8 +340,7 @@ function belle_queueFolderFilesToSheet() {
   }
 
   if (skipped.length > 0) {
-    const skipLogSheetName = belle_getSkipLogSheetName(props);
-    belle_appendSkipLogRows(ss, skipLogSheetName, skipped, nowIso, "QUEUE_SKIP");
+    belle_appendQueueSkipLogRows_(ss, skipped, nowIso, props);
   }
 
   const result = {
@@ -861,6 +860,11 @@ function belle_getQueueSheetName(props) {
 function belle_getSkipLogSheetName(props) {
   const p = props || PropertiesService.getScriptProperties();
   return p.getProperty("BELLE_SKIP_LOG_SHEET_NAME") || "EXPORT_SKIP_LOG";
+}
+
+function belle_getQueueSkipLogSheetName(props) {
+  const p = props || PropertiesService.getScriptProperties();
+  return p.getProperty("BELLE_QUEUE_SKIP_LOG_SHEET_NAME") || "QUEUE_SKIP_LOG";
 }
 
 function belle_getOutputFolderId(props) {
@@ -1464,6 +1468,11 @@ function belle_appendSkipLogRows(ss, sheetName, details, loggedAtIso, phase) {
     ]);
   }
   return belle_sheet_appendRowsInChunks_(sh, rows, 200);
+}
+
+function belle_appendQueueSkipLogRows_(ss, details, loggedAtIso, props) {
+  const sheetName = belle_getQueueSkipLogSheetName(props);
+  return belle_appendSkipLogRows(ss, sheetName, details, loggedAtIso, "QUEUE_SKIP");
 }
 
 function belle_parseBool(value, defaultValue) {

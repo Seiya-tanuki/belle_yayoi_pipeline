@@ -16,3 +16,4 @@ This file tracks known drifts between docs and current implementation.
 - Export writes CSVs under doc_type subfolders (receipt/, cc_statement/). CC export uses Stage2 transactions (1 file -> multiple rows).
 - Export resolves output subfolders strictly; duplicate subfolder names stop export for that doc_type.
 - Export runs per doc_type independently; one doc_type error does not block the other.
+- Queue skip logs (phase=QUEUE_SKIP) write to QUEUE_SKIP_LOG; EXPORT_SKIP_LOG is export-only.

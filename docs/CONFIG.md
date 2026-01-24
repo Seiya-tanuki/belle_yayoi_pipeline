@@ -4,7 +4,7 @@
 - BELLE_SHEET_ID
 - BELLE_DRIVE_FOLDER_ID
   - Input root folder. Files must be placed under subfolders: receipt, cc_statement, bank_statement.
-  - Root-level files are skipped (logged to EXPORT_SKIP_LOG).
+  - Root-level files are skipped (logged to QUEUE_SKIP_LOG).
 - BELLE_GEMINI_API_KEY
 - BELLE_GEMINI_MODEL
 
@@ -26,6 +26,7 @@
   - Subfolders are created when missing.
   - Duplicate subfolder names are treated as errors and export is skipped per doc_type.
 - BELLE_SKIP_LOG_SHEET_NAME (default: EXPORT_SKIP_LOG)
+- BELLE_QUEUE_SKIP_LOG_SHEET_NAME (default: QUEUE_SKIP_LOG)
 - BELLE_EXPORT_BATCH_MAX_ROWS (default: 5000)
 - BELLE_CSV_ENCODING (default: SHIFT_JIS)
 - BELLE_CSV_EOL (default: CRLF)
