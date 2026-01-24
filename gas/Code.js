@@ -162,6 +162,13 @@ function belle_listFilesInFolder() {
       const isImage = mime && mime.indexOf("image/") === 0;
       const isPdf = mime === "application/pdf";
       if (!isImage && !isPdf) continue;
+      if (isPdf) {
+        const skipDetail = belle_queue_checkPdfPageCount_(f, def.docType, def.subfolder);
+        if (skipDetail) {
+          skipped.push(skipDetail);
+          continue;
+        }
+      }
       const entry = {
         id: f.getId(),
         name: f.getName(),
@@ -872,6 +879,66 @@ function belle_getOutputFolderId(props) {
   return p.getProperty("BELLE_OUTPUT_FOLDER_ID") || p.getProperty("BELLE_DRIVE_FOLDER_ID");
 }
 
+function belle_pdf_countPages_(pdfBlob, out) {
+  try {
+    if (!pdfBlob || typeof pdfBlob.getBytes !== "function") return null;
+    const bytes = pdfBlob.getBytes();
+    if (!bytes || !bytes.length) return null;
+    const token = "/Type /Page";
+    const tokenBytes = [];
+    for (let i = 0; i < token.length; i++) tokenBytes.push(token.charCodeAt(i));
+    let count = 0;
+    for (let i = 0; i <= bytes.length - tokenBytes.length; i++) {
+      let match = true;
+      for (let j = 0; j < tokenBytes.length; j++) {
+        if (bytes[i + j] !== tokenBytes[j]) {
+          match = false;
+          break;
+        }
+      }
+      if (!match) continue;
+      // Avoid counting "/Type /Pages".
+      const nextByte = bytes[i + tokenBytes.length];
+      if (nextByte === 0x73) continue;
+      count++;
+      if (count >= 2) return count;
+    }
+    if (count === 1) return 1;
+    return null;
+  } catch (e) {
+    if (out) out.error = String(e);
+    return null;
+  }
+}
+
+function belle_queue_checkPdfPageCount_(file, docType, sourceSubfolder) {
+  if (!file || typeof file.getMimeType !== "function") return null;
+  if (file.getMimeType() !== "application/pdf") return null;
+  const info = {};
+  const pageCount = belle_pdf_countPages_(file.getBlob && file.getBlob(), info);
+  if (pageCount === 1) return null;
+  const reason = pageCount ? "MULTI_PAGE_PDF" : "PDF_PAGECOUNT_UNKNOWN";
+  let detail = "method=byte_scan:/Type /Page";
+  if (pageCount) {
+    detail += " detected_page_count=" + pageCount;
+  } else {
+    detail += " detected_page_count=unknown";
+  }
+  if (info && info.error) {
+    detail += " error=" + String(info.error).slice(0, 200);
+  }
+  const id = typeof file.getId === "function" ? file.getId() : "";
+  return {
+    file_id: id,
+    file_name: typeof file.getName === "function" ? file.getName() : "",
+    drive_url: id ? "https://drive.google.com/file/d/" + id + "/view" : "",
+    reason: reason,
+    detail: detail,
+    doc_type: docType || "",
+    source_subfolder: sourceSubfolder || ""
+  };
+}
+
 function belle_queue_buildRow_(header, data) {
   const row = new Array(header.length);
   for (let i = 0; i < header.length; i++) {
@@ -1430,15 +1497,16 @@ function belle_sheet_appendRowsInChunks_(sh, rows, chunkSize) {
 /**
  * Append skip details to a sheet (append-only).
  */
-function belle_appendSkipLogRows(ss, sheetName, details, loggedAtIso, phase) {
-  if (!details || details.length === 0) return 0;
+function belle_getSkipLogHeader_() {
+  return ["logged_at_iso","phase","file_id","file_name","drive_url","doc_type","source_subfolder","reason","detail"];
+}
+
+function belle_ensureSkipLogSheet_(ss, sheetName, header) {
   let sh = ss.getSheetByName(sheetName);
   if (!sh) sh = ss.insertSheet(sheetName);
-
-  const header = ["logged_at_iso","phase","file_id","file_name","drive_url","doc_type","source_subfolder","reason","detail"];
   const lastRow = sh.getLastRow();
   if (lastRow === 0) {
-    sh.appendRow(header);
+    sh.getRange(1, 1, 1, header.length).setValues([header]);
   } else {
     const headerRow = sh.getRange(1, 1, 1, header.length).getValues()[0];
     const mismatch = header.some(function (h, i) {
@@ -1449,7 +1517,13 @@ function belle_appendSkipLogRows(ss, sheetName, details, loggedAtIso, phase) {
       sh.getRange(1, 1, 1, header.length).setValues([header]);
     }
   }
+  return sh;
+}
 
+function belle_appendSkipLogRows(ss, sheetName, details, loggedAtIso, phase) {
+  if (!details || details.length === 0) return 0;
+  const header = belle_getSkipLogHeader_();
+  const sh = belle_ensureSkipLogSheet_(ss, sheetName, header);
   const rows = [];
   const phaseName = phase || "SKIP_LOG";
   const ts = loggedAtIso || new Date().toISOString();
@@ -1470,9 +1544,46 @@ function belle_appendSkipLogRows(ss, sheetName, details, loggedAtIso, phase) {
   return belle_sheet_appendRowsInChunks_(sh, rows, 200);
 }
 
+function belle_queue_skip_makeKey_(fileId, reason) {
+  return String(fileId || "") + "||" + String(reason || "");
+}
+
 function belle_appendQueueSkipLogRows_(ss, details, loggedAtIso, props) {
+  if (!details || details.length === 0) return 0;
   const sheetName = belle_getQueueSkipLogSheetName(props);
-  return belle_appendSkipLogRows(ss, sheetName, details, loggedAtIso, "QUEUE_SKIP");
+  const header = belle_getSkipLogHeader_();
+  const sh = belle_ensureSkipLogSheet_(ss, sheetName, header);
+  const existing = new Set();
+  const lastRow = sh.getLastRow();
+  if (lastRow >= 2) {
+    const idValues = sh.getRange(2, 3, lastRow - 1, 1).getValues();
+    const reasonValues = sh.getRange(2, 8, lastRow - 1, 1).getValues();
+    for (let i = 0; i < idValues.length; i++) {
+      const key = belle_queue_skip_makeKey_(idValues[i][0], reasonValues[i][0]);
+      existing.add(key);
+    }
+  }
+  const rows = [];
+  const phaseName = "QUEUE_SKIP";
+  const ts = loggedAtIso || new Date().toISOString();
+  for (let i = 0; i < details.length; i++) {
+    const d = details[i] || {};
+    const key = belle_queue_skip_makeKey_(d.file_id, d.reason);
+    if (existing.has(key)) continue;
+    existing.add(key);
+    rows.push([
+      ts,
+      phaseName,
+      d.file_id || "",
+      d.file_name || "",
+      d.drive_url || "",
+      d.doc_type || "",
+      d.source_subfolder || "",
+      d.reason || "",
+      d.detail || ""
+    ]);
+  }
+  return belle_sheet_appendRowsInChunks_(sh, rows, 200);
 }
 
 function belle_parseBool(value, defaultValue) {

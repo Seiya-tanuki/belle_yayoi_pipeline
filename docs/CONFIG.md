@@ -5,6 +5,7 @@
 - BELLE_DRIVE_FOLDER_ID
   - Input root folder. Files must be placed under subfolders: receipt, cc_statement, bank_statement.
   - Root-level files are skipped (logged to QUEUE_SKIP_LOG).
+  - Multi-page/unknown-pagecount PDFs are skipped at queue time (QUEUE_SKIP_LOG reasons: MULTI_PAGE_PDF, PDF_PAGECOUNT_UNKNOWN).
 - BELLE_GEMINI_API_KEY
 - BELLE_GEMINI_MODEL
 
