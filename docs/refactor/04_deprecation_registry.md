@@ -192,3 +192,11 @@ This file records code that is scheduled for removal or has been removed during 
 - Proof:
   - tests: test_ocr_receipt_pipeline_boundaries.js, test_ocr_receipt_pipeline_load_order_safety.js, test_ocr_receipt_pipeline_parity.js
 - Rollback: revert de8d2fb
+- ID: CLN-0025
+- Status: REMOVED
+- Area: ocr
+- Target: OcrWorkerParallel_v0.js pipeline dispatch via registry pipeline_kind only
+- Reason: keep OcrWorkerParallel as thin orchestrator without pipeline-specific control flow
+- Proof:
+  - tests: test_ocr_worker_orchestrator_boundaries.js, test_ocr_worker_dispatch_parity.js
+- Rollback: revert 667ce9c

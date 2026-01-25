@@ -3,7 +3,7 @@
 
 ## File boundaries
 1) Code.js: entrypoints/wrappers only (no helper logic).
-2) OcrWorkerParallel_v0.js: worker loop + OCR orchestration (doc_type branching acceptable but must remain readable).
+2) OcrWorkerParallel_v0.js: worker loop + OCR orchestration only; no pipeline control flow or doc_type literals.
 3) Review_v0.js: export entrypoints/wrappers only.
 4) Export_v0.js: export orchestration + guard logic + log routing for export phase.
 5) YayoiExport_v0.js: deterministic mapping from OCR JSON -> Yayoi CSV rows.
