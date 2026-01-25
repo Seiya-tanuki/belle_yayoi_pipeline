@@ -21,7 +21,7 @@ vm.createContext(sandbox);
 let threw = false;
 try {
   vm.runInContext(fs.readFileSync('gas/Config_v0.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('gas/Drive_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
 } catch (e) {
   threw = true;
 }
@@ -40,3 +40,4 @@ const res = sandbox.belle_exportLog_buildHeaderMap_(sheet, ["file_id"]);
 expect(res && res.ok === true, 'belle_exportLog_buildHeaderMap_ should return ok=true');
 
 console.log('OK: test_sheet_module_load_order_safety');
+

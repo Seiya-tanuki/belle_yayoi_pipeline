@@ -3,7 +3,7 @@ const vm = require('vm');
 
 const code = fs.readFileSync('gas/Config_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8')
+  + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8')
   + '\n' + fs.readFileSync('gas/Review_v0.js', 'utf8');
 
 const calls = [];
@@ -53,5 +53,6 @@ expect(handlerKeys[0] === 'cc_statement', 'export handler order should start wit
 expect(handlerKeys[1] === 'receipt', 'export handler order should include receipt');
 
 console.log('OK: test_doc_type_registry_callsite_smoke');
+
 
 

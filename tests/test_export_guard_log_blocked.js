@@ -159,7 +159,7 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync('gas/Config_v0.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8'), sandbox);
-vm.runInContext(fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/YayoiExport_v0.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/OcrValidation_v0.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/Review_v0.js', 'utf8'), sandbox);
@@ -228,6 +228,7 @@ expect(guardSheet.data.length === 2, 'should log one guard row plus header');
 expect(guardSheet.data[1][2] === 'receipt', 'guard row should be for receipt');
 
 console.log('OK: test_export_guard_log_blocked');
+
 
 
 
