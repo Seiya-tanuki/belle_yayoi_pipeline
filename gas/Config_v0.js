@@ -151,3 +151,37 @@ function belle_cfg_getOcrClaimCursorRaw_(props, docType, cursorKey) {
   }
   return "";
 }
+
+function belle_configWarnOnce(key, detail) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const cacheKey = "CFG_WARN_" + String(key || "");
+    if (cache.get(cacheKey)) return;
+    cache.put(cacheKey, "1", 3600);
+  } catch (e) {
+    // ignore cache errors
+  }
+  try {
+    Logger.log({ phase: "CONFIG_WARN", ok: true, key: String(key || ""), detail: String(detail || "") });
+  } catch (e) {
+    // ignore logger errors
+  }
+}
+
+function belle_parseBool(value, defaultValue) {
+  const raw = String(value || "").trim();
+  if (!raw) return defaultValue === undefined ? false : !!defaultValue;
+  const lower = raw.toLowerCase();
+  if (lower === "true" || lower === "1" || lower === "yes" || lower === "y") return true;
+  if (lower === "false" || lower === "0" || lower === "no" || lower === "n") return false;
+  return defaultValue === undefined ? false : !!defaultValue;
+}
+
+function belle_getQueueSheetName(props) {
+  return belle_ocr_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_RECEIPT);
+}
+
+function belle_getOutputFolderId(props) {
+  const p = props || belle_cfg_getProps_();
+  return String(p.getProperty("BELLE_OUTPUT_FOLDER_ID") || p.getProperty("BELLE_DRIVE_FOLDER_ID") || "");
+}

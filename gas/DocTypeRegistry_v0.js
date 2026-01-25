@@ -91,3 +91,81 @@ function belle_docType_buildBankSpec_() {
     export_order: 99
   };
 }
+
+function belle_getDocTypeDefs_() {
+  var docTypes = belle_docType_getSupportedDocTypes_();
+  var out = [];
+  for (var i = 0; i < docTypes.length; i++) {
+    var spec = belle_docType_getSpec_(docTypes[i]);
+    if (!spec) continue;
+    out.push({
+      docType: spec.doc_type,
+      subfolder: spec.source_subfolder_name,
+      sheetName: spec.ocr_sheet_name_default
+    });
+  }
+  return out;
+}
+
+function belle_ocr_getDocTypeDefByDocType_(docType) {
+  var spec = belle_docType_getSpec_(docType);
+  if (!spec) return null;
+  return {
+    docType: spec.doc_type,
+    subfolder: spec.source_subfolder_name,
+    sheetName: spec.ocr_sheet_name_default
+  };
+}
+
+function belle_ocr_getDocTypeDefBySubfolder_(name) {
+  var spec = belle_docType_getSpecBySubfolder_(name);
+  if (!spec) return null;
+  return {
+    docType: spec.doc_type,
+    subfolder: spec.source_subfolder_name,
+    sheetName: spec.ocr_sheet_name_default
+  };
+}
+
+function belle_ocr_getActiveDocTypes_(props) {
+  var p = props || belle_cfg_getProps_();
+  var raw = String(p.getProperty("BELLE_ACTIVE_DOC_TYPES") || "").trim();
+  if (!raw) return [BELLE_DOC_TYPE_RECEIPT];
+  var parts = raw.split(",");
+  var out = [];
+  var seen = {};
+  for (var i = 0; i < parts.length; i++) {
+    var item = String(parts[i] || "").trim();
+    if (!item) continue;
+    var spec = belle_docType_getSpec_(item);
+    if (!spec) {
+      belle_configWarnOnce("BELLE_ACTIVE_DOC_TYPES_UNKNOWN", "unknown=" + item);
+      continue;
+    }
+    if (!seen[spec.doc_type]) {
+      seen[spec.doc_type] = true;
+      out.push(spec.doc_type);
+    }
+  }
+  if (out.length === 0) return [BELLE_DOC_TYPE_RECEIPT];
+  return out;
+}
+
+function belle_ocr_getFixedQueueSheetNameForDocType_(docType) {
+  var spec = belle_docType_getSpec_(docType);
+  return spec ? spec.ocr_sheet_name_default : "OCR_RECEIPT";
+}
+
+function belle_ocr_getQueueSheetNameForDocType_(props, docType) {
+  return belle_cfg_getQueueSheetNameForDocType_(props, docType);
+}
+
+function belle_ocr_allowPdfForDocType_(docType) {
+  var spec = belle_docType_getSpec_(docType);
+  return !!(spec && spec.pipeline_kind === BELLE_DOC_PIPELINE_TWO_STAGE);
+}
+
+function belle_ocr_shouldStopAfterItem_(docType) {
+  var spec = belle_docType_getSpec_(docType);
+  return !!(spec && spec.pipeline_kind === BELLE_DOC_PIPELINE_TWO_STAGE);
+}

@@ -2,6 +2,9 @@
 
 // NOTE: Keep comments ASCII only.
 
+function belle_getExportLogHeaderColumns_v0() {
+  return ["file_id","exported_at_iso","csv_file_id"];
+}
 
 function belle_getOrCreateExportLogSheet(ss) {
   const EXPORT_LOG_NAME = "EXPORT_LOG";

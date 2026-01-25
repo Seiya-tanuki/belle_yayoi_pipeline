@@ -122,3 +122,113 @@ function belle_export_flushExportLog_(exportLog, fileIds, nowIso, csvFileId, chu
   }
   return written;
 }
+
+
+function belle_resetSpreadsheetToInitialState_fallback_v0Internal_() {
+  const EXPECTED_RESET_TOKEN = "RESET_FALLBACK_V0_CONFIRM";
+  const props = belle_cfg_getProps_();
+  const token = String(props.getProperty("BELLE_RESET_TOKEN") || "");
+  if (token !== EXPECTED_RESET_TOKEN) {
+    const guard = { phase: "RESET_GUARD", ok: true, reason: "RESET_TOKEN_MISMATCH" };
+    Logger.log(guard);
+    return guard;
+  }
+
+  let lock;
+  try {
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+  } catch (e) {
+    const guard = { phase: "RESET_GUARD", ok: true, reason: "LOCK_BUSY" };
+    Logger.log(guard);
+    return guard;
+  }
+
+  try {
+    const sheetId = belle_cfg_getSheetIdOrEmpty_(props);
+    if (!sheetId) {
+      const guard = { phase: "RESET_GUARD", ok: true, reason: "MISSING_SHEET_ID" };
+      Logger.log(guard);
+      return guard;
+    }
+
+    const ss = SpreadsheetApp.openById(sheetId);
+    const receiptSheetName = belle_ocr_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_RECEIPT);
+    const docDefs = belle_getDocTypeDefs_();
+    const queueNames = [];
+    for (let i = 0; i < docDefs.length; i++) {
+      const name = belle_ocr_getQueueSheetNameForDocType_(props, docDefs[i].docType);
+      if (queueNames.indexOf(name) < 0) queueNames.push(name);
+    }
+    const exportLogName = "EXPORT_LOG";
+    const candidates = [
+      receiptSheetName
+    ];
+    for (let i = 0; i < queueNames.length; i++) {
+      candidates.push(queueNames[i]);
+    }
+    candidates.push(
+      exportLogName,
+      "QUEUE",
+      "IMPORT_LOG",
+      "REVIEW_UI",
+      "REVIEW_STATE",
+      "REVIEW_LOG"
+    );
+    const uniq = {};
+    const targets = [];
+    for (let i = 0; i < candidates.length; i++) {
+      const name = candidates[i];
+      if (name && !uniq[name]) {
+        uniq[name] = true;
+        targets.push(name);
+      }
+    }
+
+    const existing = [];
+    for (let i = 0; i < targets.length; i++) {
+      const sh = ss.getSheetByName(targets[i]);
+      if (sh) existing.push(sh);
+    }
+
+    let temp = null;
+    if (existing.length > 0 && existing.length >= ss.getSheets().length) {
+      temp = ss.insertSheet("__RESET_TMP__");
+    }
+
+    const deleted = [];
+    for (let i = 0; i < existing.length; i++) {
+      const sh = existing[i];
+      deleted.push(sh.getName());
+      ss.deleteSheet(sh);
+    }
+
+    const queueHeader = belle_getQueueHeaderColumns_v0();
+    const createdSheets = [];
+    for (let i = 0; i < queueNames.length; i++) {
+      const name = queueNames[i];
+      const queueSheet = ss.insertSheet(name);
+      queueSheet.getRange(1, 1, 1, queueHeader.length).setValues([queueHeader]);
+      createdSheets.push(name);
+    }
+
+    const exportLogSheet = ss.insertSheet(exportLogName);
+    const exportHeader = belle_getExportLogHeaderColumns_v0();
+    exportLogSheet.getRange(1, 1, 1, exportHeader.length).setValues([exportHeader]);
+
+    if (temp) ss.deleteSheet(temp);
+
+    const result = {
+      phase: "RESET_DONE",
+      ok: true,
+      deletedSheets: deleted,
+      createdSheets: createdSheets.concat([exportLogName]),
+      tokenCleared: true
+    };
+    props.deleteProperty("BELLE_RESET_TOKEN");
+    Logger.log(result);
+    return result;
+  } finally {
+    if (lock) lock.releaseLock();
+  }
+}
