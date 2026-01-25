@@ -160,3 +160,11 @@ This file records code that is scheduled for removal or has been removed during 
   - rg: `rg -n "^function " gas/Code.js` (allowlist only)
   - tests: test_code_entrypoints_boundary.js, test_code_load_order_safety.js
 - Rollback: revert adca7d7 and 3a9e8fe
+- ID: CLN-0021
+- Status: PROPOSED
+- Area: doc_type
+- Target: DocTypeRegistry spec completeness hardening (required fields + tests)
+- Reason: enforce stable doc_type spec contract for future additions
+- Proof:
+  - tests: test_doc_type_registry_spec_completeness.js
+- Rollback: revert 86cc3ec

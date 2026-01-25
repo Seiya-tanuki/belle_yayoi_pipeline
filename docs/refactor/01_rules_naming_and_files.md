@@ -21,6 +21,7 @@
 1) Define doc_types only in DocTypeRegistry_v0.js; do not add new doc_type literals in call sites for folder/sheet/output resolution.
 2) Call sites must read doc_type wiring via registry specs or wrappers (no ad-hoc lists).
 3) Branching on pipeline_kind and export_handler_key must be driven by DocTypeRegistry_v0.js (no direct doc_type string comparisons).
+4) Update the doc_type spec completeness test when adding a new doc_type (see tests/test_doc_type_registry_spec_completeness.js).
 
 ## Naming conventions
 1) Prefix by domain:
