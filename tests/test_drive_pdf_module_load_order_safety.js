@@ -21,7 +21,7 @@ vm.createContext(sandbox);
 let threw = false;
 try {
   vm.runInContext(fs.readFileSync('gas/Config_v0.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('gas/Gemini_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
 } catch (e) {
   threw = true;
 }
@@ -34,3 +34,4 @@ expect(typeof sandbox.belle_listFilesInFolder === 'function', 'missing belle_lis
 expect(typeof sandbox.belle_pdf_countPages_ === 'function', 'missing belle_pdf_countPages_ after Pdf_v0.js load');
 
 console.log('OK: test_drive_pdf_module_load_order_safety');
+
