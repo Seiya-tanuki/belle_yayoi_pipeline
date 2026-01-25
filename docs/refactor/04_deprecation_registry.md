@@ -168,3 +168,11 @@ This file records code that is scheduled for removal or has been removed during 
 - Proof:
   - tests: test_doc_type_registry_spec_completeness.js
 - Rollback: revert 86cc3ec
+- ID: CLN-0022
+- Status: REMOVED
+- Area: ocr
+- Target: gas/OcrWorkerParallel_v0.js common helpers moved to gas/OcrCommon_v0.js
+- Reason: isolate OCR shared helpers and reduce OcrWorkerParallel surface
+- Proof:
+  - tests: test_ocr_common_module_boundaries.js, test_ocr_common_load_order_safety.js
+- Rollback: revert 6cfcc23
