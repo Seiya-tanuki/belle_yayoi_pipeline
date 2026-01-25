@@ -312,7 +312,7 @@ function belle_queueFolderFilesToSheet() {
     if (!sheetName) continue;
     let sh = ss.getSheetByName(sheetName);
     if (!sh) sh = ss.insertSheet(sheetName);
-    const headerMap = belle_queue_ensureHeaderMap(sh, baseHeader, extraHeader);
+    const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
     if (!headerMap) throw new Error("INVALID_QUEUE_HEADER: " + sheetName);
     const existing = belle_queue_loadExistingFileIds_(sh, headerMap);
     const files = belle_queue_filterNewFiles_(filesByDocType[docType] || [], existing);
@@ -695,19 +695,24 @@ function belle_callGeminiOcr(imageBlob, opt) {
   return JSON.stringify(parsed);
 }
 
-function belle_queue_ensureHeaderMap(sh, baseHeader, extraHeader) {
+function belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader, opts) {
   const required = baseHeader.concat(extraHeader || []);
+  const options = opts || {};
+  const appendMissing = options.appendMissing !== false;
+  const throwOnMissing = options.throwOnMissing === true;
   const lastRow = sh.getLastRow();
   if (lastRow === 0) {
     sh.appendRow(required);
   }
 
   let headerRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  let nextCol = headerRow.length + 1;
-  for (let i = 0; i < required.length; i++) {
-    if (headerRow.indexOf(required[i]) === -1) {
-      sh.getRange(1, nextCol).setValue(required[i]);
-      nextCol++;
+  if (appendMissing) {
+    let nextCol = headerRow.length + 1;
+    for (let i = 0; i < required.length; i++) {
+      if (headerRow.indexOf(required[i]) === -1) {
+        sh.getRange(1, nextCol).setValue(required[i]);
+        nextCol++;
+      }
     }
   }
 
@@ -719,10 +724,16 @@ function belle_queue_ensureHeaderMap(sh, baseHeader, extraHeader) {
 
   for (let i = 0; i < baseHeader.length; i++) {
     if (map[baseHeader[i]] === undefined) {
+      if (throwOnMissing) throw new Error("INVALID_QUEUE_HEADER: missing required columns");
       return null;
     }
   }
   return map;
+}
+
+// @deprecated Use belle_queue_ensureHeaderMapCanonical_ instead.
+function belle_queue_ensureHeaderMap(sh, baseHeader, extraHeader, opts) {
+  return belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader, opts);
 }
 
 function belle_getQueueHeader_fallback_v0_() {
@@ -1121,7 +1132,7 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
     return { ok: false, processed: 0, reason: "QUEUE_EMPTY: sheet has no header", docType: docType, queueSheetName: queueSheetName };
   }
 
-  const headerMap = belle_queue_ensureHeaderMap(sh, baseHeader, extraHeader);
+  const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
   if (!headerMap) {
     return { ok: false, processed: 0, reason: "INVALID_QUEUE_HEADER: missing required columns", docType: docType, queueSheetName: queueSheetName };
   }
@@ -1405,7 +1416,7 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
 
     const baseHeader = belle_getQueueHeaderColumns_v0();
     const extraHeader = belle_getQueueLockHeaderColumns_v0_();
-    const headerMap = belle_queue_ensureHeaderMap(sh, baseHeader, extraHeader);
+    const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
     if (!headerMap) {
       const res = { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "INVALID_QUEUE_HEADER" };
       Logger.log(res);
@@ -1791,7 +1802,7 @@ function belle_queue_getStatusCounts() {
     if (!sheetName) continue;
     const sh = ss.getSheetByName(sheetName);
     if (!sh) continue;
-    const headerMap = belle_queue_ensureHeaderMap(sh, baseHeader, extraHeader);
+    const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
     if (!headerMap) continue;
     const lastRow = sh.getLastRow();
     if (lastRow < 2) continue;

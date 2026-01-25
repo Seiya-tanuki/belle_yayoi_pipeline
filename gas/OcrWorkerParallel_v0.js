@@ -156,7 +156,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
 
   const baseHeader = belle_getQueueHeaderColumns_v0();
   const extraHeader = belle_getQueueLockHeaderColumns_v0_();
-  const headerMap = belle_queue_ensureHeaderMap(sh, baseHeader, extraHeader);
+  const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
   if (!headerMap) {
     return { ok: false, processed: 0, reason: "INVALID_QUEUE_HEADER" };
   }

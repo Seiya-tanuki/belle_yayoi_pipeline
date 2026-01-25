@@ -2,33 +2,9 @@
 
 // NOTE: Keep comments ASCII only.
 
-function belle_queue_ensureHeaderMapForExport(sh, baseHeader, extraHeader) {
-  const required = baseHeader.concat(extraHeader || []);
-  const lastRow = sh.getLastRow();
-  if (lastRow === 0) {
-    sh.appendRow(required);
-  }
-
-  let headerRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  let nextCol = headerRow.length + 1;
-  for (let i = 0; i < required.length; i++) {
-    if (headerRow.indexOf(required[i]) === -1) {
-      sh.getRange(1, nextCol).setValue(required[i]);
-      nextCol++;
-    }
-  }
-
-  headerRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  const map = {};
-  for (let i = 0; i < headerRow.length; i++) {
-    map[String(headerRow[i] || "")] = i;
-  }
-  for (let i = 0; i < baseHeader.length; i++) {
-    if (map[baseHeader[i]] === undefined) {
-      return null;
-    }
-  }
-  return map;
+// @deprecated Use belle_queue_ensureHeaderMapCanonical_ instead.
+function belle_queue_ensureHeaderMapForExport(sh, baseHeader, extraHeader, opts) {
+  return belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader, opts);
 }
 
 function belle_getOrCreateExportLogSheet(ss) {
@@ -206,7 +182,7 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
       Logger.log(res);
       return res;
     }
-    const headerMap = belle_queue_ensureHeaderMapForExport(queue, baseHeader, extraHeader);
+    const headerMap = belle_queue_ensureHeaderMapCanonical_(queue, baseHeader, extraHeader);
     if (!headerMap) {
       logGuard("INVALID_QUEUE_HEADER: missing required columns", null, "");
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: missing required columns", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
@@ -609,7 +585,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
       Logger.log(res);
       return res;
     }
-    const headerMap = belle_queue_ensureHeaderMapForExport(queue, baseHeader, extraHeader);
+    const headerMap = belle_queue_ensureHeaderMapCanonical_(queue, baseHeader, extraHeader);
     if (!headerMap) {
       logGuard("INVALID_QUEUE_HEADER: missing required columns", null, "");
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: missing required columns", doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
