@@ -41,6 +41,10 @@ function belle_docType_buildReceiptSpec_() {
   return {
     doc_type: BELLE_DOC_TYPE_RECEIPT,
     source_subfolder_name: "receipt",
+    queue_sheet_name: "OCR_RECEIPT",
+    queue_sheet_name_getter: function (props) {
+      return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_RECEIPT);
+    },
     ocr_sheet_name_default: "OCR_RECEIPT",
     ocr_sheet_name_getter: function (props) {
       return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_RECEIPT);
@@ -50,6 +54,8 @@ function belle_docType_buildReceiptSpec_() {
     stage2_prompt_getter: null,
     export_subfolder_name: "receipt",
     export_handler_key: BELLE_DOC_TYPE_RECEIPT,
+    allow_pdf: false,
+    stop_after_item: false,
     export_order: 2
   };
 }
@@ -58,6 +64,10 @@ function belle_docType_buildCcSpec_() {
   return {
     doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
     source_subfolder_name: "cc_statement",
+    queue_sheet_name: "OCR_CC",
+    queue_sheet_name_getter: function (props) {
+      return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_CC_STATEMENT);
+    },
     ocr_sheet_name_default: "OCR_CC",
     ocr_sheet_name_getter: function (props) {
       return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_CC_STATEMENT);
@@ -71,6 +81,8 @@ function belle_docType_buildCcSpec_() {
     },
     export_subfolder_name: "cc_statement",
     export_handler_key: BELLE_DOC_TYPE_CC_STATEMENT,
+    allow_pdf: true,
+    stop_after_item: true,
     export_order: 1
   };
 }
@@ -79,6 +91,10 @@ function belle_docType_buildBankSpec_() {
   return {
     doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
     source_subfolder_name: "bank_statement",
+    queue_sheet_name: "OCR_BANK",
+    queue_sheet_name_getter: function (props) {
+      return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_BANK_STATEMENT);
+    },
     ocr_sheet_name_default: "OCR_BANK",
     ocr_sheet_name_getter: function (props) {
       return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_BANK_STATEMENT);
@@ -88,6 +104,8 @@ function belle_docType_buildBankSpec_() {
     stage2_prompt_getter: null,
     export_subfolder_name: "bank_statement",
     export_handler_key: "",
+    allow_pdf: false,
+    stop_after_item: false,
     export_order: 99
   };
 }
