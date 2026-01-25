@@ -228,9 +228,8 @@ function belle_ocr_cc_buildStage2SuccessWriteback_(stage2JsonStr) {
     errorCode: "",
     errorMessage: "",
     errorDetail: "",
-    cacheJson: stage2JsonStr,
-    clearErrors: true,
-    clearNextRetry: true
+    nextJson: stage2JsonStr,
+    clearErrors: true
   };
 }
 
@@ -239,10 +238,8 @@ function belle_ocr_cc_buildStage2NoRowsWriteback_(stage2JsonStr) {
     statusOut: "ERROR_RETRYABLE",
     errorCode: "CC_NO_ROWS_EXTRACTED",
     errorMessage: "transactions empty",
-    errorDetail: belle_ocr_buildInvalidSchemaLogDetail_(stage2JsonStr),
-    cacheJson: null,
-    clearErrors: false,
-    clearNextRetry: false
+    errorDetail: "transactions empty",
+    keepCache: true
   };
 }
 
