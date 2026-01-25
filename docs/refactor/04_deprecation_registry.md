@@ -151,3 +151,12 @@ This file records code that is scheduled for removal or has been removed during 
   - rg: `rg -n "^function belle_export" gas/Export_v0.js`
   - tests: test_export_module_boundaries.js, test_export_module_load_order_safety.js, test_export_parity_smoke.js
 - Rollback: revert 48c8b48
+- ID: CLN-0020
+- Status: REMOVED
+- Area: core
+- Target: gas/Code.js slimmed to entrypoint wrappers only
+- Reason: reduce Code.js surface area; helpers live in domain modules
+- Proof:
+  - rg: `rg -n "^function " gas/Code.js` (allowlist only)
+  - tests: test_code_entrypoints_boundary.js, test_code_load_order_safety.js
+- Rollback: revert adca7d7
