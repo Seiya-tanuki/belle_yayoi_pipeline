@@ -223,12 +223,12 @@ function belle_ocr_getFixedQueueSheetNameForDocType_(docType) {
 }
 
 function belle_ocr_getQueueSheetNameForDocType_(props, docType) {
-  const p = props || PropertiesService.getScriptProperties();
+  const p = props || belle_cfg_getProps_();
   const key = String(docType || "receipt");
   if (key === "receipt") {
-    const name = p.getProperty("BELLE_QUEUE_SHEET_NAME");
+    const name = belle_cfg_getQueueSheetNameOverride_(p);
     if (name) return name;
-    const legacy = p.getProperty("BELLE_SHEET_NAME");
+    const legacy = belle_cfg_getLegacyQueueSheetNameOverride_(p);
     if (legacy) {
       belle_configWarnOnce("BELLE_SHEET_NAME_DEPRECATED", "Use BELLE_QUEUE_SHEET_NAME instead.");
       return legacy;
@@ -812,13 +812,13 @@ function belle_getQueueSheetName(props) {
 
 
 function belle_getSkipLogSheetName(props) {
-  const p = props || PropertiesService.getScriptProperties();
-  return p.getProperty("BELLE_SKIP_LOG_SHEET_NAME") || "EXPORT_SKIP_LOG";
+  const p = props || belle_cfg_getProps_();
+  return belle_cfg_getSkipLogSheetName_(p);
 }
 
 function belle_getQueueSkipLogSheetName(props) {
-  const p = props || PropertiesService.getScriptProperties();
-  return p.getProperty("BELLE_QUEUE_SKIP_LOG_SHEET_NAME") || "QUEUE_SKIP_LOG";
+  const p = props || belle_cfg_getProps_();
+  return belle_cfg_getQueueSkipLogSheetName_(p);
 }
 
 function belle_getOutputFolderId(props) {
@@ -1705,8 +1705,8 @@ function belle_parseBool(value, defaultValue) {
 }
 
 function belle_getExportGuardLogSheetName(props) {
-  const p = props || PropertiesService.getScriptProperties();
-  return p.getProperty("BELLE_EXPORT_GUARD_LOG_SHEET_NAME") || "EXPORT_GUARD_LOG";
+  const p = props || belle_cfg_getProps_();
+  return belle_cfg_getExportGuardLogSheetName_(p);
 }
 
 function belle_getExportGuardLogHeader_() {

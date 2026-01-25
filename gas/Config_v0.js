@@ -103,3 +103,23 @@ function belle_cfg_getOutputFolderIdOrDriveFolderIdOrThrow_(props) {
   if (!value) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
   return value;
 }
+
+function belle_cfg_getQueueSheetNameOverride_(props) {
+  return belle_cfg_getString_(props, "BELLE_QUEUE_SHEET_NAME", { required: false, defaultValue: "" });
+}
+
+function belle_cfg_getLegacyQueueSheetNameOverride_(props) {
+  return belle_cfg_getString_(props, "BELLE_SHEET_NAME", { required: false, defaultValue: "" });
+}
+
+function belle_cfg_getSkipLogSheetName_(props) {
+  return belle_cfg_getString_(props, "BELLE_SKIP_LOG_SHEET_NAME", { required: false, defaultValue: "EXPORT_SKIP_LOG" });
+}
+
+function belle_cfg_getQueueSkipLogSheetName_(props) {
+  return belle_cfg_getString_(props, "BELLE_QUEUE_SKIP_LOG_SHEET_NAME", { required: false, defaultValue: "QUEUE_SKIP_LOG" });
+}
+
+function belle_cfg_getExportGuardLogSheetName_(props) {
+  return belle_cfg_getString_(props, "BELLE_EXPORT_GUARD_LOG_SHEET_NAME", { required: false, defaultValue: "EXPORT_GUARD_LOG" });
+}
