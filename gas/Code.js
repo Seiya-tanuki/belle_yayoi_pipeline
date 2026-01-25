@@ -301,14 +301,6 @@ function belle_queueFolderFilesToSheet() {
 }
 
 /**
- * Manual test runner (dev only).
- * Run this from the Apps Script editor.
- */
-function belle_queueFolderFilesToSheet_test() {
-  return belle_queueFolderFilesToSheet();
-}
-
-/**
  * Read required properties for Gemini call.
  * Required:
  * - BELLE_GEMINI_API_KEY
@@ -1308,13 +1300,6 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
   return result;
 }
 
-/**
- * Manual test runner (dev only).
- */
-function belle_processQueueOnce_test() {
-  return belle_processQueueOnce();
-}
-
 function belle_ocr_claimNextRow_fallback_v0_(opts) {
   const props = belle_cfg_getProps_();
   const sheetId = belle_cfg_getSheetIdOrThrow_(props);
@@ -1484,12 +1469,6 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
   } finally {
     if (lock) lock.releaseLock();
   }
-}
-
-function belle_ocr_claimNextRow_fallback_v0_test() {
-  const res = belle_ocr_claimNextRow_fallback_v0_({ workerId: "TEST_WORKER", ttlSeconds: 30 });
-  Logger.log(res);
-  return res;
 }
 
 function belle_ocr_claimNextRowByDocTypes_(opts) {
@@ -1877,15 +1856,6 @@ function belle_runPipelineBatch_v0() {
   return summary;
 }
 
-/**
- * Manual test runner (dev only).
- */
-function belle_runPipelineBatch_v0_test() {
-  const result = belle_runPipelineBatch_v0();
-  Logger.log(result);
-  return result;
-}
-
 
 
 function belle_resetSpreadsheetToInitialState_fallback_v0() {
@@ -1995,10 +1965,6 @@ function belle_resetSpreadsheetToInitialState_fallback_v0() {
   } finally {
     if (lock) lock.releaseLock();
   }
-}
-
-function belle_resetSpreadsheetToInitialState_fallback_v0_test() {
-  return belle_resetSpreadsheetToInitialState_fallback_v0();
 }
 
 

@@ -956,9 +956,3 @@ function belle_exportYayoiCsvFromReview(options) {
   return belle_exportYayoiCsvFallback(options);
 }
 
-function belle_exportYayoiCsvFromReview_test() {
-  return belle_exportYayoiCsvFallback({});
-}
-
-
-

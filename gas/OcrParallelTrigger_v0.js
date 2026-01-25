@@ -219,36 +219,3 @@ function belle_ocr_parallel_disable_fallback_v0() {
   Logger.log(res);
   return res;
 }
-
-function belle_ocr_parallel_enable_fallback_v0_test() {
-  const res = belle_ocr_parallel_enable_fallback_v0();
-  Logger.log(res);
-  return res;
-}
-
-function belle_ocr_parallel_disable_fallback_v0_test() {
-  const res = belle_ocr_parallel_disable_fallback_v0();
-  Logger.log(res);
-  return res;
-}
-
-function belle_ocr_parallel_status_fallback_v0_test() {
-  const props = belle_cfg_getProps_();
-  const enabled = belle_parseBool(props.getProperty("BELLE_OCR_PARALLEL_ENABLED"), false);
-  const workerCount = belle_ocr_parallel_getWorkerCount_(props);
-  const ids = belle_ocr_parallel_parseTriggerIds_(props);
-  const handlerName = "belle_ocr_workerTick_fallback_v0";
-  const byId = belle_ocr_parallel_getTriggersByIds_(ids);
-  const byHandler = belle_ocr_parallel_getTriggersByHandler_(handlerName);
-  const res = {
-    phase: "OCR_PARALLEL_STATUS",
-    enabled: enabled,
-    workerCount: workerCount,
-    triggerIds: ids,
-    triggerIdCount: ids.length,
-    existingById: byId.length,
-    handlerMatches: byHandler.length
-  };
-  Logger.log(res);
-  return res;
-}

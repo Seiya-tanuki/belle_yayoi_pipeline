@@ -240,26 +240,3 @@ function doPost(e) {
   }
 }
 
-function belle_chatwork_webhook_mock_test() {
-  const props = belle_cfg_getProps_();
-  const route = belle_chatwork_webhook_getExpectedRoute_(props);
-  const token = props.getProperty("BELLE_CHATWORK_WEBHOOK_TOKEN") || "";
-  const mock = {
-    parameter: {
-      route: route,
-      token: token
-    },
-    postData: {
-      contents: JSON.stringify({
-        webhook_event_type: "message_created",
-        webhook_setting_id: "mock",
-        webhook_event_time: Math.floor(Date.now() / 1000),
-        room_id: 0,
-        account_id: 0,
-        message_id: 0,
-        body: "[BELLE][MOCK] webhook test"
-      })
-    }
-  };
-  return belle_chatwork_webhook_handle_(mock);
-}

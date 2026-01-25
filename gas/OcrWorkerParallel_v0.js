@@ -664,26 +664,3 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
   Logger.log(summary);
   return summary;
 }
-
-function belle_ocr_workerLoop_fallback_v0_test() {
-  const res = belle_ocr_workerLoop_fallback_v0_({ workerId: Utilities.getUuid() });
-  Logger.log(res);
-  return res;
-}
-
-function belle_ocr_parallel_smoke_test() {
-  const workerId1 = Utilities.getUuid();
-  const workerId2 = Utilities.getUuid();
-  const r1 = belle_ocr_workerLoop_fallback_v0_({ workerId: workerId1, maxItems: 1 });
-  Utilities.sleep(200);
-  const r2 = belle_ocr_workerLoop_fallback_v0_({ workerId: workerId2, maxItems: 1 });
-  const sameClaim = r1 && r2 && r1.claimedFileId && r1.claimedFileId === r2.claimedFileId;
-  const res = {
-    phase: "OCR_PARALLEL_SMOKE",
-    worker1: { claimedFileId: r1.claimedFileId || "", claimedRowIndex: r1.claimedRowIndex },
-    worker2: { claimedFileId: r2.claimedFileId || "", claimedRowIndex: r2.claimedRowIndex },
-    sameClaim: sameClaim
-  };
-  Logger.log(res);
-  return res;
-}
