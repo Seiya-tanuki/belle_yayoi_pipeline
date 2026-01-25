@@ -31,6 +31,7 @@
 5) Legacy property aliases (e.g., BELLE_SHEET_NAME, BELLE_OCR_CLAIM_CURSOR) are resolved only in Config_v0.js and must preserve prior behavior until removal.
 6) Production GAS modules must not expose *_test entrypoints; manual operations use the primary entrypoints or automated tests.
 7) DocTypeRegistry_v0.js is the canonical doc_type spec; adding a doc_type requires registry updates and tests, not scattered conditionals.
+8) Export plumbing lives in Export_v0.js; Review_v0.js only exposes entrypoints/wrappers.
 
 ## Terminology
 - doc_type: receipt | cc_statement | bank_statement (future)

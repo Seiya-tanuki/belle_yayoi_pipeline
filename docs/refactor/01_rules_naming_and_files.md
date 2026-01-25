@@ -4,8 +4,9 @@
 ## File boundaries
 1) Code.js: shared helpers only (pure functions where possible).
 2) OcrWorkerParallel_v0.js: worker loop + OCR orchestration (doc_type branching acceptable but must remain readable).
-3) Review_v0.js: export orchestration + guard logic + log routing for export phase.
-4) YayoiExport_v0.js: deterministic mapping from OCR JSON -> Yayoi CSV rows.
+3) Review_v0.js: export entrypoints/wrappers only.
+4) Export_v0.js: export orchestration + guard logic + log routing for export phase.
+5) YayoiExport_v0.js: deterministic mapping from OCR JSON -> Yayoi CSV rows.
 5) OcrValidation_v0.js: schema validation only; no business decisions.
 6) Config_v0.js: Script Properties parsing and canonical config access helpers.
 7) Log_v0.js: log sheet plumbing (headers, rotation, append, dedupe helpers).
@@ -13,8 +14,8 @@
 9) Drive_v0.js: Drive enumeration and folder traversal helpers.
 10) Pdf_v0.js: local PDF inspection utilities (page count heuristics).
 11) Gemini_v0.js: Gemini HTTP client plumbing and response parsing.
-12) DocTypeRegistry_v0.js: canonical doc_type registry and per-doc_type specs (subfolder/sheet/export routing).
-13) Queue_v0.js: queue/import helpers; Code.js keeps thin wrappers for entrypoints only.
+13) DocTypeRegistry_v0.js: canonical doc_type registry and per-doc_type specs (subfolder/sheet/export routing).
+14) Queue_v0.js: queue/import helpers; Code.js keeps thin wrappers for entrypoints only.
 
 ## Doc_type rules
 1) Define doc_types only in DocTypeRegistry_v0.js; do not add new doc_type literals in call sites for folder/sheet/output resolution.

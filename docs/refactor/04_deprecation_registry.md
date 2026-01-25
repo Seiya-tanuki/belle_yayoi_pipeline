@@ -142,3 +142,12 @@ This file records code that is scheduled for removal or has been removed during 
   - rg: `rg -n "function belle_queue_" gas/Queue_v0.js`
   - tests: test_queue_module_boundaries.js, test_queue_module_load_order_safety.js, test_queue_parity_smoke.js
 - Rollback: revert 29e822f
+- ID: CLN-0019
+- Status: REMOVED
+- Area: export
+- Target: gas/Review_v0.js export plumbing moved to gas/Export_v0.js (wrappers retained)
+- Reason: isolate export orchestration and guard logic in a dedicated module
+- Proof:
+  - rg: `rg -n "^function belle_export" gas/Export_v0.js`
+  - tests: test_export_module_boundaries.js, test_export_module_load_order_safety.js, test_export_parity_smoke.js
+- Rollback: revert 48c8b48
