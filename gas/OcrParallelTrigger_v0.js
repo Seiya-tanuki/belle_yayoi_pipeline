@@ -231,7 +231,7 @@ function belle_ocr_parallel_disable_fallback_v0(opts) {
   }
 
   const audit = auditRemovedTestTriggers_();
-  if (opts && opts.auditOnly) {
+  if (opts === true || (opts && opts.auditOnly)) {
     const res = { phase: "OCR_PARALLEL_DISABLE", ok: true, auditOnly: true, audit: audit };
     Logger.log(res);
     return res;
