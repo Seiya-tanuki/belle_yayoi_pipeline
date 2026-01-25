@@ -86,3 +86,12 @@ This file records code that is scheduled for removal or has been removed during 
   - rg: `rg -n "function\\s+\\w+_test\\b" gas` (no matches)
   - tests: test_no_gas_test_entrypoints.js, npm test
 - Rollback: revert 2b4e5b3 (and 26006ac to remove guard)
+- ID: CLN-0013
+- Status: REMOVED
+- Area: ops
+- Target: trigger audit entrypoint for removed *_test handlers
+- Reason: allow audit/cleanup from Apps Script editor without Execution API
+- Proof:
+  - tests: test_trigger_audit_filter.js, npm test
+  - checklist: docs/refactor/03_checklists.md
+- Rollback: revert 5cf0239
