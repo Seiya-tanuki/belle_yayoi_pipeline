@@ -104,3 +104,12 @@ This file records code that is scheduled for removal or has been removed during 
   - rg: `rg -n "^function belle_log_" gas` (hits only gas/Log_v0.js)
   - tests: test_log_module_boundaries.js, test_log_module_load_order_safety.js
 - Rollback: revert 30151fb
+- ID: CLN-0015
+- Status: REMOVED
+- Area: sheets
+- Target: gas/Code.js + gas/Review_v0.js sheet I/O helpers moved to gas/Sheet_v0.js
+- Reason: centralize spreadsheet I/O primitives and header-map utilities
+- Proof:
+  - rg: `rg -n "^function belle_sheet_" gas` (hits only gas/Sheet_v0.js)
+  - tests: test_sheet_module_boundaries.js, test_sheet_module_load_order_safety.js
+- Rollback: revert 05d9849
