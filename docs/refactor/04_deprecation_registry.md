@@ -176,3 +176,11 @@ This file records code that is scheduled for removal or has been removed during 
 - Proof:
   - tests: test_ocr_common_module_boundaries.js, test_ocr_common_load_order_safety.js
 - Rollback: revert 6cfcc23
+- ID: CLN-0023
+- Status: REMOVED
+- Area: ocr
+- Target: cc_statement pipeline logic moved to gas/OcrCcPipeline_v0.js
+- Reason: isolate CC stage/cache control flow from OcrWorkerParallel orchestrator
+- Proof:
+  - tests: test_ocr_cc_pipeline_boundaries.js, test_ocr_cc_pipeline_load_order_safety.js, test_ocr_cc_pipeline_parity.js
+- Rollback: revert 2c67d9c
