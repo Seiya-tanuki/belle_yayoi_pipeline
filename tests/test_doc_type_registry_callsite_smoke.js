@@ -4,7 +4,7 @@ const vm = require('vm');
 const code = fs.readFileSync('gas/Config_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Review_v0.js', 'utf8');
+  + '\n' + fs.readFileSync('gas/Export_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Review_v0.js', 'utf8');
 
 const calls = [];
 const sandbox = {

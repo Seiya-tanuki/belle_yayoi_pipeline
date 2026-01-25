@@ -132,6 +132,7 @@ function buildSandbox(spreadsheet, folder, props) {
     + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue_v0.js', 'utf8') + '\n'
     + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8') + '\n'
     + fs.readFileSync('gas/OcrValidation_v0.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/Export_v0.js', 'utf8') + '\n'
     + fs.readFileSync('gas/Review_v0.js', 'utf8');
   const sandbox = {
     console,
