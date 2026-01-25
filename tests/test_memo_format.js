@@ -1,7 +1,7 @@
 ﻿const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
+const code = fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
 const sandbox = {
   console,
   Utilities: {
@@ -67,4 +67,6 @@ expect(memo3.includes('RID=UNUSUAL_FORMAT'), 'RID should be preserved');
 expect(memo3.includes('FID='), 'FID should be preserved');
 
 console.log('OK: test_memo_format');
+
+
 

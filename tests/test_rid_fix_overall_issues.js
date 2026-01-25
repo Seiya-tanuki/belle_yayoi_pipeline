@@ -1,7 +1,7 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
+const code = fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
 const sandbox = {
   console,
   Utilities: {
@@ -48,3 +48,5 @@ const taxUnknownRes = runCase('taxUnknown', taxUnknown);
 expect(taxUnknownRes.ridInfo.rid === 'TAX_UNKNOWN', 'rate null should be TAX_UNKNOWN');
 
 console.log('OK: test_rid_fix_overall_issues');
+
+

@@ -1,7 +1,7 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
+const code = fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
 const sandbox = {
   console,
   Utilities: {
@@ -38,3 +38,5 @@ expect(inRange.dateYmdSlash === '2025/11/10', 'IN_RANGE should keep date');
 expect(!inRange.dateRid, 'IN_RANGE should not set RID');
 
 console.log('OK: test_date_fallback');
+
+

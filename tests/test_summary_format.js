@@ -1,7 +1,7 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
+const code = fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
 const sandbox = {
   console,
   Utilities: {
@@ -41,3 +41,5 @@ if (!summaryLabelReg.includes('DUMMY') || !summaryLabelReg.includes(regNo)) {
 }
 
 console.log('OK: summary includes full registration_number');
+
+

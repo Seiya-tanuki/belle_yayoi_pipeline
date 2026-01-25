@@ -1,7 +1,7 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
+const code = fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
 const sandbox = {
   console,
   Utilities: {
@@ -54,3 +54,5 @@ const ccCsv = buildCsvRow(ccRow);
 expect(ccCsv === expectedCcCsv, 'cc CSV mismatch');
 
 console.log('OK: test_csv_row_regression');
+
+

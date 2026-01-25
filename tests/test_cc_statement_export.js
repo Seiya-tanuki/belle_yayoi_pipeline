@@ -1,7 +1,7 @@
 ﻿const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
+const code = fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
 const sandbox = {
   console,
   Utilities: {
@@ -82,3 +82,5 @@ const row2 = built.rows[1];
 expect(row2[3] === '2026/03/15', 'date should use fiscal end year');
 
 console.log('OK: test_cc_statement_export');
+
+

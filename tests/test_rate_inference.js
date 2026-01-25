@@ -1,7 +1,8 @@
-const fs = require("fs");
+﻿const fs = require("fs");
 const vm = require("vm");
 
-const code = fs.readFileSync("gas/YayoiExport_v0.js", "utf8");
+const code = fs.readFileSync("gas/DocTypeRegistry_v0.js", "utf8") + "\n"
+  + fs.readFileSync("gas/YayoiExport_v0.js", "utf8");
 const context = {};
 vm.runInNewContext(code, context, { filename: "YayoiExport_v0.js" });
 
@@ -16,3 +17,4 @@ if (info.rate !== 10) {
 }
 
 console.log("OK: rate=10", info);
+
