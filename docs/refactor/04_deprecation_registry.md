@@ -52,14 +52,23 @@ This file records code that is scheduled for removal or has been removed during 
   - tests: npm test
 - Rollback: revert eccdaea
 - ID: CLN-0010
-- Status: PROPOSED
-- Area: config
-- Target: direct ad-hoc parsing of core Script Properties (BELLE_SHEET_ID, BELLE_DRIVE_FOLDER_ID, BELLE_OUTPUT_FOLDER_ID)
-- Reason: centralize parsing and required/default semantics in gas/Config_v0.js to reduce drift
-- Proof:
-  - rg: `rg -n "BELLE_SHEET_ID|BELLE_DRIVE_FOLDER_ID|BELLE_OUTPUT_FOLDER_ID" gas`
-  - tests: test_config_getters_parity.js, test_config_core_keys_callsites_smoke.js
+  - Status: DONE
+  - Area: config
+  - Target: direct ad-hoc parsing of core Script Properties (BELLE_SHEET_ID, BELLE_DRIVE_FOLDER_ID, BELLE_OUTPUT_FOLDER_ID)
+  - Reason: centralize parsing and required/default semantics in gas/Config_v0.js to reduce drift
+  - Proof:
+    - rg: `rg -n "BELLE_SHEET_ID|BELLE_DRIVE_FOLDER_ID|BELLE_OUTPUT_FOLDER_ID" gas`
+    - tests: test_config_getters_parity.js, test_config_core_keys_callsites_smoke.js
   - Rollback: revert 95d8afd
+- ID: CLN-0011
+  - Status: DONE
+  - Area: config
+  - Target: legacy alias handling + centralized Script Properties access (BELLE_SHEET_NAME, BELLE_OCR_CLAIM_CURSOR)
+  - Reason: resolve legacy branching in Config_v0.js and remove direct getScriptProperties calls outside Config
+  - Proof:
+    - rg: `rg -n "getScriptProperties\\(|ScriptProperties\\.getScriptProperties\\(" gas`
+    - tests: test_config_legacy_aliases.js, test_config_sheet_log_keys_guard.js
+  - Rollback: revert 7e8a969
 - ID: CLN-0009
 - Status: PROPOSED
 - Area: export
