@@ -24,3 +24,30 @@ This file records code that is scheduled for removal or has been removed during 
   - rg references: `rg -n "belle_queue_ensureHeaderMap" gas`, `rg -n "belle_queue_ensureHeaderMapForExport" gas`
   - tests: test_queue_header_map_parity.js (parity across wrappers)
 - Rollback: revert commit that introduces belle_queue_ensureHeaderMapCanonical_ and wrapper delegation
+- ID: CLN-0006
+- Status: REMOVED
+- Area: queue
+- Target: gas/Code.js:belle_healthCheck
+- Reason: deprecated helper with no runtime or test references
+- Proof:
+  - rg: `rg -n "belle_healthCheck\\b" gas tests`
+  - tests: npm test
+- Rollback: revert e92e9bf
+- ID: CLN-0007
+- Status: REMOVED
+- Area: queue
+- Target: gas/Code.js:belle_setupScriptProperties
+- Reason: deprecated helper with no runtime or test references
+- Proof:
+  - rg: `rg -n "belle_setupScriptProperties\\b" gas tests`
+  - tests: npm test
+- Rollback: revert e92e9bf
+- ID: CLN-0008
+- Status: REMOVED
+- Area: queue
+- Target: gas/Code.js:belle_appendRow, gas/Code.js:belle_appendRow_test
+- Reason: deprecated helper/test with no runtime or test references
+- Proof:
+  - rg: `rg -n "belle_appendRow\\b" gas tests`, `rg -n "belle_appendRow_test\\b" gas tests`
+  - tests: npm test
+- Rollback: revert e92e9bf

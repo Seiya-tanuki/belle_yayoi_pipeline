@@ -1,54 +1,6 @@
 ﻿// @ts-check
 
 /**
- * @deprecated Fallback-v0 uses runner/queue/export entrypoints.
- */
-function belle_healthCheck() {
-  const props = PropertiesService.getScriptProperties();
-  const keys = props.getKeys();
-  Logger.log({ ok: true, propertyKeys: keys, now: new Date().toISOString() });
-  return { ok: true, propertyKeys: keys, now: new Date().toISOString() };
-}
-
-/**
- * @deprecated Configure Script Properties via UI. This helper is not used in fallback-v0.
- */
-function belle_setupScriptProperties() {
-  const props = PropertiesService.getScriptProperties();
-  // Example (leave commented):
-  // props.setProperties({
-  //   BELLE_SHEET_ID: "",
-  //   BELLE_SHEET_NAME: "OCR_RECEIPT"
-  // }, true);
-  Logger.log("belle_setupScriptProperties: done");
-}
-
-/**
- * @deprecated Use belle_queueFolderFilesToSheet for queueing. Not used in fallback-v0.
- */
-function belle_appendRow(values) {
-  const props = PropertiesService.getScriptProperties();
-  const sheetId = props.getProperty("BELLE_SHEET_ID");
-  const sheetName = belle_ocr_getQueueSheetNameForDocType_(props, "receipt");
-
-  if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
-  if (!Array.isArray(values)) throw new Error("values must be an array");
-
-  const ss = SpreadsheetApp.openById(sheetId);
-  const sh = ss.getSheetByName(sheetName);
-  if (!sh) throw new Error("Sheet not found: " + sheetName);
-
-  sh.appendRow(values);
-}
-
-/**
- * @deprecated Use belle_queueFolderFilesToSheet_test. Not used in fallback-v0.
- */
-function belle_appendRow_test() {
-  belle_appendRow(["TEST", new Date().toISOString(), "hello"]);
-}
-
-/**
  * List files under BELLE_DRIVE_FOLDER_ID.
  * - Filters: image/* and application/pdf
  * - Read-only. No delete/move.
