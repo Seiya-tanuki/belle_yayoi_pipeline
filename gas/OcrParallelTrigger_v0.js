@@ -2,6 +2,62 @@
 
 // NOTE: Keep comments ASCII only.
 
+const BELLE_TRIGGER_AUDIT_REMOVED_HANDLERS_ = [
+  "belle_queueFolderFilesToSheet_test",
+  "belle_processQueueOnce_test",
+  "belle_ocr_claimNextRow_fallback_v0_test",
+  "belle_runPipelineBatch_v0_test",
+  "belle_resetSpreadsheetToInitialState_fallback_v0_test",
+  "belle_exportYayoiCsvFromReview_test",
+  "belle_ocr_workerLoop_fallback_v0_test",
+  "belle_ocr_parallel_smoke_test",
+  "belle_ocr_parallel_enable_fallback_v0_test",
+  "belle_ocr_parallel_disable_fallback_v0_test",
+  "belle_ocr_parallel_status_fallback_v0_test",
+  "belle_chatwork_webhook_mock_test",
+  "belle_chatworkSendTestMessage_v0_test",
+  "belle_chatwork_sendLatestCsv_test"
+];
+
+function belle_triggerAudit_isRemovedHandler_(handler) {
+  const name = String(handler || "");
+  if (!name) return false;
+  if (name.slice(-5) === "_test") return true;
+  return BELLE_TRIGGER_AUDIT_REMOVED_HANDLERS_.indexOf(name) >= 0;
+}
+
+function belle_triggerAudit_run_(opts) {
+  const options = opts || {};
+  const triggers = ScriptApp.getProjectTriggers();
+  const details = [];
+  const removed = [];
+  for (let i = 0; i < triggers.length; i++) {
+    const t = triggers[i];
+    const handler = t.getHandlerFunction ? t.getHandlerFunction() : "";
+    const eventType = t.getEventType ? String(t.getEventType()) : "";
+    const triggerId = t.getUniqueId ? t.getUniqueId() : "";
+    details.push({ id: triggerId, eventType: eventType, handler: handler });
+    if (belle_triggerAudit_isRemovedHandler_(handler)) {
+      ScriptApp.deleteTrigger(t);
+      removed.push({ id: triggerId, eventType: eventType, handler: handler });
+    }
+  }
+  Logger.log({ phase: "TRIGGER_AUDIT_DETAILS", ok: true, triggers: details });
+  const res = {
+    phase: "TRIGGER_AUDIT",
+    ok: true,
+    total: triggers.length,
+    removedCount: removed.length,
+    removedHandlers: removed
+  };
+  Logger.log(res);
+  return res;
+}
+
+function belle_triggerAuditOnly_v0() {
+  return belle_triggerAudit_run_({ remove: true });
+}
+
 function belle_ocr_parallel_getTag_(props) {
   return props.getProperty("BELLE_OCR_PARALLEL_TRIGGER_TAG") || "BELLE_OCR_PARALLEL_V0";
 }
@@ -187,50 +243,7 @@ function belle_ocr_parallel_enable_fallback_v0() {
 }
 
 function belle_ocr_parallel_disable_fallback_v0(opts) {
-  function auditRemovedTestTriggers_() {
-    const removedHandlers = [
-      "belle_queueFolderFilesToSheet_test",
-      "belle_processQueueOnce_test",
-      "belle_ocr_claimNextRow_fallback_v0_test",
-      "belle_runPipelineBatch_v0_test",
-      "belle_resetSpreadsheetToInitialState_fallback_v0_test",
-      "belle_exportYayoiCsvFromReview_test",
-      "belle_ocr_workerLoop_fallback_v0_test",
-      "belle_ocr_parallel_smoke_test",
-      "belle_ocr_parallel_enable_fallback_v0_test",
-      "belle_ocr_parallel_disable_fallback_v0_test",
-      "belle_ocr_parallel_status_fallback_v0_test",
-      "belle_chatwork_webhook_mock_test",
-      "belle_chatworkSendTestMessage_v0_test",
-      "belle_chatwork_sendLatestCsv_test"
-    ];
-    const triggers = ScriptApp.getProjectTriggers();
-    const details = [];
-    const removed = [];
-    for (let i = 0; i < triggers.length; i++) {
-      const t = triggers[i];
-      const handler = t.getHandlerFunction ? t.getHandlerFunction() : "";
-      const eventType = t.getEventType ? String(t.getEventType()) : "";
-      const triggerId = t.getUniqueId ? t.getUniqueId() : "";
-      details.push({ id: triggerId, eventType: eventType, handler: handler });
-      if (removedHandlers.indexOf(handler) >= 0) {
-        ScriptApp.deleteTrigger(t);
-        removed.push({ id: triggerId, eventType: eventType, handler: handler });
-      }
-    }
-    const res = {
-      phase: "TRIGGER_AUDIT",
-      ok: true,
-      total: triggers.length,
-      removedCount: removed.length,
-      removedHandlers: removed
-    };
-    Logger.log({ phase: "TRIGGER_AUDIT_DETAILS", ok: true, triggers: details });
-    Logger.log(res);
-    return res;
-  }
-
-  const audit = auditRemovedTestTriggers_();
+  const audit = belle_triggerAudit_run_({ remove: true });
   if (opts === true || (opts && opts.auditOnly)) {
     const res = { phase: "OCR_PARALLEL_DISABLE", ok: true, auditOnly: true, audit: audit };
     Logger.log(res);

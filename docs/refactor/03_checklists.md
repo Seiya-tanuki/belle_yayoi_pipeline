@@ -23,6 +23,7 @@
 2) Add tests or extend existing tests to lock in behavior
 3) Delete code in small commits
 4) Record deletions in docs/refactor/04_deprecation_registry.md
+5) After removing *_test entrypoints, run belle_triggerAuditOnly_v0 once from Apps Script editor and confirm no triggers reference *_test handlers
 
 ## C) Naming/structure checklist
 1) No new "v0" suffix unless legacy boundary requires it
