@@ -7,7 +7,7 @@ function expect(cond, msg) {
 
 const code = fs.readFileSync('gas/Config_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
+  + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue_v0.js', 'utf8');
 
 const captured = { url: '', options: null };
 const sandbox = {

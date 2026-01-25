@@ -16,7 +16,7 @@ vm.createContext(sandbox);
 let threw = false;
 try {
   vm.runInContext(fs.readFileSync('gas/Config_v0.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue_v0.js', 'utf8'), sandbox);
 } catch (e) {
   threw = true;
 }
