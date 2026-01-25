@@ -16,14 +16,14 @@ This file records code that is scheduled for removal or has been removed during 
 
 ## Entries
 - ID: CLN-0005
-- Status: PROPOSED
+- Status: REMOVED
 - Area: queue
 - Target: gas/Code.js:belle_queue_ensureHeaderMap, gas/Review_v0.js:belle_queue_ensureHeaderMapForExport
 - Reason: duplicate header-map helpers for queue/export; risk of drift as headers evolve
 - Proof:
   - rg references: `rg -n "belle_queue_ensureHeaderMap" gas`, `rg -n "belle_queue_ensureHeaderMapForExport" gas`
   - tests: test_queue_header_map_parity.js (parity across wrappers)
-- Rollback: revert commit that introduces belle_queue_ensureHeaderMapCanonical_ and wrapper delegation
+- Rollback: revert c9acc1f
 - ID: CLN-0006
 - Status: REMOVED
 - Area: queue
@@ -52,7 +52,7 @@ This file records code that is scheduled for removal or has been removed during 
   - tests: npm test
 - Rollback: revert eccdaea
 - ID: CLN-0010
-  - Status: DONE
+  - Status: REMOVED
   - Area: config
   - Target: direct ad-hoc parsing of core Script Properties (BELLE_SHEET_ID, BELLE_DRIVE_FOLDER_ID, BELLE_OUTPUT_FOLDER_ID)
   - Reason: centralize parsing and required/default semantics in gas/Config_v0.js to reduce drift
@@ -61,19 +61,19 @@ This file records code that is scheduled for removal or has been removed during 
     - tests: test_config_getters_parity.js, test_config_core_keys_callsites_smoke.js
   - Rollback: revert 95d8afd
 - ID: CLN-0011
-  - Status: DONE
+  - Status: REMOVED
   - Area: config
   - Target: legacy alias handling + centralized Script Properties access (BELLE_SHEET_NAME, BELLE_OCR_CLAIM_CURSOR)
   - Reason: resolve legacy branching in Config_v0.js and remove direct getScriptProperties calls outside Config
   - Proof:
     - rg: `rg -n "getScriptProperties\\(|ScriptProperties\\.getScriptProperties\\(" gas`
     - tests: test_config_legacy_aliases.js, test_config_sheet_log_keys_guard.js
-  - Rollback: revert 7e8a969
+  - Rollback: revert 9862c94 and 7e8a969
 - ID: CLN-0009
-- Status: PROPOSED
+- Status: REMOVED
 - Area: export
 - Target: gas/Review_v0.js: EXPORT_LOG schema enforcement (guard on mismatch)
 - Reason: EXPORT_LOG is stateful for dedupe; should guard on schema mismatch and use header map for extra columns
 - Proof:
   - tests: test_export_log_schema_guard.js
-- Rollback: revert <pending>
+  - Rollback: revert e286a58
