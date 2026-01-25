@@ -164,86 +164,63 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   let keepOcrJsonOnError = false;
 
   try {
-    if (mimeType === "application/pdf" && !belle_ocr_allowPdfForDocType_(docType)) {
-      outcome = "ERROR_FINAL";
-      statusOut = "ERROR_FINAL";
-      errorCode = "UNSUPPORTED_PDF";
-      errorMessage = "PDF not supported in v0";
-      errorDetail = "PDF not supported in v0";
-    } else if (isTwoStage) {
-      const ccResult = belle_ocr_cc_runOnce_({
-        props: props,
-        fileId: fileId,
-        attempt: attempt,
-        maxAttempts: maxAttempts,
-        statusBefore: statusBefore,
-        prevErrorCode: ocrErrorCode,
-        prevError: ocrError,
-        prevErrorDetail: ocrErrorDetail,
-        ocrJsonBefore: ocrJsonBefore,
-        backoffSeconds: backoffSeconds
-      });
-      ccStage = ccResult.ccStage;
-      ccCacheHit = ccResult.ccCacheHit;
-      ccStage2Attempted = ccResult.ccStage2Attempted;
-      geminiElapsedMs = ccResult.geminiElapsedMs;
-      ccGeminiMs = ccResult.ccGeminiMs;
-      httpStatus = ccResult.httpStatus;
-      jsonStr = ccResult.jsonStr;
-      statusOut = ccResult.statusOut;
-      outcome = ccResult.outcome;
-      errorCode = ccResult.errorCode;
-      errorMessage = ccResult.errorMessage;
-      errorDetail = ccResult.errorDetail;
-      nextRetryIso = ccResult.nextRetryIso;
-      keepOcrJsonOnError = ccResult.keepOcrJsonOnError === true;
-      if (ccResult.throwError) {
-        throw new Error(ccResult.throwError);
-      }
-    } else {
-      const file = DriveApp.getFileById(fileId);
-      const blob = file.getBlob();
-      const tempInfo = belle_ocr_computeGeminiTemperature_({
-        attempt: attempt,
-        maxAttempts: maxAttempts,
-        statusBefore: statusBefore,
-        prevErrorCode: ocrErrorCode,
-        prevError: ocrError,
-        prevErrorDetail: ocrErrorDetail
-      });
-      if (tempInfo.overridden) {
-        Logger.log({
-          phase: "GEMINI_TEMPERATURE_POLICY",
-          temperature: tempInfo.temperature,
-          defaultTemp: tempInfo.defaultTemp,
-          addTemp: tempInfo.addTemp,
+      if (isTwoStage) {
+        const ccResult = belle_ocr_cc_runOnce_({
+          props: props,
+          fileId: fileId,
           attempt: attempt,
           maxAttempts: maxAttempts,
           statusBefore: statusBefore,
-          prevErrorCode: ocrErrorCode
+          prevErrorCode: ocrErrorCode,
+          prevError: ocrError,
+          prevErrorDetail: ocrErrorDetail,
+          ocrJsonBefore: ocrJsonBefore,
+          backoffSeconds: backoffSeconds
         });
+        ccStage = ccResult.ccStage;
+        ccCacheHit = ccResult.ccCacheHit;
+        ccStage2Attempted = ccResult.ccStage2Attempted;
+        geminiElapsedMs = ccResult.geminiElapsedMs;
+        ccGeminiMs = ccResult.ccGeminiMs;
+        httpStatus = ccResult.httpStatus;
+        jsonStr = ccResult.jsonStr;
+        statusOut = ccResult.statusOut;
+        outcome = ccResult.outcome;
+        errorCode = ccResult.errorCode;
+        errorMessage = ccResult.errorMessage;
+        errorDetail = ccResult.errorDetail;
+        nextRetryIso = ccResult.nextRetryIso;
+        keepOcrJsonOnError = ccResult.keepOcrJsonOnError === true;
+        if (ccResult.throwError) {
+          throw new Error(ccResult.throwError);
+        }
+      } else {
+        const receiptResult = belle_ocr_receipt_runOnce_({
+          props: props,
+          fileId: fileId,
+          mimeType: mimeType,
+          docType: docType,
+          attempt: attempt,
+          maxAttempts: maxAttempts,
+          statusBefore: statusBefore,
+          prevErrorCode: ocrErrorCode,
+          prevError: ocrError,
+          prevErrorDetail: ocrErrorDetail
+        });
+        geminiElapsedMs = receiptResult.geminiElapsedMs;
+        httpStatus = receiptResult.httpStatus;
+        jsonStr = receiptResult.jsonStr;
+        statusOut = receiptResult.statusOut;
+        outcome = receiptResult.outcome;
+        errorCode = receiptResult.errorCode;
+        errorMessage = receiptResult.errorMessage;
+        errorDetail = receiptResult.errorDetail;
+        nextRetryIso = receiptResult.nextRetryIso;
+        keepOcrJsonOnError = receiptResult.keepOcrJsonOnError === true;
+        if (receiptResult.throwError) {
+          throw new Error(receiptResult.throwError);
+        }
       }
-      geminiStartMs = Date.now();
-      jsonStr = belle_callGeminiOcr(blob, { temperature: tempInfo.temperature });
-      geminiElapsedMs = Date.now() - geminiStartMs;
-      httpStatus = 200;
-      const MAX_CELL_CHARS = 45000;
-      if (jsonStr.length > MAX_CELL_CHARS) {
-        throw new Error("OCR JSON too long for single cell: " + jsonStr.length);
-      }
-      let parsed;
-      try {
-        parsed = JSON.parse(jsonStr);
-      } catch (e) {
-        throw new Error("INVALID_SCHEMA: PARSE_ERROR");
-      }
-      const validation = belle_ocr_validateSchema(parsed);
-      if (!validation.ok) {
-        throw new Error("INVALID_SCHEMA: " + validation.reason);
-      }
-      outcome = "DONE";
-      statusOut = "DONE";
-    }
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
     if (geminiStartMs > 0 && geminiElapsedMs === 0) {
