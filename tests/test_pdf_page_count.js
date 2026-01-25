@@ -1,7 +1,7 @@
 const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
+const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
 const sandbox = { console };
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
@@ -37,4 +37,5 @@ const boom = { getBytes: () => { throw new Error('boom'); } };
 expect(countPages(boom) === null, 'should return null on exception');
 
 console.log('OK: test_pdf_page_count');
+
 

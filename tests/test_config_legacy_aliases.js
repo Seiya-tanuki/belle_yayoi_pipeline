@@ -3,7 +3,7 @@ const vm = require('vm');
 
 const code = fs.readFileSync('gas/Config_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
+  + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
 
 const sandbox = {
   __props: {},
@@ -53,3 +53,4 @@ const c3 = getCursor({ getProperty: (key) => ({ BELLE_OCR_CLAIM_CURSOR: '7' }[ke
 expect(c3 === '', 'non-receipt should ignore legacy cursor');
 
 console.log('OK: test_config_legacy_aliases');
+

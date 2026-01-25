@@ -1,7 +1,7 @@
 const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/ChatworkWebhook_v0.js', 'utf8');
+const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/ChatworkWebhook_v0.js', 'utf8');
 const sandbox = {
   console,
   Utilities: {
@@ -93,4 +93,5 @@ const afterCount = Object.keys(ss.sheets).length;
 expect(beforeCount === afterCount, 'no additional rotation when header matches');
 
 console.log('OK: test_webhook_log_rotation');
+
 
