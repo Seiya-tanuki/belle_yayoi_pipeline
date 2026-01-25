@@ -113,3 +113,13 @@ This file records code that is scheduled for removal or has been removed during 
   - rg: `rg -n "^function belle_sheet_" gas` (hits only gas/Sheet_v0.js)
   - tests: test_sheet_module_boundaries.js, test_sheet_module_load_order_safety.js
 - Rollback: revert 05d9849
+- ID: CLN-0016
+- Status: REMOVED
+- Area: drive/pdf
+- Target: gas/Code.js drive listing + PDF inspection helpers moved to gas/Drive_v0.js and gas/Pdf_v0.js
+- Reason: isolate Drive/PDF primitives and reduce Code.js surface area
+- Proof:
+  - rg: `rg -n "^function belle_pdf_" gas` (hits only gas/Pdf_v0.js)
+  - rg: `rg -n "function belle_listFilesInFolder" gas` (hits only gas/Drive_v0.js)
+  - tests: test_drive_module_boundaries.js, test_pdf_module_boundaries.js, test_drive_pdf_module_load_order_safety.js
+- Rollback: revert 4993968
