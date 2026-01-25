@@ -64,18 +64,9 @@ function belle_chatwork_webhook_extractBody_(payload) {
 
 function belle_chatwork_webhook_ensureLogSheet_(ss) {
   const name = "WEBHOOK_LOG";
-  let sheet = ss.getSheetByName(name);
-  if (!sheet) sheet = ss.insertSheet(name);
   const header = ["received_at_iso", "phase", "detail"];
-  const current = sheet.getRange(1, 1, 1, header.length).getValues()[0];
-  const mismatch = header.some(function (h, i) {
-    return String(current[i] || "") !== h;
-  });
-  if (mismatch) {
-    sheet.clear();
-    sheet.getRange(1, 1, 1, header.length).setValues([header]);
-  }
-  return sheet;
+  const ensured = belle_log_ensureSheetWithHeader_(ss, name, header);
+  return ensured.sheet;
 }
 
 function belle_chatwork_webhook_appendLogRow_(phase, detailObjOrString) {
