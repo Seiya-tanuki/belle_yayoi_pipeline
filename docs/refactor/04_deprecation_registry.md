@@ -59,7 +59,7 @@ This file records code that is scheduled for removal or has been removed during 
 - Proof:
   - rg: `rg -n "BELLE_SHEET_ID|BELLE_DRIVE_FOLDER_ID|BELLE_OUTPUT_FOLDER_ID" gas`
   - tests: test_config_getters_parity.js, test_config_core_keys_callsites_smoke.js
-- Rollback: revert <pending>
+  - Rollback: revert 95d8afd
 - ID: CLN-0009
 - Status: PROPOSED
 - Area: export
