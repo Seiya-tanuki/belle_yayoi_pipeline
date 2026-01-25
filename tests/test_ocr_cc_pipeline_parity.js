@@ -27,6 +27,8 @@ sandbox.belle_ocr_computeGeminiTemperature_ = () => ({
   addTemp: 0,
   overridden: false
 });
+sandbox.belle_ocr_getCcStage1Prompt_ = () => 'STAGE1_PROMPT';
+sandbox.belle_ocr_getCcStage2Prompt_ = () => 'STAGE2_PROMPT';
 
 const props = { getProperty: () => '' };
 
