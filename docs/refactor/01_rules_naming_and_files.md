@@ -8,6 +8,12 @@
 4) YayoiExport_v0.js: deterministic mapping from OCR JSON -> Yayoi CSV rows.
 5) OcrValidation_v0.js: schema validation only; no business decisions.
 6) Config_v0.js: Script Properties parsing and canonical config access helpers.
+7) DocTypeRegistry_v0.js: canonical doc_type registry and per-doc_type specs (subfolder/sheet/export routing).
+
+## Doc_type rules
+1) Define doc_types only in DocTypeRegistry_v0.js; do not add new doc_type literals in call sites for folder/sheet/output resolution.
+2) Call sites must read doc_type wiring via registry specs or wrappers (no ad-hoc lists).
+3) Branching on pipeline_kind and export_handler_key must be driven by DocTypeRegistry_v0.js (no direct doc_type string comparisons).
 
 ## Naming conventions
 1) Prefix by domain:
