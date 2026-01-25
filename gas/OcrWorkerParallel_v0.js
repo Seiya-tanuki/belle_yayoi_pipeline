@@ -28,14 +28,44 @@ function belle_ocr_perf_appendFromSummary_(summary) {
   return true;
 }
 
+function belle_ocr_worker_dispatchByPipelineKind_(pipelineKind, handlers) {
+  if (pipelineKind === BELLE_DOC_PIPELINE_TWO_STAGE) {
+    return handlers && handlers.two_stage ? handlers.two_stage() : null;
+  }
+  if (pipelineKind === BELLE_DOC_PIPELINE_INACTIVE) {
+    return handlers && handlers.inactive ? handlers.inactive() : null;
+  }
+  return handlers && handlers.single_stage ? handlers.single_stage() : null;
+}
+
 function belle_ocr_workerOnce_fallback_v0_(opts) {
   const totalStart = Date.now();
   const props = belle_cfg_getProps_();
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
   let processingCount = 0;
-  const docTypes = opts && Array.isArray(opts.docTypes) && opts.docTypes.length > 0
+  const docTypesRaw = opts && Array.isArray(opts.docTypes) && opts.docTypes.length > 0
     ? opts.docTypes
     : belle_ocr_getActiveDocTypes_(props);
+  const docTypes = [];
+  for (let i = 0; i < docTypesRaw.length; i++) {
+    const docType = docTypesRaw[i];
+    const spec = belle_docType_getSpec_(docType);
+    if (spec && spec.pipeline_kind === BELLE_DOC_PIPELINE_INACTIVE) continue;
+    docTypes.push(docType);
+  }
+  if (docTypes.length === 0) {
+    return {
+      ok: true,
+      processed: 0,
+      reason: "NO_TARGET",
+      claimElapsedMs: 0,
+      totalItemElapsedMs: Date.now() - totalStart,
+      geminiElapsedMs: 0,
+      classify: "",
+      httpStatus: 0,
+      processingCount: processingCount
+    };
+  }
   const ttlSeconds = belle_ocr_worker_resolveTtlSeconds_(props.getProperty("BELLE_OCR_LOCK_TTL_SECONDS"));
   const lockMode = opts && opts.lockMode ? String(opts.lockMode) : "wait";
   const lockWaitMs = Number((opts && opts.lockWaitMs) || "30000");
@@ -164,7 +194,8 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   let keepOcrJsonOnError = false;
 
   try {
-      if (isTwoStage) {
+    belle_ocr_worker_dispatchByPipelineKind_(pipelineKind, {
+      two_stage: function () {
         const ccResult = belle_ocr_cc_runOnce_({
           props: props,
           fileId: fileId,
@@ -194,7 +225,8 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
         if (ccResult.throwError) {
           throw new Error(ccResult.throwError);
         }
-      } else {
+      },
+      single_stage: function () {
         const receiptResult = belle_ocr_receipt_runOnce_({
           props: props,
           fileId: fileId,
@@ -220,7 +252,15 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
         if (receiptResult.throwError) {
           throw new Error(receiptResult.throwError);
         }
+      },
+      inactive: function () {
+        statusOut = "ERROR_FINAL";
+        outcome = "ERROR_FINAL";
+        errorCode = "DOC_TYPE_INACTIVE";
+        errorMessage = "DOC_TYPE_INACTIVE";
+        errorDetail = "DOC_TYPE_INACTIVE";
       }
+    });
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
     if (geminiStartMs > 0 && geminiElapsedMs === 0) {
