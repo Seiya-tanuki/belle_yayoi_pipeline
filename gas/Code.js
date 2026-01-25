@@ -647,46 +647,6 @@ function belle_callGeminiOcr(imageBlob, opt) {
   return JSON.stringify(parsed);
 }
 
-function belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader, opts) {
-  const required = baseHeader.concat(extraHeader || []);
-  const options = opts || {};
-  const appendMissing = options.appendMissing !== false;
-  const throwOnMissing = options.throwOnMissing === true;
-  const lastRow = sh.getLastRow();
-  if (lastRow === 0) {
-    sh.appendRow(required);
-  }
-
-  let headerRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  if (appendMissing) {
-    let nextCol = headerRow.length + 1;
-    for (let i = 0; i < required.length; i++) {
-      if (headerRow.indexOf(required[i]) === -1) {
-        sh.getRange(1, nextCol).setValue(required[i]);
-        nextCol++;
-      }
-    }
-  }
-
-  headerRow = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-  const map = {};
-  for (let i = 0; i < headerRow.length; i++) {
-    map[String(headerRow[i] || "")] = i;
-  }
-
-  for (let i = 0; i < baseHeader.length; i++) {
-    if (map[baseHeader[i]] === undefined) {
-      if (throwOnMissing) throw new Error("INVALID_QUEUE_HEADER: missing required columns");
-      return null;
-    }
-  }
-  return map;
-}
-
-// @deprecated Use belle_queue_ensureHeaderMapCanonical_ instead.
-function belle_queue_ensureHeaderMap(sh, baseHeader, extraHeader, opts) {
-  return belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader, opts);
-}
 
 function belle_getQueueHeader_fallback_v0_() {
   return belle_getQueueHeaderColumns_v0().concat(belle_getQueueLockHeaderColumns_v0_());
@@ -1504,23 +1464,6 @@ function belle_ocr_claimNextRowByDocTypes_(opts) {
     if (reason && reason !== "NO_TARGET" && reason !== "NO_ROWS") return res;
   }
   return last || { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "NO_TARGET" };
-}
-
-function belle_sheet_appendRowsInChunks_(sh, rows, chunkSize) {
-  if (!rows || rows.length === 0) return 0;
-  const sizeRaw = Number(chunkSize);
-  const size = sizeRaw && isFinite(sizeRaw) && sizeRaw > 0 ? Math.floor(sizeRaw) : 200;
-  let written = 0;
-  let startRow = sh.getLastRow() + 1;
-  for (let i = 0; i < rows.length; i += size) {
-    const chunk = rows.slice(i, i + size);
-    const width = chunk[0] ? chunk[0].length : 0;
-    if (!width) continue;
-    sh.getRange(startRow, 1, chunk.length, width).setValues(chunk);
-    startRow += chunk.length;
-    written += chunk.length;
-  }
-  return written;
 }
 
 

@@ -21,7 +21,7 @@ vm.createContext(sandbox);
 let threw = false;
 try {
   vm.runInContext(fs.readFileSync('gas/Config_v0.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
 } catch (e) {
   threw = true;
 }
@@ -37,4 +37,5 @@ const spec = sandbox.belle_docType_getSpec_('receipt');
 expect(spec && spec.doc_type === 'receipt', 'receipt spec should resolve after registry load');
 
 console.log('OK: test_doc_type_registry_load_order_safety');
+
 

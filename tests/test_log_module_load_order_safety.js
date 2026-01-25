@@ -18,7 +18,7 @@ vm.createContext(sandbox);
 let threw = false;
 try {
   vm.runInContext(fs.readFileSync('gas/Config_v0.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
 } catch (e) {
   threw = true;
 }
@@ -31,3 +31,4 @@ const header = sandbox.belle_getSkipLogHeader_();
 expect(Array.isArray(header) && header.length > 0, 'belle_getSkipLogHeader_ should return a header array');
 
 console.log('OK: test_log_module_load_order_safety');
+

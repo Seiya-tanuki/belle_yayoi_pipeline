@@ -3,7 +3,7 @@ const vm = require('vm');
 
 const code = fs.readFileSync('gas/Config_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
+  + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
 
 const sandbox = { console, Logger: { log: () => {} } };
 vm.createContext(sandbox);
@@ -25,4 +25,5 @@ expect(sandbox.belle_ocr_allowPdfForDocType_('cc_statement') === true, 'cc shoul
 expect(sandbox.belle_ocr_allowPdfForDocType_('receipt') === false, 'receipt should not allow pdf');
 
 console.log('OK: test_worker_pipeline_kind_parity');
+
 

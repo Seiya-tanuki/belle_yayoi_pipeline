@@ -2,10 +2,6 @@
 
 // NOTE: Keep comments ASCII only.
 
-// @deprecated Use belle_queue_ensureHeaderMapCanonical_ instead.
-function belle_queue_ensureHeaderMapForExport(sh, baseHeader, extraHeader, opts) {
-  return belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader, opts);
-}
 
 function belle_getOrCreateExportLogSheet(ss) {
   const EXPORT_LOG_NAME = "EXPORT_LOG";
@@ -31,26 +27,6 @@ function belle_getOrCreateExportLogSheet(ss) {
   return { sheet: created, guard: null };
 }
 
-function belle_exportLog_buildHeaderMap_(sheet, requiredHeader) {
-  const lastCol = sheet.getLastColumn();
-  const expected = Array.isArray(requiredHeader) ? requiredHeader : [];
-  if (lastCol < 1) {
-    return { ok: false, headerMap: {}, actualHeader: [], missing: expected.slice() };
-  }
-  const raw = sheet.getRange(1, 1, 1, lastCol).getValues()[0] || [];
-  const headerMap = {};
-  const actual = [];
-  for (let i = 0; i < raw.length; i++) {
-    const name = String(raw[i] || "");
-    actual.push(name);
-    headerMap[name] = i;
-  }
-  const missing = [];
-  for (let i = 0; i < expected.length; i++) {
-    if (headerMap[expected[i]] === undefined) missing.push(expected[i]);
-  }
-  return { ok: missing.length === 0, headerMap: headerMap, actualHeader: actual, missing: missing };
-}
 
 function belle_exportLog_buildSchemaMismatchDetail_(docType, sheetName, expected, actualHeader) {
   return JSON.stringify({
@@ -61,24 +37,6 @@ function belle_exportLog_buildSchemaMismatchDetail_(docType, sheetName, expected
   });
 }
 
-function belle_exportLog_computeWidth_(headerMap) {
-  let maxIdx = -1;
-  const keys = Object.keys(headerMap || {});
-  for (let i = 0; i < keys.length; i++) {
-    const idx = Number(headerMap[keys[i]]);
-    if (!isNaN(idx) && idx > maxIdx) maxIdx = idx;
-  }
-  return maxIdx >= 0 ? maxIdx + 1 : 0;
-}
-
-function belle_exportLog_buildRow_(headerMap, width, fileId, nowIso, csvFileId) {
-  if (!headerMap || !width) return [fileId, nowIso, csvFileId];
-  const row = new Array(width).fill("");
-  if (headerMap.file_id !== undefined) row[headerMap.file_id] = fileId;
-  if (headerMap.exported_at_iso !== undefined) row[headerMap.exported_at_iso] = nowIso;
-  if (headerMap.csv_file_id !== undefined) row[headerMap.csv_file_id] = csvFileId;
-  return row;
-}
 
 function belle_export_pickSingleFolder_(folders, folderName, docType, parentFolderId) {
   const list = Array.isArray(folders) ? folders : [];
@@ -152,25 +110,6 @@ function belle_export_getHandlersByRegistry_(options) {
   return handlers;
 }
 
-function belle_export_flushExportLog_(exportLog, fileIds, nowIso, csvFileId, chunkSize, headerMap) {
-  if (!exportLog || !fileIds || fileIds.length === 0) return 0;
-  const sizeRaw = Number(chunkSize);
-  const size = sizeRaw && isFinite(sizeRaw) && sizeRaw > 0 ? Math.floor(sizeRaw) : 200;
-  const width = headerMap ? belle_exportLog_computeWidth_(headerMap) : 0;
-  let written = 0;
-  let buffer = [];
-  for (let i = 0; i < fileIds.length; i++) {
-    buffer.push(belle_exportLog_buildRow_(headerMap, width, fileIds[i], nowIso, csvFileId));
-    if (buffer.length >= size) {
-      written += belle_sheet_appendRowsInChunks_(exportLog, buffer, size);
-      buffer = [];
-    }
-  }
-  if (buffer.length > 0) {
-    written += belle_sheet_appendRowsInChunks_(exportLog, buffer, size);
-  }
-  return written;
-}
 
 function belle_exportYayoiCsvFallback(options) {
   const handlers = belle_export_getHandlersByRegistry_(options);

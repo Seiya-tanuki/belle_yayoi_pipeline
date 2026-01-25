@@ -15,7 +15,7 @@ function makeIterator(list) {
 
 const code = fs.readFileSync('gas/Config_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
+  + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
 
 const bankFolder = {
   getName: () => 'bank_statement',
@@ -70,4 +70,5 @@ expect(inactive.length === 1, 'bank_statement should be marked inactive when not
 expect(inactive[0].doc_type === 'bank_statement', 'inactive doc_type mismatch');
 
 console.log('OK: test_doc_type_registry_inactive_unknown_parity');
+
 

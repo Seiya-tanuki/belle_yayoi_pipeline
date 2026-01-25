@@ -3,7 +3,7 @@ const vm = require('vm');
 
 const code = fs.readFileSync('gas/Config_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
+  + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
 
 const sandbox = { console, Logger: { log: () => {} } };
 vm.createContext(sandbox);
@@ -49,4 +49,5 @@ expect(bankSpec.ocr_sheet_name_getter({ getProperty: () => '' }) === 'OCR_BANK',
 expect(bankSpec.pipeline_kind === 'inactive', 'bank pipeline_kind mismatch');
 
 console.log('OK: test_doc_type_registry_specs');
+
 
