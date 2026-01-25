@@ -7,7 +7,7 @@
 ## 2. 現行（review-sheet-v0）の要約
 - パイプライン: belle_listFilesInFolder -> belle_queueFolderFilesToSheet -> belle_processQueueOnce -> belle_buildReviewFromDoneQueue -> belle_exportYayoiCsvFromReview
 - シート: REVIEW_STATE / REVIEW_UI / REVIEW_LOG / EXPORT_LOG / EXPORT_SKIP_LOG
-- 入口関数: belle_runPipelineBatch_v0（export無効が既定）, belle_exportYayoiCsvFromReview_test（手動）
+- 入口関数: belle_runPipelineBatch_v0（export無効が既定）, belle_exportYayoiCsvFallback（手動）
 - 参照: docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md
 
 ## 3. フォールバック優先版 v0 要件

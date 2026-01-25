@@ -19,7 +19,7 @@
   1) `LEGACY_NAME` チェックと guard を削除
   2) `EXPORT_LOG_MISSING_LEGACY_PRESENT` を参照する docs を削除
 - 削除後の確認手順:
-  - `belle_exportYayoiCsvFromReview_test` を実行し、EXPORT_LOG 作成/追記が正常であること
+  - `belle_exportYayoiCsvFallback` を実行し、EXPORT_LOG 作成/追記が正常であること
 - リスク評価: Med
 
 ### CLN-002: OCR legacy normalize (ERROR_RETRYABLE + ocr_json)

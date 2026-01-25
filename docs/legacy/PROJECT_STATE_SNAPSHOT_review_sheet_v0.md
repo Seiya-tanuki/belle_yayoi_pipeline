@@ -104,27 +104,27 @@ gas\Review_v0.js:202:function belle_review_syncUiFromState(stateSheet, stateMap,
 gas\Review_v0.js:262:function belle_buildReviewFromDoneQueue() {
 gas\Review_v0.js:415:function belle_review_countNeedsReview() {
 gas\Review_v0.js:439:function belle_exportYayoiCsvFromReview(options) {
-gas\Review_v0.js:577:function belle_exportYayoiCsvFromReview_test() {
+gas\Review_v0.js:577:function belle_exportYayoiCsvFromReview() {
 gas\Review_v0.js:581:function belle_backfillReviewReasonsJa() {
-gas\Review_v0.js:675:function belle_backfillReviewReasonsJa_test() {
+gas\Review_v0.js:675:function belle_backfillReviewReasonsJa() {
 gas\Code.js:6:function belle_healthCheck() {
 gas\Code.js:17:function belle_setupScriptProperties() {
 gas\Code.js:33:function belle_appendRow(values) {
-gas\Code.js:51:function belle_appendRow_test() {
+gas\Code.js:51:function belle_appendRow() {
 gas\Code.js:60:function belle_listFilesInFolder() {
 gas\Code.js:108:function belle_queueFolderFilesToSheet() {
-gas\Code.js:176:function belle_queueFolderFilesToSheet_test() {
+gas\Code.js:176:function belle_queueFolderFilesToSheet() {
 gas\Code.js:189:function belle_getGeminiConfig() {
 gas\Code.js:204:function belle_callGeminiOcr(imageBlob) {
 gas\Code.js:267:function belle_processQueueOnce(options) {
-gas\Code.js:380:function belle_processQueueOnce_test() {
+gas\Code.js:380:function belle_processQueueOnce() {
 gas\Code.js:387:function belle_appendSkipLogRows(ss, sheetName, details, exportedAtIso) {
 gas\Code.js:419:function belle_exportYayoiCsvFromDoneRows(options) {
-gas\Code.js:674:function belle_exportYayoiCsvFromDoneRows_test() {
-gas\Code.js:682:function belle_exportYayoiCsvFromDoneRows_force_test() {
+gas\Code.js:674:function belle_exportYayoiCsvFromDoneRows() {
+gas\Code.js:682:function belle_exportYayoiCsvFromDoneRows_force() {
 gas\Code.js:686:function belle_parseBool(value, defaultValue) {
 gas\Code.js:698:function belle_runPipelineBatch_v0() {
-gas\Code.js:805:function belle_runPipelineBatch_v0_test() {
+gas\Code.js:805:function belle_runPipelineBatch_v0() {
 gas\ReviewReasons_ja_v0.js:5:function belle_reviewReasonJa(code, context) {
 ```
 

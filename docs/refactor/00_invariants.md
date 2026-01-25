@@ -29,6 +29,7 @@
    (see docs/refactor/04_deprecation_registry.md)
 4) All Script Properties access must be routed through canonical config helpers (gas/Config_v0.js); no direct calls elsewhere.
 5) Legacy property aliases (e.g., BELLE_SHEET_NAME, BELLE_OCR_CLAIM_CURSOR) are resolved only in Config_v0.js and must preserve prior behavior until removal.
+6) Production GAS modules must not expose *_test entrypoints; manual operations use the primary entrypoints or automated tests.
 
 ## Terminology
 - doc_type: receipt | cc_statement | bank_statement (future)

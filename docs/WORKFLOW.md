@@ -4,7 +4,7 @@
 - list: belle_listFilesInFolder
 - queue: belle_queueFolderFilesToSheet
 - ocr: belle_processQueueOnce (runner loops)
-- export (manual): belle_exportYayoiCsvFallback (alias: belle_exportYayoiCsvFromReview_test)
+- export (manual): belle_exportYayoiCsvFallback
 
 ## 2. Operation rules
 1. dev Apps Script only. Do not push/deploy to prod/stg.
@@ -33,17 +33,17 @@
    - Out of range -> replace year with fiscal year; DT=OUT_OF_RANGE, RID=DATE_FALLBACK, FIX=誤った取引日
    - Leap invalid after replace -> use fiscal end; DT=LEAP_ADJUST
    - Do not use file_name or queued_at_iso for date fallback.
-14. Destructive reset (admin only): use BELLE_RESET_TOKEN and belle_resetSpreadsheetToInitialState_fallback_v0_test (see docs/RESET_GUIDE_fallback_v0.md).
+14. Destructive reset (admin only): use BELLE_RESET_TOKEN and belle_resetSpreadsheetToInitialState_fallback_v0 (see docs/RESET_GUIDE_fallback_v0.md).
 15. OCR claim (phase1): added PROCESSING and lock columns (ocr_lock_owner, ocr_lock_until_iso, ocr_processing_started_at_iso). Claim function only (no OCR); TTL expiry makes row claimable again.
-16. OCR worker (phase2): belle_ocr_workerLoop_fallback_v0_test runs claim -> OCR -> writeback (locks only during claim/update), worker max items via BELLE_OCR_WORKER_MAX_ITEMS, TTL via BELLE_OCR_LOCK_TTL_SECONDS. Existing runner/processQueueOnce are unchanged.
+16. OCR worker (phase2): belle_ocr_workerTick_fallback_v0 runs claim -> OCR -> writeback (locks only during claim/update), worker max items via BELLE_OCR_WORKER_MAX_ITEMS, TTL via BELLE_OCR_LOCK_TTL_SECONDS. Existing runner/processQueueOnce are unchanged.
 17. OCR parallel triggers (phase4): use belle_ocr_parallel_enable_fallback_v0 / belle_ocr_parallel_disable_fallback_v0 to create/delete N time-based triggers for belle_ocr_workerTick_fallback_v0. BELLE_OCR_PARALLEL_ENABLED gates tick execution and runner OCR is skipped with RUN_GUARD. Disable removes triggers only; enabled flag is unchanged.
 18. OCR parallel tuning (phase6): claim scans at most BELLE_OCR_CLAIM_SCAN_MAX_ROWS with round-robin cursor (BELLE_OCR_CLAIM_CURSOR). PERF_LOG is written to the integrations sheet when BELLE_INTEGRATIONS_SHEET_ID is set.
 
 ## 3. Parallel OCR operation (v0)
 - Precondition: configure Script Properties (see CONFIG.md). Lock columns are auto-added to OCR_RAW when missing.
-- Enable: run belle_ocr_parallel_enable_fallback_v0_test and confirm OCR_PARALLEL_ENABLE with triggerIds.
-- Disable: run belle_ocr_parallel_disable_fallback_v0_test and confirm OCR_PARALLEL_DISABLE (enabled flag is unchanged).
-- Status: run belle_ocr_parallel_status_fallback_v0_test to check enabled/trigger counts.
+- Enable: run belle_ocr_parallel_enable_fallback_v0 and confirm OCR_PARALLEL_ENABLE with triggerIds.
+- Disable: run belle_ocr_parallel_disable_fallback_v0 and confirm OCR_PARALLEL_DISABLE (enabled flag is unchanged).
+- Status: check enabled/trigger counts in the Apps Script triggers view (no manual status entrypoint).
 - Runner interaction: when BELLE_OCR_PARALLEL_ENABLED is true, runner OCR is skipped with RUN_GUARD.
 - LOCK_BUSY means a tick could not acquire the claim lock and exits early.
 - PERF_LOG appears only when BELLE_INTEGRATIONS_SHEET_ID is set.
@@ -55,18 +55,18 @@
 - No export in runner.
 
 ## 5. Manual export
-- Run belle_exportYayoiCsvFromReview_test or belle_exportYayoiCsvFallback from the editor.
+- Run belle_exportYayoiCsvFallback from the editor.
 - If QUEUED remains, it logs OCR_PENDING and does not create CSV or update EXPORT_LOG.
 - If ERROR_RETRYABLE remains, it logs OCR_RETRYABLE_REMAINING and does not export.
 - Export log uses EXPORT_LOG. If legacy IMPORT_LOG exists, rename it to EXPORT_LOG before export.
 
 ## 6. Verification checklist (manual)
-1) Run belle_runPipelineBatch_v0_test and check RUN_SUMMARY
+1) Run belle_runPipelineBatch_v0 and check RUN_SUMMARY
 2) With QUEUED remaining, run export and expect OCR_PENDING
 3) After DONE/ERROR_FINAL only, export should create CSV and update EXPORT_LOG
 4) Case A (legacy): IMPORT_LOG exists and EXPORT_LOG missing -> export is guarded; rename IMPORT_LOG to EXPORT_LOG, then retry
 5) Case B (fresh): neither exists -> export creates EXPORT_LOG with header
-6) Chatwork (optional): set BELLE_CHATWORK_NOTIFY_ENABLED=true and run belle_chatwork_sendLatestCsv_test (latest CSV sends file post only to avoid duplicate messages)
+6) Chatwork (optional): set BELLE_CHATWORK_NOTIFY_ENABLED=true and use the standard notification flow (manual *_test entrypoints were removed; rely on automated runs or tests)
 7) Chatwork Webhook (optional): deploy Web App with ?route=chatwork&token=<SECRET>, set BELLE_CHATWORK_WEBHOOK_ENABLED=true and BELLE_CHATWORK_WEBHOOK_TOKEN (same value as URL token). Logs are persisted to the integrations sheet (WEBHOOK_LOG) when BELLE_INTEGRATIONS_SHEET_ID is set, including BODY_CAPTURE (hash/length/preview). Token mismatch/parse errors are logged and still return 200.
 
 ## 7. References

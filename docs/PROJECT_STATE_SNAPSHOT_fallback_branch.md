@@ -3,7 +3,7 @@
 ## 1. Overview (pipeline stages)
 - runner: belle_runPipelineBatch_v0 (Queue -> OCR only; no export)
 - queue: belle_listFilesInFolder -> belle_queueFolderFilesToSheet -> belle_processQueueOnce
-- export (manual): belle_exportYayoiCsvFallback / belle_exportYayoiCsvFromReview_test
+- export (manual): belle_exportYayoiCsvFallback
 
 ## 2. Sheets (code-defined names and usage)
 - OCR_RAW: default sheet name when no properties are set
@@ -76,25 +76,15 @@ Notes:
 - belle_processQueueOnce
 - belle_runPipelineBatch_v0
 - belle_exportYayoiCsvFallback
-- belle_exportYayoiCsvFromReview_test
 - belle_ocr_workerTick_fallback_v0
 
 ### Debug / test
-- belle_queueFolderFilesToSheet_test
-- belle_processQueueOnce_test
-- belle_runPipelineBatch_v0_test
-- belle_ocr_claimNextRow_fallback_v0_test
-- belle_ocr_workerLoop_fallback_v0_test
-- belle_ocr_parallel_smoke_test
-- belle_ocr_parallel_enable_fallback_v0_test
-- belle_ocr_parallel_disable_fallback_v0_test
-- belle_ocr_parallel_status_fallback_v0_test
+- manual *_test entrypoints were removed; use primary functions or automated tests
 
 ### Deprecated (do not use)
 - belle_healthCheck
 - belle_setupScriptProperties
 - belle_appendRow
-- belle_appendRow_test
 - belle_exportYayoiCsvFromReview (alias of fallback export)
 
 ## 6. Script Properties

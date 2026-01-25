@@ -28,7 +28,7 @@ flowchart LR
 
 ## Entry Points
 - Trigger: belle_runPipelineBatch_v0 (Queue -> OCR -> Review update)
-- Manual export: belle_exportYayoiCsvFromReview_test
+- Manual export: belle_exportYayoiCsvFromReview
 
 ## References
 - docs/CONFIG.md

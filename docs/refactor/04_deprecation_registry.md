@@ -45,10 +45,10 @@ This file records code that is scheduled for removal or has been removed during 
 - ID: CLN-0008
 - Status: REMOVED
 - Area: queue
-- Target: gas/Code.js:belle_appendRow, gas/Code.js:belle_appendRow_test
+- Target: gas/Code.js:belle_appendRow (and its removed test wrapper)
 - Reason: deprecated helper/test with no runtime or test references
 - Proof:
-  - rg: `rg -n "belle_appendRow\\b" gas tests`, `rg -n "belle_appendRow_test\\b" gas tests`
+  - rg: `rg -n "belle_appendRow\\b" gas tests`
   - tests: npm test
 - Rollback: revert eccdaea
 - ID: CLN-0010

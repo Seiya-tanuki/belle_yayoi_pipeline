@@ -113,11 +113,10 @@ Note: overall_issues with only MISSING_TAX_INFO is treated as benign when tax ra
 - belle_healthCheck
 - belle_setupScriptProperties
 - belle_appendRow
-- belle_appendRow_test
 - belle_exportYayoiCsvFromReview (alias of fallback export)
 
 ## Restart checklist (quick)
-1) Run belle_runPipelineBatch_v0_test -> check RUN_SUMMARY
+1) Run belle_runPipelineBatch_v0 -> check RUN_SUMMARY
 2) Run export with QUEUED remaining -> OCR_PENDING guard
 3) After DONE/ERROR_FINAL only -> export generates CSV and updates EXPORT_LOG
 

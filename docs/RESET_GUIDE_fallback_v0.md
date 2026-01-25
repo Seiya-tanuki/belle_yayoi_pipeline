@@ -7,7 +7,7 @@ Use only when headers/sheet names are corrupted.
 ## Prerequisites
 - You must be an administrator of the spreadsheet.
 - This action deletes existing data in the managed sheets.
-- If parallel OCR triggers are enabled, disable them before reset (belle_ocr_parallel_disable_fallback_v0_test).
+- If parallel OCR triggers are enabled, disable them before reset (belle_ocr_parallel_disable_fallback_v0).
 
 ## Token Guard
 - Set Script Property `BELLE_RESET_TOKEN` to the expected value.
@@ -16,7 +16,7 @@ Use only when headers/sheet names are corrupted.
 
 ## Execution Steps
 1) Open Script Properties and set `BELLE_RESET_TOKEN` to the expected token.
-2) Run `belle_resetSpreadsheetToInitialState_fallback_v0_test` in the Apps Script editor.
+2) Run `belle_resetSpreadsheetToInitialState_fallback_v0` in the Apps Script editor.
 3) Confirm logs show `RESET_DONE` and that `BELLE_RESET_TOKEN` is cleared.
 
 ## What gets deleted

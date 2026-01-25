@@ -6,7 +6,7 @@ function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-const m = code.match(/function belle_ocr_parallel_disable_fallback_v0\(\)\s*\{([\s\S]*?)\n\}/);
+const m = code.match(/function belle_ocr_parallel_disable_fallback_v0\([^)]*\)\s*\{([\s\S]*?)\n\}/);
 expect(m, 'disable function not found');
 const body = m[1];
 
