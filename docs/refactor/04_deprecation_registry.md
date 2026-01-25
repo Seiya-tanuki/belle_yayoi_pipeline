@@ -95,3 +95,12 @@ This file records code that is scheduled for removal or has been removed during 
   - tests: test_trigger_audit_filter.js, npm test
   - checklist: docs/refactor/03_checklists.md
 - Rollback: revert 5cf0239
+- ID: CLN-0014
+- Status: REMOVED
+- Area: logs
+- Target: gas/Code.js log plumbing helpers moved to gas/Log_v0.js
+- Reason: isolate log sheet plumbing in a dedicated module to reduce drift
+- Proof:
+  - rg: `rg -n "^function belle_log_" gas` (hits only gas/Log_v0.js)
+  - tests: test_log_module_boundaries.js, test_log_module_load_order_safety.js
+- Rollback: revert 30151fb
