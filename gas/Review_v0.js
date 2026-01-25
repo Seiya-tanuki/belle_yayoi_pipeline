@@ -31,6 +31,55 @@ function belle_getOrCreateExportLogSheet(ss) {
   return { sheet: created, guard: null };
 }
 
+function belle_exportLog_buildHeaderMap_(sheet, requiredHeader) {
+  const lastCol = sheet.getLastColumn();
+  const expected = Array.isArray(requiredHeader) ? requiredHeader : [];
+  if (lastCol < 1) {
+    return { ok: false, headerMap: {}, actualHeader: [], missing: expected.slice() };
+  }
+  const raw = sheet.getRange(1, 1, 1, lastCol).getValues()[0] || [];
+  const headerMap = {};
+  const actual = [];
+  for (let i = 0; i < raw.length; i++) {
+    const name = String(raw[i] || "");
+    actual.push(name);
+    headerMap[name] = i;
+  }
+  const missing = [];
+  for (let i = 0; i < expected.length; i++) {
+    if (headerMap[expected[i]] === undefined) missing.push(expected[i]);
+  }
+  return { ok: missing.length === 0, headerMap: headerMap, actualHeader: actual, missing: missing };
+}
+
+function belle_exportLog_buildSchemaMismatchDetail_(docType, sheetName, expected, actualHeader) {
+  return JSON.stringify({
+    expected_required_columns: expected || [],
+    actual_header: actualHeader || [],
+    doc_type: String(docType || ""),
+    sheet_name: String(sheetName || "")
+  });
+}
+
+function belle_exportLog_computeWidth_(headerMap) {
+  let maxIdx = -1;
+  const keys = Object.keys(headerMap || {});
+  for (let i = 0; i < keys.length; i++) {
+    const idx = Number(headerMap[keys[i]]);
+    if (!isNaN(idx) && idx > maxIdx) maxIdx = idx;
+  }
+  return maxIdx >= 0 ? maxIdx + 1 : 0;
+}
+
+function belle_exportLog_buildRow_(headerMap, width, fileId, nowIso, csvFileId) {
+  if (!headerMap || !width) return [fileId, nowIso, csvFileId];
+  const row = new Array(width).fill("");
+  if (headerMap.file_id !== undefined) row[headerMap.file_id] = fileId;
+  if (headerMap.exported_at_iso !== undefined) row[headerMap.exported_at_iso] = nowIso;
+  if (headerMap.csv_file_id !== undefined) row[headerMap.csv_file_id] = csvFileId;
+  return row;
+}
+
 function belle_export_pickSingleFolder_(folders, folderName, docType, parentFolderId) {
   const list = Array.isArray(folders) ? folders : [];
   const count = list.length;
@@ -77,14 +126,15 @@ function belle_export_runDocTypes_(handlers) {
   return results;
 }
 
-function belle_export_flushExportLog_(exportLog, fileIds, nowIso, csvFileId, chunkSize) {
+function belle_export_flushExportLog_(exportLog, fileIds, nowIso, csvFileId, chunkSize, headerMap) {
   if (!exportLog || !fileIds || fileIds.length === 0) return 0;
   const sizeRaw = Number(chunkSize);
   const size = sizeRaw && isFinite(sizeRaw) && sizeRaw > 0 ? Math.floor(sizeRaw) : 200;
+  const width = headerMap ? belle_exportLog_computeWidth_(headerMap) : 0;
   let written = 0;
   let buffer = [];
   for (let i = 0; i < fileIds.length; i++) {
-    buffer.push([fileIds[i], nowIso, csvFileId]);
+    buffer.push(belle_exportLog_buildRow_(headerMap, width, fileIds[i], nowIso, csvFileId));
     if (buffer.length >= size) {
       written += belle_sheet_appendRowsInChunks_(exportLog, buffer, size);
       buffer = [];
@@ -286,10 +336,21 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
       };
     }
     const exportLog = exportLogResult.sheet;
+    const exportHeader = belle_getExportLogHeaderColumns_v0();
+    const exportHeaderInfo = belle_exportLog_buildHeaderMap_(exportLog, exportHeader);
+    if (!exportHeaderInfo.ok) {
+      const detail = belle_exportLog_buildSchemaMismatchDetail_("cc_statement", "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
+      logGuard("EXPORT_LOG_SCHEMA_MISMATCH", null, detail);
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "EXPORT_LOG_SCHEMA_MISMATCH", doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+    const exportLogHeaderMap = exportHeaderInfo.headerMap;
     const importSet = new Set();
     const logRows = exportLog.getLastRow();
     if (logRows >= 2) {
-      const vals = exportLog.getRange(2, 1, logRows - 1, 1).getValues();
+      const fileIdCol = exportLogHeaderMap["file_id"];
+      const vals = exportLog.getRange(2, fileIdCol + 1, logRows - 1, 1).getValues();
       for (let i = 0; i < vals.length; i++) {
         const v = vals[i][0];
         if (v) importSet.add(String(v));
@@ -500,7 +561,7 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
     const file = folderRes.folder.createFile(blob);
     const csvFileId = file.getId();
 
-    belle_export_flushExportLog_(exportLog, exportFileIds, nowIso, csvFileId, logChunkSize);
+    belle_export_flushExportLog_(exportLog, exportFileIds, nowIso, csvFileId, logChunkSize, exportLogHeaderMap);
 
     if (skippedDetails.length > 0) {
       belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
@@ -693,10 +754,21 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
       };
     }
     const exportLog = exportLogResult.sheet;
+    const exportHeader = belle_getExportLogHeaderColumns_v0();
+    const exportHeaderInfo = belle_exportLog_buildHeaderMap_(exportLog, exportHeader);
+    if (!exportHeaderInfo.ok) {
+      const detail = belle_exportLog_buildSchemaMismatchDetail_("receipt", "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
+      logGuard("EXPORT_LOG_SCHEMA_MISMATCH", null, detail);
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "EXPORT_LOG_SCHEMA_MISMATCH", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+    const exportLogHeaderMap = exportHeaderInfo.headerMap;
     const importSet = new Set();
     const logRows = exportLog.getLastRow();
     if (logRows >= 2) {
-      const vals = exportLog.getRange(2, 1, logRows - 1, 1).getValues();
+      const fileIdCol = exportLogHeaderMap["file_id"];
+      const vals = exportLog.getRange(2, fileIdCol + 1, logRows - 1, 1).getValues();
       for (let i = 0; i < vals.length; i++) {
         const v = vals[i][0];
         if (v) importSet.add(String(v));
@@ -854,7 +926,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     const file = folderRes.folder.createFile(blob);
     const csvFileId = file.getId();
 
-    belle_export_flushExportLog_(exportLog, exportFileIds, nowIso, csvFileId, logChunkSize);
+    belle_export_flushExportLog_(exportLog, exportFileIds, nowIso, csvFileId, logChunkSize, exportLogHeaderMap);
 
     if (skippedDetails.length > 0) {
       belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");

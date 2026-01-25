@@ -8,6 +8,7 @@
 
 ## System invariants
 1) Sheet creation is schema-driven; header mismatch triggers rotation instead of silent corruption.
+   - Exception: stateful sheets used for dedupe (e.g., EXPORT_LOG) must NOT be rotated automatically; they guard and abort on mismatch.
 2) Logging separation is strict:
    - QUEUE_SKIP_LOG: queue-time skips
    - EXPORT_SKIP_LOG: export-time skips

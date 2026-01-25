@@ -32,7 +32,7 @@ This file records code that is scheduled for removal or has been removed during 
 - Proof:
   - rg: `rg -n "belle_healthCheck\\b" gas tests`
   - tests: npm test
-- Rollback: revert e92e9bf
+- Rollback: revert eccdaea
 - ID: CLN-0007
 - Status: REMOVED
 - Area: queue
@@ -41,7 +41,7 @@ This file records code that is scheduled for removal or has been removed during 
 - Proof:
   - rg: `rg -n "belle_setupScriptProperties\\b" gas tests`
   - tests: npm test
-- Rollback: revert e92e9bf
+- Rollback: revert eccdaea
 - ID: CLN-0008
 - Status: REMOVED
 - Area: queue
@@ -50,4 +50,12 @@ This file records code that is scheduled for removal or has been removed during 
 - Proof:
   - rg: `rg -n "belle_appendRow\\b" gas tests`, `rg -n "belle_appendRow_test\\b" gas tests`
   - tests: npm test
-- Rollback: revert e92e9bf
+- Rollback: revert eccdaea
+- ID: CLN-0009
+- Status: PROPOSED
+- Area: export
+- Target: gas/Review_v0.js: EXPORT_LOG schema enforcement (guard on mismatch)
+- Reason: EXPORT_LOG is stateful for dedupe; should guard on schema mismatch and use header map for extra columns
+- Proof:
+  - tests: test_export_log_schema_guard.js
+- Rollback: revert <pending>
