@@ -1,7 +1,7 @@
 const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/OcrWorkerParallel_v0.js', 'utf8');
+const code = fs.readFileSync('gas/OcrCommon_v0.js', 'utf8');
 const sandbox = { console };
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
