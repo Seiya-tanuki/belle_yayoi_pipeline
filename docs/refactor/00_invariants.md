@@ -27,6 +27,7 @@
    - why it is safe
    - how to rollback
    (see docs/refactor/04_deprecation_registry.md)
+4) Core Script Properties must be accessed via canonical config helpers (gas/Config_v0.js).
 
 ## Terminology
 - doc_type: receipt | cc_statement | bank_statement (future)

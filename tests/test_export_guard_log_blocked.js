@@ -157,6 +157,7 @@ const sandbox = {
 };
 
 vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync('gas/Config_v0.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/YayoiExport_v0.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/OcrValidation_v0.js', 'utf8'), sandbox);

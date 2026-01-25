@@ -2,6 +2,7 @@ const fs = require('fs');
 const vm = require('vm');
 
 const code = [
+  fs.readFileSync('gas/Config_v0.js', 'utf8'),
   fs.readFileSync('gas/Code.js', 'utf8'),
   fs.readFileSync('gas/Review_v0.js', 'utf8')
 ].join('\n');

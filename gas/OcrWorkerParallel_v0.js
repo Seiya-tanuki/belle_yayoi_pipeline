@@ -109,7 +109,7 @@ function belle_ocr_perf_appendFromSummary_(summary) {
 
 function belle_ocr_workerOnce_fallback_v0_(opts) {
   const totalStart = Date.now();
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
   let processingCount = 0;
   const docTypes = opts && Array.isArray(opts.docTypes) && opts.docTypes.length > 0
@@ -144,12 +144,10 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     };
   }
 
-  const sheetId = props.getProperty("BELLE_SHEET_ID");
+  const sheetId = belle_cfg_getSheetIdOrThrow_(props);
   const queueSheetName = claim.queueSheetName || belle_getQueueSheetName(props);
   const maxAttempts = Number(props.getProperty("BELLE_OCR_MAX_ATTEMPTS") || "3");
   const backoffSeconds = Number(props.getProperty("BELLE_OCR_RETRY_BACKOFF_SECONDS") || "300");
-  if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
-
   const ss = SpreadsheetApp.openById(sheetId);
   const sh = ss.getSheetByName(queueSheetName);
   if (!sh) throw new Error("Sheet not found: " + queueSheetName);

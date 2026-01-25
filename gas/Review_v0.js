@@ -170,10 +170,10 @@ function belle_exportYayoiCsvFallback(options) {
 }
 
 function belle_exportYayoiCsvReceiptFallback_(options) {
-  const props = PropertiesService.getScriptProperties();
-  const sheetId = props.getProperty("BELLE_SHEET_ID");
+  const props = belle_cfg_getProps_();
+  const sheetId = belle_cfg_getSheetIdOrThrow_(props);
   const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, "receipt");
-  const outputFolderId = belle_getOutputFolderId(props);
+  const outputFolderId = belle_cfg_getOutputFolderIdOrDriveFolderIdOrThrow_(props);
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
   const batchMaxRows = Number(props.getProperty("BELLE_EXPORT_BATCH_MAX_ROWS") || "5000");
@@ -184,8 +184,6 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
   const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
   const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
   const skipLogSheetName = belle_getSkipLogSheetName(props);
-  if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
-  if (!outputFolderId) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
 
   const ss = SpreadsheetApp.openById(sheetId);
   try {
@@ -588,18 +586,16 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
 }
 
 function belle_exportYayoiCsvCcStatementFallback_(options) {
-  const props = PropertiesService.getScriptProperties();
-  const sheetId = props.getProperty("BELLE_SHEET_ID");
+  const props = belle_cfg_getProps_();
+  const sheetId = belle_cfg_getSheetIdOrEmpty_(props);
   const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, "cc_statement");
-  const outputFolderId = belle_getOutputFolderId(props);
+  const outputFolderId = belle_cfg_getOutputFolderIdOrDriveFolderId_(props);
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
   const batchMaxRows = Number(props.getProperty("BELLE_EXPORT_BATCH_MAX_ROWS") || "5000");
   const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
   const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
   const skipLogSheetName = belle_getSkipLogSheetName(props);
-  if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
-  if (!outputFolderId) throw new Error("Missing Script Property: BELLE_OUTPUT_FOLDER_ID (or BELLE_DRIVE_FOLDER_ID)");
 
   const ss = SpreadsheetApp.openById(sheetId);
   try {

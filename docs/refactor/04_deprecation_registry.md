@@ -51,6 +51,15 @@ This file records code that is scheduled for removal or has been removed during 
   - rg: `rg -n "belle_appendRow\\b" gas tests`, `rg -n "belle_appendRow_test\\b" gas tests`
   - tests: npm test
 - Rollback: revert eccdaea
+- ID: CLN-0010
+- Status: PROPOSED
+- Area: config
+- Target: direct ad-hoc parsing of core Script Properties (BELLE_SHEET_ID, BELLE_DRIVE_FOLDER_ID, BELLE_OUTPUT_FOLDER_ID)
+- Reason: centralize parsing and required/default semantics in gas/Config_v0.js to reduce drift
+- Proof:
+  - rg: `rg -n "BELLE_SHEET_ID|BELLE_DRIVE_FOLDER_ID|BELLE_OUTPUT_FOLDER_ID" gas`
+  - tests: test_config_getters_parity.js, test_config_core_keys_callsites_smoke.js
+- Rollback: revert <pending>
 - ID: CLN-0009
 - Status: PROPOSED
 - Area: export

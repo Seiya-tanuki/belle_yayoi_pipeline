@@ -168,7 +168,7 @@ const sandbox = {
   }
 };
 
-const code = fs.readFileSync('gas/Code.js', 'utf8')
+const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8')
   + '\n' + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/OcrValidation_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/Review_v0.js', 'utf8');

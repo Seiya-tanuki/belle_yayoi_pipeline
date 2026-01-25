@@ -127,7 +127,8 @@ function countFiles(folder) {
 }
 
 function buildSandbox(spreadsheet, folder, props) {
-  const code = fs.readFileSync('gas/Code.js', 'utf8') + '\n'
+  const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/Code.js', 'utf8') + '\n'
     + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8') + '\n'
     + fs.readFileSync('gas/OcrValidation_v0.js', 'utf8') + '\n'
     + fs.readFileSync('gas/Review_v0.js', 'utf8');

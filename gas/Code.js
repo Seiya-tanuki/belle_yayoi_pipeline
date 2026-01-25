@@ -6,9 +6,8 @@
  * - Read-only. No delete/move.
  */
 function belle_listFilesInFolder() {
-  const props = PropertiesService.getScriptProperties();
-  const folderId = props.getProperty("BELLE_DRIVE_FOLDER_ID");
-  if (!folderId) throw new Error("Missing Script Property: BELLE_DRIVE_FOLDER_ID");
+  const props = belle_cfg_getProps_();
+  const folderId = belle_cfg_getDriveFolderIdOrThrow_(props);
 
   const folder = DriveApp.getFolderById(folderId);
   const defs = belle_getDocTypeDefs_();
@@ -242,9 +241,8 @@ function belle_ocr_getQueueSheetNameForDocType_(props, docType) {
  * Append-only queue writer (doc_type routing by subfolder).
  */
 function belle_queueFolderFilesToSheet() {
-  const props = PropertiesService.getScriptProperties();
-  const sheetId = props.getProperty("BELLE_SHEET_ID");
-  if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
+  const props = belle_cfg_getProps_();
+  const sheetId = belle_cfg_getSheetIdOrThrow_(props);
 
   const listed = belle_listFilesInFolder();
   const filesByDocType = listed.filesByDocType || {};
@@ -331,7 +329,7 @@ function belle_queueFolderFilesToSheet_test() {
  * - BELLE_MAX_ITEMS_PER_RUN (default 1)
  */
 function belle_getGeminiConfig() {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const apiKey = props.getProperty("BELLE_GEMINI_API_KEY");
   const model = props.getProperty("BELLE_GEMINI_MODEL");
   const sleepMs = Number(props.getProperty("BELLE_GEMINI_SLEEP_MS") || "500");
@@ -824,8 +822,7 @@ function belle_getQueueSkipLogSheetName(props) {
 }
 
 function belle_getOutputFolderId(props) {
-  const p = props || PropertiesService.getScriptProperties();
-  return p.getProperty("BELLE_OUTPUT_FOLDER_ID") || p.getProperty("BELLE_DRIVE_FOLDER_ID");
+  return belle_cfg_getOutputFolderIdOrDriveFolderId_(props);
 }
 
 function belle_pdf_countPages_(pdfBlob, out) {
@@ -1041,9 +1038,8 @@ function belle_queue_loadExistingFileIds_(sh, headerMap) {
  * - ocr_error
  */
 function belle_processQueueOnce(options) {
-  const props = PropertiesService.getScriptProperties();
-  const sheetId = props.getProperty("BELLE_SHEET_ID");
-  if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
+  const props = belle_cfg_getProps_();
+  const sheetId = belle_cfg_getSheetIdOrThrow_(props);
 
   const useLock = !(options && options.skipLock === true);
   const lock = useLock ? LockService.getScriptLock() : null;
@@ -1066,7 +1062,7 @@ function belle_processQueueOnce(options) {
 }
 
 function belle_processQueueOnceForDocType_(props, docType, options) {
-  const sheetId = props.getProperty("BELLE_SHEET_ID");
+  const sheetId = belle_cfg_getSheetIdOrThrow_(props);
   const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, docType);
   const maxAttempts = Number(props.getProperty("BELLE_OCR_MAX_ATTEMPTS") || "3");
   const backoffSeconds = Number(props.getProperty("BELLE_OCR_RETRY_BACKOFF_SECONDS") || "300");
@@ -1331,8 +1327,8 @@ function belle_processQueueOnce_test() {
 }
 
 function belle_ocr_claimNextRow_fallback_v0_(opts) {
-  const props = PropertiesService.getScriptProperties();
-  const sheetId = props.getProperty("BELLE_SHEET_ID");
+  const props = belle_cfg_getProps_();
+  const sheetId = belle_cfg_getSheetIdOrThrow_(props);
   const docType = opts && opts.docType ? String(opts.docType) : "receipt";
   const queueSheetName = opts && opts.queueSheetName
     ? String(opts.queueSheetName)
@@ -1739,8 +1735,8 @@ function belle_export_appendGuardLogRow_(ss, props, data) {
 }
 
 function belle_queue_getStatusCounts() {
-  const props = PropertiesService.getScriptProperties();
-  const sheetId = props.getProperty("BELLE_SHEET_ID");
+  const props = belle_cfg_getProps_();
+  const sheetId = belle_cfg_getSheetIdOrEmpty_(props);
   if (!sheetId) return { totalCount: 0, queuedRemaining: 0, doneCount: 0, errorRetryableCount: 0, errorFinalCount: 0 };
 
   const ss = SpreadsheetApp.openById(sheetId);
@@ -1925,7 +1921,7 @@ function belle_resetSpreadsheetToInitialState_fallback_v0() {
   }
 
   try {
-    const sheetId = props.getProperty("BELLE_SHEET_ID");
+    const sheetId = belle_cfg_getSheetIdOrEmpty_(props);
     if (!sheetId) {
       const guard = { phase: "RESET_GUARD", ok: true, reason: "MISSING_SHEET_ID" };
       Logger.log(guard);

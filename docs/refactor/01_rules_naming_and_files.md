@@ -7,6 +7,7 @@
 3) Review_v0.js: export orchestration + guard logic + log routing for export phase.
 4) YayoiExport_v0.js: deterministic mapping from OCR JSON -> Yayoi CSV rows.
 5) OcrValidation_v0.js: schema validation only; no business decisions.
+6) Config_v0.js: Script Properties parsing and canonical config access helpers.
 
 ## Naming conventions
 1) Prefix by domain:
