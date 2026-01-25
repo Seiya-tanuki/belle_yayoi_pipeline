@@ -1,0 +1,33 @@
+
+# Invariants (must not be broken)
+
+## Product invariants
+1) Receipt pipeline behavior is preserved unless a task explicitly changes it.
+2) CC pipeline behavior is preserved unless a task explicitly changes it.
+3) Exported CSV content semantics must remain stable; dedupe must prevent double export.
+
+## System invariants
+1) Sheet creation is schema-driven; header mismatch triggers rotation instead of silent corruption.
+2) Logging separation is strict:
+   - QUEUE_SKIP_LOG: queue-time skips
+   - EXPORT_SKIP_LOG: export-time skips
+   - EXPORT_GUARD_LOG: export blocked/guard reasons
+   - PERF_LOG: performance/telemetry
+3) Queue scan must not crash the system:
+   - unknown/multi-page PDFs are skipped at queue time (safety-first policy).
+4) "One worker tick = bounded work":
+   - CC uses stage caching so that each worker performs at most one Gemini call per item.
+
+## Engineering invariants
+1) Must keep "npm test" green.
+2) Prefer additive tests for refactors; do not delete coverage to make tests pass.
+3) When deleting legacy code, record:
+   - what was deleted
+   - why it is safe
+   - how to rollback
+   (see docs/refactor/04_deprecation_registry.md)
+
+## Terminology
+- doc_type: receipt | cc_statement | bank_statement (future)
+- stage1 cache: CC page classification JSON stored in ocr_json when page_type=transactions
+- stage2: CC transaction extraction JSON stored in ocr_json after DONE

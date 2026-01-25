@@ -13,3 +13,6 @@ gas/Code.js.bak.*
 # clasp config backups (DO NOT COMMIT)
 configs/clasp/*.clasp.json
 configs/clasp/*.json
+
+/refactor/**
+/refactor_starter_pack_v0.zip
