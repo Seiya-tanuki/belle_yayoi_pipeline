@@ -1,7 +1,7 @@
 const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
+const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
 const sandbox = { console };
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
@@ -43,3 +43,4 @@ try {
 expect(threw, 'missing output folder should throw');
 
 console.log('OK: test_config_core_keys_callsites_smoke');
+

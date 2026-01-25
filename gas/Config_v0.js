@@ -126,8 +126,8 @@ function belle_cfg_getExportGuardLogSheetName_(props) {
 
 function belle_cfg_getQueueSheetNameForDocType_(props, docType) {
   const p = props || belle_cfg_getProps_();
-  const key = String(docType || "receipt");
-  if (key === "receipt") {
+  const key = String(docType || BELLE_DOC_TYPE_RECEIPT);
+  if (key === BELLE_DOC_TYPE_RECEIPT) {
     const name = belle_cfg_getQueueSheetNameOverride_(p);
     if (name) return name;
     const legacy = belle_cfg_getLegacyQueueSheetNameOverride_(p);
@@ -146,7 +146,7 @@ function belle_cfg_getOcrClaimCursorRaw_(props, docType, cursorKey) {
   const key = String(cursorKey || "");
   const raw = belle_cfg_getString_(p, key, { required: false, defaultValue: "" });
   if (raw) return raw;
-  if (String(docType || "") === "receipt") {
+  if (String(docType || "") === BELLE_DOC_TYPE_RECEIPT) {
     return belle_cfg_getString_(p, "BELLE_OCR_CLAIM_CURSOR", { required: false, defaultValue: "" });
   }
   return "";

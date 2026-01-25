@@ -1,7 +1,7 @@
 const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
+const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
 const sandbox = { console };
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
@@ -38,3 +38,4 @@ const filtered = sandbox.belle_queue_filterNewFiles_(files, existing);
 expect(filtered.length === 1 && filtered[0].id === 'B', 'queue dedupe failed');
 
 console.log('OK: test_doc_type_pipeline_helpers');
+

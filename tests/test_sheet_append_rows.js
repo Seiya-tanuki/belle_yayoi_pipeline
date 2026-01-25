@@ -1,7 +1,7 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
+const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
 const sandbox = { console };
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
@@ -45,3 +45,4 @@ expect(calls[1].row === 6 && calls[1].numRows === 2 && calls[1].numCols === 2, '
 expect(calls[2].row === 8 && calls[2].numRows === 1 && calls[2].numCols === 2, 'third chunk position mismatch');
 
 console.log('OK: test_sheet_append_rows');
+

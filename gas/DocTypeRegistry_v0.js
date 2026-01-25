@@ -1,0 +1,93 @@
+// @ts-check
+
+// NOTE: Keep comments ASCII only.
+
+var BELLE_DOC_TYPE_RECEIPT = "receipt";
+var BELLE_DOC_TYPE_CC_STATEMENT = "cc_statement";
+var BELLE_DOC_TYPE_BANK_STATEMENT = "bank_statement";
+var BELLE_DOC_PIPELINE_SINGLE_STAGE = "single_stage";
+var BELLE_DOC_PIPELINE_TWO_STAGE = "two_stage";
+var BELLE_DOC_PIPELINE_INACTIVE = "inactive";
+
+function belle_docType_getSupportedDocTypes_() {
+  return [BELLE_DOC_TYPE_RECEIPT, BELLE_DOC_TYPE_CC_STATEMENT, BELLE_DOC_TYPE_BANK_STATEMENT];
+}
+
+function belle_docType_assertSupportedDocType_(docType) {
+  var spec = belle_docType_getSpec_(docType);
+  if (!spec) throw new Error("UNSUPPORTED_DOC_TYPE: " + String(docType || ""));
+  return spec;
+}
+
+function belle_docType_getSpec_(docType) {
+  var key = String(docType || "");
+  if (key === BELLE_DOC_TYPE_RECEIPT) return belle_docType_buildReceiptSpec_();
+  if (key === BELLE_DOC_TYPE_CC_STATEMENT) return belle_docType_buildCcSpec_();
+  if (key === BELLE_DOC_TYPE_BANK_STATEMENT) return belle_docType_buildBankSpec_();
+  return null;
+}
+
+function belle_docType_getSpecBySubfolder_(name) {
+  var key = String(name || "");
+  var docTypes = belle_docType_getSupportedDocTypes_();
+  for (var i = 0; i < docTypes.length; i++) {
+    var spec = belle_docType_getSpec_(docTypes[i]);
+    if (spec && spec.source_subfolder_name === key) return spec;
+  }
+  return null;
+}
+
+function belle_docType_buildReceiptSpec_() {
+  return {
+    doc_type: BELLE_DOC_TYPE_RECEIPT,
+    source_subfolder_name: "receipt",
+    ocr_sheet_name_default: "OCR_RECEIPT",
+    ocr_sheet_name_getter: function (props) {
+      return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_RECEIPT);
+    },
+    pipeline_kind: BELLE_DOC_PIPELINE_SINGLE_STAGE,
+    stage1_prompt_getter: null,
+    stage2_prompt_getter: null,
+    export_subfolder_name: "receipt",
+    export_handler_key: BELLE_DOC_TYPE_RECEIPT,
+    export_order: 2
+  };
+}
+
+function belle_docType_buildCcSpec_() {
+  return {
+    doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+    source_subfolder_name: "cc_statement",
+    ocr_sheet_name_default: "OCR_CC",
+    ocr_sheet_name_getter: function (props) {
+      return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_CC_STATEMENT);
+    },
+    pipeline_kind: BELLE_DOC_PIPELINE_TWO_STAGE,
+    stage1_prompt_getter: function () {
+      return belle_ocr_getCcStage1Prompt_();
+    },
+    stage2_prompt_getter: function () {
+      return belle_ocr_getCcStage2Prompt_();
+    },
+    export_subfolder_name: "cc_statement",
+    export_handler_key: BELLE_DOC_TYPE_CC_STATEMENT,
+    export_order: 1
+  };
+}
+
+function belle_docType_buildBankSpec_() {
+  return {
+    doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+    source_subfolder_name: "bank_statement",
+    ocr_sheet_name_default: "OCR_BANK",
+    ocr_sheet_name_getter: function (props) {
+      return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_BANK_STATEMENT);
+    },
+    pipeline_kind: BELLE_DOC_PIPELINE_INACTIVE,
+    stage1_prompt_getter: null,
+    stage2_prompt_getter: null,
+    export_subfolder_name: "bank_statement",
+    export_handler_key: "",
+    export_order: 99
+  };
+}

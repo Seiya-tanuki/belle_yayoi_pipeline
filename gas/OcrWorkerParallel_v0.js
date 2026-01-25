@@ -168,6 +168,9 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   const statusBefore = claim.statusBefore || status;
   const rowDocType = headerMap["doc_type"] !== undefined ? String(row[headerMap["doc_type"]] || "") : "";
   const docType = rowDocType || claim.docType || "";
+  const docSpec = belle_docType_getSpec_(docType);
+  const pipelineKind = docSpec ? docSpec.pipeline_kind : "";
+  const isTwoStage = pipelineKind === BELLE_DOC_PIPELINE_TWO_STAGE;
   const ocrJsonBefore = String(row[headerMap["ocr_json"]] || "");
   const ocrError = String(row[headerMap["ocr_error"]] || "");
   const ocrErrorCode = String(row[headerMap["ocr_error_code"]] || "");
@@ -246,7 +249,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
       errorCode = "UNSUPPORTED_PDF";
       errorMessage = "PDF not supported in v0";
       errorDetail = "PDF not supported in v0";
-    } else if (docType === "cc_statement") {
+    } else if (isTwoStage) {
       const file = DriveApp.getFileById(fileId);
       const blob = file.getBlob();
       const tempInfo = belle_ocr_computeGeminiTemperature_({
@@ -276,7 +279,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
 
       if (cacheInfo.cacheInvalid) {
         errorCode = "CC_STAGE1_CACHE_INVALID";
-        errorMessage = "cc_statement stage1 cache invalid";
+        errorMessage = BELLE_DOC_TYPE_CC_STATEMENT + " stage1 cache invalid";
         errorDetail = belle_ocr_buildInvalidSchemaLogDetail_(ocrJsonBefore);
       }
 
@@ -420,7 +423,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
     if (geminiStartMs > 0 && geminiElapsedMs === 0) {
       geminiElapsedMs = Date.now() - geminiStartMs;
     }
-    if (docType === "cc_statement" && ccGeminiMs === 0 && geminiElapsedMs > 0) {
+    if (isTwoStage && ccGeminiMs === 0 && geminiElapsedMs > 0) {
       ccGeminiMs = geminiElapsedMs;
     }
     let detail = msg.slice(0, 500);
@@ -438,7 +441,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
       detail = belle_ocr_buildInvalidSchemaLogDetail_(jsonStr);
     }
     errorDetail = detail;
-    if (docType === "cc_statement" && ccStage2Attempted) {
+    if (isTwoStage && ccStage2Attempted) {
       keepOcrJsonOnError = true;
     }
     if (statusOut === "ERROR_RETRYABLE") {
@@ -638,7 +641,9 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
       summary.docType = r.docType;
       summary.queueSheetName = r.queueSheetName || "";
     }
-    if (r.docType === "cc_statement") {
+    const rSpec = belle_docType_getSpec_(r.docType || "");
+    const rKind = rSpec ? rSpec.pipeline_kind : "";
+    if (rKind === BELLE_DOC_PIPELINE_TWO_STAGE) {
       summary.ccStage = r.ccStage || "";
       summary.ccCacheHit = r.ccCacheHit === true;
       summary.ccGeminiMs = typeof r.ccGeminiMs === "number" ? r.ccGeminiMs : 0;

@@ -97,7 +97,8 @@ function belle_export_pickSingleFolder_(folders, folderName, docType, parentFold
 
 function belle_export_resolveOutputFolderByDocType_(outputFolderId, docType) {
   const root = DriveApp.getFolderById(outputFolderId);
-  const name = docType ? String(docType) : "receipt";
+  const spec = belle_docType_getSpec_(docType || BELLE_DOC_TYPE_RECEIPT);
+  const name = spec && spec.export_subfolder_name ? String(spec.export_subfolder_name) : (docType ? String(docType) : BELLE_DOC_TYPE_RECEIPT);
   const folders = [];
   const it = root.getFoldersByName(name);
   while (it.hasNext()) folders.push(it.next());
@@ -126,6 +127,31 @@ function belle_export_runDocTypes_(handlers) {
   return results;
 }
 
+function belle_export_getHandlersByRegistry_(options) {
+  const handlers = {};
+  const docTypes = belle_docType_getSupportedDocTypes_();
+  const specs = [];
+  for (let i = 0; i < docTypes.length; i++) {
+    const spec = belle_docType_getSpec_(docTypes[i]);
+    if (!spec || !spec.export_handler_key) continue;
+    specs.push(spec);
+  }
+  specs.sort(function (a, b) {
+    const aOrder = typeof a.export_order === "number" ? a.export_order : 0;
+    const bOrder = typeof b.export_order === "number" ? b.export_order : 0;
+    return aOrder - bOrder;
+  });
+  for (let i = 0; i < specs.length; i++) {
+    const key = specs[i].export_handler_key;
+    if (key === BELLE_DOC_TYPE_CC_STATEMENT) {
+      handlers[key] = function () { return belle_exportYayoiCsvCcStatementFallback_(options); };
+    } else if (key === BELLE_DOC_TYPE_RECEIPT) {
+      handlers[key] = function () { return belle_exportYayoiCsvReceiptFallback_(options); };
+    }
+  }
+  return handlers;
+}
+
 function belle_export_flushExportLog_(exportLog, fileIds, nowIso, csvFileId, chunkSize, headerMap) {
   if (!exportLog || !fileIds || fileIds.length === 0) return 0;
   const sizeRaw = Number(chunkSize);
@@ -147,22 +173,20 @@ function belle_export_flushExportLog_(exportLog, fileIds, nowIso, csvFileId, chu
 }
 
 function belle_exportYayoiCsvFallback(options) {
-  const results = belle_export_runDocTypes_({
-    cc_statement: function () { return belle_exportYayoiCsvCcStatementFallback_(options); },
-    receipt: function () { return belle_exportYayoiCsvReceiptFallback_(options); }
-  });
-  const ccWrap = results.cc_statement;
-  const receiptWrap = results.receipt;
+  const handlers = belle_export_getHandlersByRegistry_(options);
+  const results = belle_export_runDocTypes_(handlers);
+  const ccWrap = results[BELLE_DOC_TYPE_CC_STATEMENT];
+  const receiptWrap = results[BELLE_DOC_TYPE_RECEIPT];
   if (ccWrap && ccWrap.ok === false) {
-    Logger.log({ phase: "EXPORT_DOC_ERROR", ok: false, doc_type: "cc_statement", errorMessage: ccWrap.errorMessage || "", stackTop: ccWrap.stackTop || "" });
+    Logger.log({ phase: "EXPORT_DOC_ERROR", ok: false, doc_type: BELLE_DOC_TYPE_CC_STATEMENT, errorMessage: ccWrap.errorMessage || "", stackTop: ccWrap.stackTop || "" });
   }
   if (receiptWrap && receiptWrap.ok === false) {
-    Logger.log({ phase: "EXPORT_DOC_ERROR", ok: false, doc_type: "receipt", errorMessage: receiptWrap.errorMessage || "", stackTop: receiptWrap.stackTop || "" });
+    Logger.log({ phase: "EXPORT_DOC_ERROR", ok: false, doc_type: BELLE_DOC_TYPE_RECEIPT, errorMessage: receiptWrap.errorMessage || "", stackTop: receiptWrap.stackTop || "" });
   }
   const ccResult = ccWrap && ccWrap.ok ? ccWrap.result : null;
   const receiptResult = receiptWrap && receiptWrap.ok ? receiptWrap.result : null;
   if (receiptResult && ccResult) {
-    receiptResult.cc_statement = ccResult;
+    receiptResult[BELLE_DOC_TYPE_CC_STATEMENT] = ccResult;
   }
   if (receiptResult) return receiptResult;
   if (ccResult) return ccResult;
@@ -172,7 +196,7 @@ function belle_exportYayoiCsvFallback(options) {
 function belle_exportYayoiCsvReceiptFallback_(options) {
   const props = belle_cfg_getProps_();
   const sheetId = belle_cfg_getSheetIdOrThrow_(props);
-  const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, "receipt");
+  const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_RECEIPT);
   const outputFolderId = belle_cfg_getOutputFolderIdOrDriveFolderIdOrThrow_(props);
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
@@ -199,7 +223,7 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
     }
     function logGuard(reason, counts, detail) {
       belle_export_appendGuardLogRow_(ss, props, {
-        doc_type: "receipt",
+        doc_type: BELLE_DOC_TYPE_RECEIPT,
         queue_sheet_name: queueSheetName,
         reason: reason,
         counts_json: buildCountsJson(counts),
@@ -337,9 +361,9 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
     const exportHeader = belle_getExportLogHeaderColumns_v0();
     const exportHeaderInfo = belle_exportLog_buildHeaderMap_(exportLog, exportHeader);
     if (!exportHeaderInfo.ok) {
-      const detail = belle_exportLog_buildSchemaMismatchDetail_("cc_statement", "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
+      const detail = belle_exportLog_buildSchemaMismatchDetail_(BELLE_DOC_TYPE_RECEIPT, "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
       logGuard("EXPORT_LOG_SCHEMA_MISMATCH", null, detail);
-      const res = { phase: "EXPORT_GUARD", ok: true, reason: "EXPORT_LOG_SCHEMA_MISMATCH", doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "EXPORT_LOG_SCHEMA_MISMATCH", doc_type: BELLE_DOC_TYPE_RECEIPT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
     }
@@ -393,7 +417,7 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
         continue;
       }
 
-      if (docType && docType !== "receipt") {
+      if (docType && docType !== BELLE_DOC_TYPE_RECEIPT) {
         skipped++;
         skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "DOC_TYPE_NOT_RECEIPT" });
         flushSkipDetails();
@@ -533,14 +557,14 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
     } else {
       blob.setDataFromString(csvText, "Shift_JIS");
     }
-    const folderRes = belle_export_resolveOutputFolderByDocType_(outputFolderId, "receipt");
+    const folderRes = belle_export_resolveOutputFolderByDocType_(outputFolderId, BELLE_DOC_TYPE_RECEIPT);
     if (!folderRes.ok) {
       Logger.log({
         phase: "EXPORT_GUARD",
         ok: true,
         reason: folderRes.reason,
-        doc_type: "receipt",
-        folder_name: folderRes.folderName || "receipt",
+        doc_type: BELLE_DOC_TYPE_RECEIPT,
+        folder_name: folderRes.folderName || BELLE_DOC_TYPE_RECEIPT,
         found_count: folderRes.foundCount || 0,
         parent_folder_id: folderRes.parentFolderId || outputFolderId
       });
@@ -548,7 +572,7 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
         phase: "EXPORT_GUARD",
         ok: true,
         reason: folderRes.reason,
-        doc_type: "receipt",
+        doc_type: BELLE_DOC_TYPE_RECEIPT,
         exportedRows: 0,
         exportedFiles: 0,
         skipped: skipped,
@@ -588,7 +612,7 @@ function belle_exportYayoiCsvReceiptFallback_(options) {
 function belle_exportYayoiCsvCcStatementFallback_(options) {
   const props = belle_cfg_getProps_();
   const sheetId = belle_cfg_getSheetIdOrEmpty_(props);
-  const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, "cc_statement");
+  const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_CC_STATEMENT);
   const outputFolderId = belle_cfg_getOutputFolderIdOrDriveFolderId_(props);
   const encodingMode = String(props.getProperty("BELLE_CSV_ENCODING") || "SHIFT_JIS").toUpperCase();
   const eolMode = String(props.getProperty("BELLE_CSV_EOL") || "CRLF").toUpperCase();
@@ -611,7 +635,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     }
     function logGuard(reason, counts, detail) {
       belle_export_appendGuardLogRow_(ss, props, {
-        doc_type: "cc_statement",
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
         queue_sheet_name: queueSheetName,
         reason: reason,
         counts_json: buildCountsJson(counts),
@@ -621,14 +645,14 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     const fiscalRange = belle_yayoi_parseFiscalRangeAllowCrossYear_(fiscalStart, fiscalEnd);
     if (!fiscalRange.ok) {
       logGuard(fiscalRange.reason || "FISCAL_RANGE_INVALID", null, "");
-      const res = { phase: "EXPORT_GUARD", ok: true, reason: fiscalRange.reason, doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: fiscalRange.reason, doc_type: BELLE_DOC_TYPE_CC_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
     }
     const queue = ss.getSheetByName(queueSheetName);
     if (!queue) {
       logGuard("QUEUE_SHEET_NOT_FOUND", null, "");
-      const res = { phase: "EXPORT_GUARD", ok: true, reason: "QUEUE_SHEET_NOT_FOUND", doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "QUEUE_SHEET_NOT_FOUND", doc_type: BELLE_DOC_TYPE_CC_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
     }
@@ -638,14 +662,14 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     const lastRow = queue.getLastRow();
     if (lastRow < 2) {
       logGuard("NO_ROWS", null, "");
-      const res = { phase: "EXPORT_GUARD", ok: true, reason: "NO_ROWS", doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "NO_ROWS", doc_type: BELLE_DOC_TYPE_CC_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
     }
     const headerMap = belle_queue_ensureHeaderMapCanonical_(queue, baseHeader, extraHeader);
     if (!headerMap) {
       logGuard("INVALID_QUEUE_HEADER: missing required columns", null, "");
-      const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: missing required columns", doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: missing required columns", doc_type: BELLE_DOC_TYPE_CC_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
       return res;
     }
@@ -686,7 +710,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     Logger.log({
       phase: "EXPORT_START",
       ok: true,
-      doc_type: "cc_statement",
+      doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
       totalCount: counts.totalCount,
       doneCount: counts.doneCount,
       errorRetryableCount: counts.errorRetryableCount,
@@ -700,7 +724,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
         phase: "EXPORT_GUARD",
         ok: true,
         reason: "OCR_PENDING",
-        doc_type: "cc_statement",
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
         exportedRows: 0,
         exportedFiles: 0,
         errors: 0,
@@ -719,7 +743,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
         phase: "EXPORT_GUARD",
         ok: true,
         reason: "OCR_RETRYABLE_REMAINING",
-        doc_type: "cc_statement",
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
         exportedRows: 0,
         exportedFiles: 0,
         errors: 0,
@@ -741,7 +765,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
         phase: exportLogResult.guard.phase,
         ok: true,
         reason: exportLogResult.guard.reason,
-        doc_type: "cc_statement",
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
         exportedRows: 0,
         exportedFiles: 0,
         skipped: 0,
@@ -753,7 +777,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     const exportHeader = belle_getExportLogHeaderColumns_v0();
     const exportHeaderInfo = belle_exportLog_buildHeaderMap_(exportLog, exportHeader);
     if (!exportHeaderInfo.ok) {
-      const detail = belle_exportLog_buildSchemaMismatchDetail_("receipt", "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
+      const detail = belle_exportLog_buildSchemaMismatchDetail_(BELLE_DOC_TYPE_CC_STATEMENT, "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
       logGuard("EXPORT_LOG_SCHEMA_MISMATCH", null, detail);
       const res = { phase: "EXPORT_GUARD", ok: true, reason: "EXPORT_LOG_SCHEMA_MISMATCH", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
       Logger.log(res);
@@ -805,7 +829,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
         continue;
       }
 
-      if (docType && docType !== "cc_statement") {
+      if (docType && docType !== BELLE_DOC_TYPE_CC_STATEMENT) {
         skipped++;
         skippedDetails.push({ file_id: fileId, file_name: fileName, drive_url: driveUrl, doc_type: docType, source_subfolder: sourceSubfolder, reason: "DOC_TYPE_NOT_CC_STATEMENT" });
         flushSkipDetails();
@@ -845,7 +869,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
         continue;
       }
 
-      const built = belle_yayoi_buildCcRowsFromStage2_(parsed, { fileId: fileId, fileName: fileName, docType: "cc_statement" }, fiscalRange);
+      const built = belle_yayoi_buildCcRowsFromStage2_(parsed, { fileId: fileId, fileName: fileName, docType: BELLE_DOC_TYPE_CC_STATEMENT }, fiscalRange);
       if (built.skipDetails && built.skipDetails.length > 0) {
         for (let j = 0; j < built.skipDetails.length; j++) {
           const sd = built.skipDetails[j] || {};
@@ -881,7 +905,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
       if (skippedDetails.length > 0) {
         belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
       }
-      const res = { phase: "EXPORT_DONE", ok: true, reason: "NO_EXPORT_ROWS", doc_type: "cc_statement", exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, csvFileId: "" };
+      const res = { phase: "EXPORT_DONE", ok: true, reason: "NO_EXPORT_ROWS", doc_type: BELLE_DOC_TYPE_CC_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, csvFileId: "" };
       Logger.log(res);
       return res;
     }
@@ -889,21 +913,21 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
     const eol = eolMode === "LF" ? "\n" : "\r\n";
     const csvText = csvRows.join(eol);
     const ts = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmmss");
-    const filename = "belle_yayoi_cc_statement_export_" + ts + ".csv";
+    const filename = "belle_yayoi_" + BELLE_DOC_TYPE_CC_STATEMENT + "_export_" + ts + ".csv";
     const blob = Utilities.newBlob("", "text/csv", filename);
     if (encodingMode === "UTF8") {
       blob.setDataFromString(csvText, "UTF-8");
     } else {
       blob.setDataFromString(csvText, "Shift_JIS");
     }
-    const folderRes = belle_export_resolveOutputFolderByDocType_(outputFolderId, "cc_statement");
+    const folderRes = belle_export_resolveOutputFolderByDocType_(outputFolderId, BELLE_DOC_TYPE_CC_STATEMENT);
     if (!folderRes.ok) {
       Logger.log({
         phase: "EXPORT_GUARD",
         ok: true,
         reason: folderRes.reason,
-        doc_type: "cc_statement",
-        folder_name: folderRes.folderName || "cc_statement",
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+        folder_name: folderRes.folderName || BELLE_DOC_TYPE_CC_STATEMENT,
         found_count: folderRes.foundCount || 0,
         parent_folder_id: folderRes.parentFolderId || outputFolderId
       });
@@ -911,7 +935,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
         phase: "EXPORT_GUARD",
         ok: true,
         reason: folderRes.reason,
-        doc_type: "cc_statement",
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
         exportedRows: 0,
         exportedFiles: 0,
         skipped: skipped,
@@ -932,7 +956,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
       phase: "EXPORT_DONE",
       ok: true,
       reason: "EXPORTED",
-      doc_type: "cc_statement",
+      doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
       exportedRows: csvRows.length,
       exportedFiles: exportFileIds.length,
       skipped: skipped,
@@ -944,7 +968,7 @@ function belle_exportYayoiCsvCcStatementFallback_(options) {
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
     const stack = e && e.stack ? String(e.stack).split("\n")[0] : "";
-    Logger.log({ phase: "EXPORT_ERROR", ok: false, doc_type: "cc_statement", errorMessage: msg, stackTop: stack });
+    Logger.log({ phase: "EXPORT_ERROR", ok: false, doc_type: BELLE_DOC_TYPE_CC_STATEMENT, errorMessage: msg, stackTop: stack });
     throw e;
   }
 }

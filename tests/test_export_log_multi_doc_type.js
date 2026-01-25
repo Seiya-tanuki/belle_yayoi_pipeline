@@ -1,4 +1,4 @@
-ï»¿const fs = require('fs');
+const fs = require('fs');
 const vm = require('vm');
 
 const logs = [];
@@ -155,6 +155,7 @@ const sandbox = {
 
 vm.createContext(sandbox);
 vm.runInContext(fs.readFileSync('gas/Config_v0.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/Code.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/YayoiExport_v0.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/OcrValidation_v0.js', 'utf8'), sandbox);
@@ -207,7 +208,7 @@ ccSheet.appendRow(buildRow({
     transactions: [
       {
         row_no: 1,
-        raw_use_date_text: '4æœˆ1æ—¥',
+        raw_use_date_text: '4ŒŽ1“ú',
         use_month: 4,
         use_day: 1,
         merchant: 'SHOP C',
@@ -231,3 +232,6 @@ expect(vals.length === 2, 'EXPORT_LOG should contain 2 entries');
 expect(vals[0] === 'cc1' && vals[1] === 'r1', 'EXPORT_LOG should include cc1 and r1');
 
 console.log('OK: test_export_log_multi_doc_type');
+
+
+

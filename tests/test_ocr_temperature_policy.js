@@ -1,7 +1,7 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
+const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8');
 const sandbox = { console };
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
@@ -58,3 +58,4 @@ const resNotFinal = calc({
 expect(resNotFinal.temperature === 0 && resNotFinal.overridden === false, 'non-final retry should use default');
 
 console.log('OK: test_ocr_temperature_policy');
+

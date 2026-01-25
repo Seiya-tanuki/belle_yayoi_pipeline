@@ -447,7 +447,7 @@ function belle_yayoi_buildCcSummary_(merchant) {
 }
 
 function belle_yayoi_buildCcMemo_(params) {
-  const parts = ["CC", "DT=cc_statement"];
+  const parts = ["CC", "DT=" + BELLE_DOC_TYPE_CC_STATEMENT];
   const rowNo = params.rowNo !== undefined && params.rowNo !== null ? String(params.rowNo) : "";
   if (rowNo) parts.push("ROW=" + rowNo);
   if (params.fileId) parts.push("FID=" + params.fileId);

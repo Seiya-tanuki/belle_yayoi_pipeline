@@ -168,58 +168,67 @@ function belle_getExportLogHeaderColumns_v0() {
 }
 
 function belle_getDocTypeDefs_() {
-  return [
-    { docType: "receipt", subfolder: "receipt", sheetName: "OCR_RECEIPT" },
-    { docType: "cc_statement", subfolder: "cc_statement", sheetName: "OCR_CC" },
-    { docType: "bank_statement", subfolder: "bank_statement", sheetName: "OCR_BANK" }
-  ];
+  var docTypes = belle_docType_getSupportedDocTypes_();
+  var out = [];
+  for (var i = 0; i < docTypes.length; i++) {
+    var spec = belle_docType_getSpec_(docTypes[i]);
+    if (!spec) continue;
+    out.push({
+      docType: spec.doc_type,
+      subfolder: spec.source_subfolder_name,
+      sheetName: spec.ocr_sheet_name_default
+    });
+  }
+  return out;
 }
 
 function belle_ocr_getDocTypeDefByDocType_(docType) {
-  const key = String(docType || "");
-  const defs = belle_getDocTypeDefs_();
-  for (let i = 0; i < defs.length; i++) {
-    if (defs[i].docType === key) return defs[i];
-  }
-  return null;
+  var spec = belle_docType_getSpec_(docType);
+  if (!spec) return null;
+  return {
+    docType: spec.doc_type,
+    subfolder: spec.source_subfolder_name,
+    sheetName: spec.ocr_sheet_name_default
+  };
 }
 
 function belle_ocr_getDocTypeDefBySubfolder_(name) {
-  const key = String(name || "");
-  const defs = belle_getDocTypeDefs_();
-  for (let i = 0; i < defs.length; i++) {
-    if (defs[i].subfolder === key) return defs[i];
-  }
-  return null;
+  var spec = belle_docType_getSpecBySubfolder_(name);
+  if (!spec) return null;
+  return {
+    docType: spec.doc_type,
+    subfolder: spec.source_subfolder_name,
+    sheetName: spec.ocr_sheet_name_default
+  };
 }
 
 function belle_ocr_getActiveDocTypes_(props) {
-  const p = props || belle_cfg_getProps_();
-  const raw = String(p.getProperty("BELLE_ACTIVE_DOC_TYPES") || "").trim();
-  if (!raw) return ["receipt"];
-  const parts = raw.split(",");
-  const out = [];
-  const seen = {};
-  for (let i = 0; i < parts.length; i++) {
-    const item = String(parts[i] || "").trim();
+  var p = props || belle_cfg_getProps_();
+  var raw = String(p.getProperty("BELLE_ACTIVE_DOC_TYPES") || "").trim();
+  if (!raw) return [BELLE_DOC_TYPE_RECEIPT];
+  var parts = raw.split(",");
+  var out = [];
+  var seen = {};
+  for (var i = 0; i < parts.length; i++) {
+    var item = String(parts[i] || "").trim();
     if (!item) continue;
-    const def = belle_ocr_getDocTypeDefByDocType_(item);
-    if (!def) {
+    var spec = belle_docType_getSpec_(item);
+    if (!spec) {
       belle_configWarnOnce("BELLE_ACTIVE_DOC_TYPES_UNKNOWN", "unknown=" + item);
       continue;
     }
-    if (!seen[def.docType]) {
-      seen[def.docType] = true;
-      out.push(def.docType);
+    if (!seen[spec.doc_type]) {
+      seen[spec.doc_type] = true;
+      out.push(spec.doc_type);
     }
   }
-  if (out.length === 0) return ["receipt"];
+  if (out.length === 0) return [BELLE_DOC_TYPE_RECEIPT];
   return out;
 }
 
 function belle_ocr_getFixedQueueSheetNameForDocType_(docType) {
-  const def = belle_ocr_getDocTypeDefByDocType_(docType);
-  return def ? def.sheetName : "OCR_RECEIPT";
+  var spec = belle_docType_getSpec_(docType);
+  return spec ? spec.ocr_sheet_name_default : "OCR_RECEIPT";
 }
 
 function belle_ocr_getQueueSheetNameForDocType_(props, docType) {
@@ -389,7 +398,8 @@ function belle_ocr_getCcStage2Prompt_() {
 }
 
 function belle_ocr_allowPdfForDocType_(docType) {
-  return String(docType || "") === "cc_statement";
+  const spec = belle_docType_getSpec_(docType);
+  return !!(spec && spec.pipeline_kind === BELLE_DOC_PIPELINE_TWO_STAGE);
 }
 
 function belle_ocr_cc_classifyStage1Page_(pageType) {
@@ -398,9 +408,19 @@ function belle_ocr_cc_classifyStage1Page_(pageType) {
     return { proceed: true, statusOut: "", errorCode: "", errorMessage: "" };
   }
   if (t === "non_transactions") {
-    return { proceed: false, statusOut: "ERROR_FINAL", errorCode: "CC_NON_TRANSACTION_PAGE", errorMessage: "cc_statement page_type=non_transactions" };
+    return {
+      proceed: false,
+      statusOut: "ERROR_FINAL",
+      errorCode: "CC_NON_TRANSACTION_PAGE",
+      errorMessage: BELLE_DOC_TYPE_CC_STATEMENT + " page_type=non_transactions"
+    };
   }
-  return { proceed: false, statusOut: "ERROR_RETRYABLE", errorCode: "CC_PAGE_UNKNOWN", errorMessage: "cc_statement page_type=unknown" };
+  return {
+    proceed: false,
+    statusOut: "ERROR_RETRYABLE",
+    errorCode: "CC_PAGE_UNKNOWN",
+    errorMessage: BELLE_DOC_TYPE_CC_STATEMENT + " page_type=unknown"
+  };
 }
 
 function belle_ocr_cc_detectStageFromCache_(ocrJsonStr) {
@@ -548,7 +568,8 @@ function belle_ocr_cc_getStage2ResponseJsonSchema_() {
 }
 
 function belle_ocr_shouldStopAfterItem_(docType) {
-  return String(docType || "") === "cc_statement";
+  const spec = belle_docType_getSpec_(docType);
+  return !!(spec && spec.pipeline_kind === BELLE_DOC_PIPELINE_TWO_STAGE);
 }
 
 function belle_callGeminiOcr(imageBlob, opt) {
@@ -788,7 +809,7 @@ function belle_configWarnOnce(key, detail) {
 }
 
 function belle_getQueueSheetName(props) {
-  return belle_ocr_getQueueSheetNameForDocType_(props, "receipt");
+  return belle_ocr_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_RECEIPT);
 }
 
 
@@ -1303,7 +1324,7 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
 function belle_ocr_claimNextRow_fallback_v0_(opts) {
   const props = belle_cfg_getProps_();
   const sheetId = belle_cfg_getSheetIdOrThrow_(props);
-  const docType = opts && opts.docType ? String(opts.docType) : "receipt";
+  const docType = opts && opts.docType ? String(opts.docType) : BELLE_DOC_TYPE_RECEIPT;
   const queueSheetName = opts && opts.queueSheetName
     ? String(opts.queueSheetName)
     : belle_ocr_getQueueSheetNameForDocType_(props, docType);
@@ -1366,7 +1387,7 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
     const scanPlan = belle_ocr_buildClaimScanPlan_(values.length, cursorRaw, scanMaxRaw);
     const scanIndices = scanPlan.indices;
     props.setProperty(cursorKey, String(scanPlan.nextCursor));
-    if (docType === "receipt") {
+    if (docType === BELLE_DOC_TYPE_RECEIPT) {
       props.setProperty("BELLE_OCR_CLAIM_CURSOR", String(scanPlan.nextCursor));
     }
 
@@ -1887,7 +1908,7 @@ function belle_resetSpreadsheetToInitialState_fallback_v0() {
     }
 
     const ss = SpreadsheetApp.openById(sheetId);
-    const receiptSheetName = belle_ocr_getQueueSheetNameForDocType_(props, "receipt");
+    const receiptSheetName = belle_ocr_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_RECEIPT);
     const docDefs = belle_getDocTypeDefs_();
     const queueNames = [];
     for (let i = 0; i < docDefs.length; i++) {
