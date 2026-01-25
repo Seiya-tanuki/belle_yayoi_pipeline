@@ -159,4 +159,4 @@ This file records code that is scheduled for removal or has been removed during 
 - Proof:
   - rg: `rg -n "^function " gas/Code.js` (allowlist only)
   - tests: test_code_entrypoints_boundary.js, test_code_load_order_safety.js
-- Rollback: revert adca7d7
+- Rollback: revert adca7d7 and 3a9e8fe
