@@ -12,7 +12,8 @@
 8) Sheet_v0.js: spreadsheet I/O primitives and header-map utilities.
 9) Drive_v0.js: Drive enumeration and folder traversal helpers.
 10) Pdf_v0.js: local PDF inspection utilities (page count heuristics).
-11) DocTypeRegistry_v0.js: canonical doc_type registry and per-doc_type specs (subfolder/sheet/export routing).
+11) Gemini_v0.js: Gemini HTTP client plumbing and response parsing.
+12) DocTypeRegistry_v0.js: canonical doc_type registry and per-doc_type specs (subfolder/sheet/export routing).
 
 ## Doc_type rules
 1) Define doc_types only in DocTypeRegistry_v0.js; do not add new doc_type literals in call sites for folder/sheet/output resolution.

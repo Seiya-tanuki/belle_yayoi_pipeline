@@ -122,4 +122,14 @@ This file records code that is scheduled for removal or has been removed during 
   - rg: `rg -n "^function belle_pdf_" gas` (hits only gas/Pdf_v0.js)
   - rg: `rg -n "function belle_listFilesInFolder" gas` (hits only gas/Drive_v0.js)
   - tests: test_drive_module_boundaries.js, test_pdf_module_boundaries.js, test_drive_pdf_module_load_order_safety.js
+- Rollback: revert 218dd90
+- ID: CLN-0017
+- Status: REMOVED
+- Area: gemini
+- Target: gas/Code.js Gemini client helpers moved to gas/Gemini_v0.js
+- Reason: isolate Gemini HTTP plumbing and response parsing
+- Proof:
+  - rg: `rg -n "function belle_(getGeminiConfig|callGeminiOcr)" gas` (hits only gas/Gemini_v0.js)
+  - rg: `rg -n "generativelanguage.googleapis.com" gas` (hits only gas/Gemini_v0.js)
+  - tests: test_gemini_module_boundaries.js, test_gemini_module_load_order_safety.js, test_gemini_client_parity_smoke.js
 - Rollback: revert 4993968
