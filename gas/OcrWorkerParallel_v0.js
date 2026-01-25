@@ -89,7 +89,7 @@ function belle_ocr_perf_ensureLogSheet_(ss) {
 
 function belle_ocr_perf_appendFromSummary_(summary) {
   if (!summary) return false;
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const integrationsSheetId = props.getProperty("BELLE_INTEGRATIONS_SHEET_ID");
   if (!integrationsSheetId) return false;
 
@@ -561,7 +561,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
 }
 
 function belle_ocr_workerLoop_fallback_v0_(opts) {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const maxItemsValue = opts && opts.maxItems !== undefined ? opts.maxItems : props.getProperty("BELLE_OCR_WORKER_MAX_ITEMS");
   const maxItems = belle_ocr_worker_resolveMaxItems_(maxItemsValue);
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();

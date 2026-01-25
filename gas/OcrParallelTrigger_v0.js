@@ -98,7 +98,7 @@ function belle_ocr_parallel_getTriggersByHandler_(handlerName) {
 }
 
 function belle_ocr_workerTick_fallback_v0(e) {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const enabled = belle_parseBool(props.getProperty("BELLE_OCR_PARALLEL_ENABLED"), false);
   if (!enabled) {
     const guard = { phase: "OCR_PARALLEL_GUARD", ok: true, reason: "PARALLEL_DISABLED" };
@@ -149,7 +149,7 @@ function belle_ocr_workerTick_fallback_v0(e) {
 }
 
 function belle_ocr_parallel_enable_fallback_v0() {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const requested = belle_ocr_parallel_getWorkerCount_(props);
   if (!requested || requested < 1 || requested > 20) {
     const guard = { phase: "OCR_PARALLEL_ENABLE", ok: true, reason: "INVALID_WORKER_COUNT", requested: requested };
@@ -187,7 +187,7 @@ function belle_ocr_parallel_enable_fallback_v0() {
 }
 
 function belle_ocr_parallel_disable_fallback_v0() {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const enabledBefore = belle_parseBool(props.getProperty("BELLE_OCR_PARALLEL_ENABLED"), false);
   const ids = belle_ocr_parallel_parseTriggerIds_(props);
 
@@ -233,7 +233,7 @@ function belle_ocr_parallel_disable_fallback_v0_test() {
 }
 
 function belle_ocr_parallel_status_fallback_v0_test() {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const enabled = belle_parseBool(props.getProperty("BELLE_OCR_PARALLEL_ENABLED"), false);
   const workerCount = belle_ocr_parallel_getWorkerCount_(props);
   const ids = belle_ocr_parallel_parseTriggerIds_(props);

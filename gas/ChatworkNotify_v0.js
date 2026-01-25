@@ -75,7 +75,7 @@ function belle_chatwork_sendMessage(message, opts) {
 }
 
 function belle_chatworkSendTestMessage_v0_test() {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const enabled = belle_chatwork_parseBool(props.getProperty("BELLE_CHATWORK_NOTIFY_ENABLED"), false);
   if (!enabled) {
     const res = { ok: true, skipped: true, reason: "CHATWORK_NOTIFY_DISABLED" };
@@ -151,7 +151,7 @@ function belle_chatwork_sendFile(message, fileBlob, opts) {
 }
 
 function belle_chatwork_sendLatestCsv_test() {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const enabled = belle_chatwork_parseBool(props.getProperty("BELLE_CHATWORK_NOTIFY_ENABLED"), false);
   if (!enabled) {
     const res = { ok: true, skipped: true, reason: "CHATWORK_NOTIFY_DISABLED" };

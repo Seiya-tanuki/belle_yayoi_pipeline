@@ -123,3 +123,31 @@ function belle_cfg_getQueueSkipLogSheetName_(props) {
 function belle_cfg_getExportGuardLogSheetName_(props) {
   return belle_cfg_getString_(props, "BELLE_EXPORT_GUARD_LOG_SHEET_NAME", { required: false, defaultValue: "EXPORT_GUARD_LOG" });
 }
+
+function belle_cfg_getQueueSheetNameForDocType_(props, docType) {
+  const p = props || belle_cfg_getProps_();
+  const key = String(docType || "receipt");
+  if (key === "receipt") {
+    const name = belle_cfg_getQueueSheetNameOverride_(p);
+    if (name) return name;
+    const legacy = belle_cfg_getLegacyQueueSheetNameOverride_(p);
+    if (legacy) {
+      if (typeof belle_configWarnOnce === "function") {
+        belle_configWarnOnce("BELLE_SHEET_NAME_DEPRECATED", "Use BELLE_QUEUE_SHEET_NAME instead.");
+      }
+      return legacy;
+    }
+  }
+  return belle_ocr_getFixedQueueSheetNameForDocType_(key);
+}
+
+function belle_cfg_getOcrClaimCursorRaw_(props, docType, cursorKey) {
+  const p = props || belle_cfg_getProps_();
+  const key = String(cursorKey || "");
+  const raw = belle_cfg_getString_(p, key, { required: false, defaultValue: "" });
+  if (raw) return raw;
+  if (String(docType || "") === "receipt") {
+    return belle_cfg_getString_(p, "BELLE_OCR_CLAIM_CURSOR", { required: false, defaultValue: "" });
+  }
+  return "";
+}

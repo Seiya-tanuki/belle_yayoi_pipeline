@@ -194,7 +194,7 @@ function belle_ocr_getDocTypeDefBySubfolder_(name) {
 }
 
 function belle_ocr_getActiveDocTypes_(props) {
-  const p = props || PropertiesService.getScriptProperties();
+  const p = props || belle_cfg_getProps_();
   const raw = String(p.getProperty("BELLE_ACTIVE_DOC_TYPES") || "").trim();
   if (!raw) return ["receipt"];
   const parts = raw.split(",");
@@ -223,18 +223,7 @@ function belle_ocr_getFixedQueueSheetNameForDocType_(docType) {
 }
 
 function belle_ocr_getQueueSheetNameForDocType_(props, docType) {
-  const p = props || belle_cfg_getProps_();
-  const key = String(docType || "receipt");
-  if (key === "receipt") {
-    const name = belle_cfg_getQueueSheetNameOverride_(p);
-    if (name) return name;
-    const legacy = belle_cfg_getLegacyQueueSheetNameOverride_(p);
-    if (legacy) {
-      belle_configWarnOnce("BELLE_SHEET_NAME_DEPRECATED", "Use BELLE_QUEUE_SHEET_NAME instead.");
-      return legacy;
-    }
-  }
-  return belle_ocr_getFixedQueueSheetNameForDocType_(key);
+  return belle_cfg_getQueueSheetNameForDocType_(props, docType);
 }
 
 /**
@@ -385,7 +374,7 @@ function belle_ocr_computeGeminiTemperatureWithConfig_(ctx, config) {
 }
 
 function belle_ocr_computeGeminiTemperature_(ctx) {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const defaultRaw = props.getProperty("BELLE_GEMINI_TEMPERATURE_DEFAULT");
   const addRaw = props.getProperty("BELLE_GEMINI_TEMPERATURE_FINAL_RETRY_ADD");
   return belle_ocr_computeGeminiTemperatureWithConfig_(ctx, { defaultRaw: defaultRaw, addRaw: addRaw });
@@ -500,26 +489,26 @@ function belle_ocr_cc_mergeGenCfg_(baseCfg, overrideCfg) {
 }
 
 function belle_ocr_cc_getStage1GenCfg_(props) {
-  const p = props || PropertiesService.getScriptProperties();
+  const p = props || belle_cfg_getProps_();
   const defaults = { temperature: 0.0, topP: 0.1, maxOutputTokens: 512, thinkingConfig: { thinkingLevel: "low" } };
   const override = belle_ocr_cc_parseGenCfg_(p.getProperty("BELLE_CC_STAGE1_GENCFG_JSON"), null);
   return belle_ocr_cc_mergeGenCfg_(defaults, override);
 }
 
 function belle_ocr_cc_getStage2GenCfg_(props) {
-  const p = props || PropertiesService.getScriptProperties();
+  const p = props || belle_cfg_getProps_();
   const defaults = { temperature: 0.0, topP: 0.1, maxOutputTokens: 8192, thinkingConfig: { thinkingLevel: "low" } };
   const override = belle_ocr_cc_parseGenCfg_(p.getProperty("BELLE_CC_STAGE2_GENCFG_JSON"), null);
   return belle_ocr_cc_mergeGenCfg_(defaults, override);
 }
 
 function belle_ocr_cc_enableResponseJsonSchema_(props) {
-  const p = props || PropertiesService.getScriptProperties();
+  const p = props || belle_cfg_getProps_();
   return belle_parseBool(p.getProperty("BELLE_CC_ENABLE_RESPONSE_JSON_SCHEMA"), false);
 }
 
 function belle_ocr_cc_enableResponseMimeType_(props) {
-  const p = props || PropertiesService.getScriptProperties();
+  const p = props || belle_cfg_getProps_();
   return belle_parseBool(p.getProperty("BELLE_CC_ENABLE_RESPONSE_MIME_TYPE"), false);
 }
 
@@ -1388,8 +1377,7 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
     const nowIso = new Date(nowMs).toISOString();
     const scanMaxRaw = props.getProperty("BELLE_OCR_CLAIM_SCAN_MAX_ROWS");
     const cursorKey = belle_ocr_buildClaimCursorKey_(docType);
-    const legacyCursor = docType === "receipt" ? props.getProperty("BELLE_OCR_CLAIM_CURSOR") : "";
-    const cursorRaw = props.getProperty(cursorKey) || legacyCursor;
+    const cursorRaw = belle_cfg_getOcrClaimCursorRaw_(props, docType, cursorKey);
     const scanPlan = belle_ocr_buildClaimScanPlan_(values.length, cursorRaw, scanMaxRaw);
     const scanIndices = scanPlan.indices;
     props.setProperty(cursorKey, String(scanPlan.nextCursor));
@@ -1505,7 +1493,7 @@ function belle_ocr_claimNextRow_fallback_v0_test() {
 }
 
 function belle_ocr_claimNextRowByDocTypes_(opts) {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const docTypes = opts && Array.isArray(opts.docTypes) && opts.docTypes.length > 0
     ? opts.docTypes
     : belle_ocr_getActiveDocTypes_(props);
@@ -1776,7 +1764,7 @@ function belle_queue_getStatusCounts() {
  * Uses ScriptLock and stops by time or item limits.
  */
 function belle_runPipelineBatch_v0() {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const maxSeconds = Number(props.getProperty("BELLE_RUN_MAX_SECONDS") || "240");
   const maxOcrItems = Number(props.getProperty("BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH") || "5");
   const doQueue = belle_parseBool(props.getProperty("BELLE_RUN_DO_QUEUE"), true);
@@ -1902,7 +1890,7 @@ function belle_runPipelineBatch_v0_test() {
 
 function belle_resetSpreadsheetToInitialState_fallback_v0() {
   const EXPECTED_RESET_TOKEN = "RESET_FALLBACK_V0_CONFIRM";
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const token = String(props.getProperty("BELLE_RESET_TOKEN") || "");
   if (token !== EXPECTED_RESET_TOKEN) {
     const guard = { phase: "RESET_GUARD", ok: true, reason: "RESET_TOKEN_MISMATCH" };

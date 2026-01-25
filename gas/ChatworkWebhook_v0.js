@@ -70,7 +70,7 @@ function belle_chatwork_webhook_ensureLogSheet_(ss) {
 }
 
 function belle_chatwork_webhook_appendLogRow_(phase, detailObjOrString) {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const integrationsSheetId = props.getProperty("BELLE_INTEGRATIONS_SHEET_ID");
   if (!integrationsSheetId) return false;
 
@@ -122,7 +122,7 @@ function belle_chatwork_webhook_logEvent_(payload, bodyPreview) {
 }
 
 function belle_chatwork_webhook_handle_(e) {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const enabled = belle_chatwork_webhook_parseBool_(
     props.getProperty("BELLE_CHATWORK_WEBHOOK_ENABLED"),
     false
@@ -241,7 +241,7 @@ function doPost(e) {
 }
 
 function belle_chatwork_webhook_mock_test() {
-  const props = PropertiesService.getScriptProperties();
+  const props = belle_cfg_getProps_();
   const route = belle_chatwork_webhook_getExpectedRoute_(props);
   const token = props.getProperty("BELLE_CHATWORK_WEBHOOK_TOKEN") || "";
   const mock = {
