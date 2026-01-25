@@ -184,3 +184,11 @@ This file records code that is scheduled for removal or has been removed during 
 - Proof:
   - tests: test_ocr_cc_pipeline_boundaries.js, test_ocr_cc_pipeline_load_order_safety.js, test_ocr_cc_pipeline_parity.js
 - Rollback: revert 2c67d9c
+- ID: CLN-0024
+- Status: REMOVED
+- Area: ocr
+- Target: receipt pipeline logic moved to gas/OcrReceiptPipeline_v0.js
+- Reason: isolate receipt control flow from OcrWorkerParallel orchestrator
+- Proof:
+  - tests: test_ocr_receipt_pipeline_boundaries.js, test_ocr_receipt_pipeline_load_order_safety.js, test_ocr_receipt_pipeline_parity.js
+- Rollback: revert de8d2fb

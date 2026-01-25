@@ -18,6 +18,7 @@
 14) Queue_v0.js: queue/import helpers; Code.js keeps thin wrappers for entrypoints only.
 15) OcrCommon_v0.js: shared OCR helpers (backoff, perf row shaping, HTTP status parsing).
 16) OcrCcPipeline_v0.js: cc_statement pipeline control flow (stage/cache logic).
+17) OcrReceiptPipeline_v0.js: receipt pipeline control flow (single-stage OCR).
 
 ## Doc_type rules
 1) Define doc_types only in DocTypeRegistry_v0.js; do not add new doc_type literals in call sites for folder/sheet/output resolution.
