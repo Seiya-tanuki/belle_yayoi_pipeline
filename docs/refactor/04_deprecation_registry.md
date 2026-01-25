@@ -133,3 +133,12 @@ This file records code that is scheduled for removal or has been removed during 
   - rg: `rg -n "generativelanguage.googleapis.com" gas` (hits only gas/Gemini_v0.js)
   - tests: test_gemini_module_boundaries.js, test_gemini_module_load_order_safety.js, test_gemini_client_parity_smoke.js
 - Rollback: revert 4993968
+- ID: CLN-0018
+- Status: REMOVED
+- Area: queue
+- Target: gas/Code.js queue/import helpers moved to gas/Queue_v0.js (entrypoint wrapper retained)
+- Reason: isolate queue/import plumbing in a dedicated module to reduce Code.js surface area
+- Proof:
+  - rg: `rg -n "function belle_queue_" gas/Queue_v0.js`
+  - tests: test_queue_module_boundaries.js, test_queue_module_load_order_safety.js, test_queue_parity_smoke.js
+- Rollback: revert 29e822f
