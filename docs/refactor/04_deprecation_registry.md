@@ -76,4 +76,13 @@ This file records code that is scheduled for removal or has been removed during 
 - Reason: EXPORT_LOG is stateful for dedupe; should guard on schema mismatch and use header map for extra columns
 - Proof:
   - tests: test_export_log_schema_guard.js
-  - Rollback: revert e286a58
+- Rollback: revert e286a58
+- ID: CLN-0012
+- Status: REMOVED
+- Area: tests
+- Target: test-only GAS entrypoints (*_test) removed from gas/*.js
+- Reason: production modules should not export manual test entrypoints; tests call canonical functions directly
+- Proof:
+  - rg: `rg -n "function\\s+\\w+_test\\b" gas` (no matches)
+  - tests: test_no_gas_test_entrypoints.js, npm test
+- Rollback: revert 2b4e5b3 (and 26006ac to remove guard)
