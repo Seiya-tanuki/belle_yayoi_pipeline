@@ -147,6 +147,10 @@ function belle_ocr_receipt_runOnce_(ctx) {
     const promptText = resolvePromptText_();
     const geminiOptions = { temperature: tempInfo.temperature };
     if (promptText) geminiOptions.promptText = promptText;
+    if (isBankStatement_()) {
+      const bankGenCfg = belle_cfg_getBankStage2GenCfgOverride_(props);
+      if (bankGenCfg) geminiOptions.generationConfig = bankGenCfg;
+    }
     jsonStr = belle_callGeminiOcr(blob, geminiOptions);
   } catch (e) {
     geminiElapsedMs = Date.now() - geminiStartMs;

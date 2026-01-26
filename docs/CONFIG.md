@@ -19,6 +19,9 @@
   - Include cc_statement to enable OCR_CC queue + OCR processing.
 - BELLE_CC_STAGE1_GENCFG_JSON (optional; JSON string for generationConfig overrides)
 - BELLE_CC_STAGE2_GENCFG_JSON (optional; JSON string for generationConfig overrides)
+- BELLE_BANK_STAGE2_GENCFG_JSON (optional; JSON string for generationConfig overrides for bank_statement OCR)
+  - Example: {"temperature":0,"topP":0.1,"maxOutputTokens":512}
+  - Applied last; overrides defaults and the temperature policy for bank_statement only.
 - BELLE_CC_ENABLE_RESPONSE_JSON_SCHEMA (default: false)
 - BELLE_CC_ENABLE_RESPONSE_MIME_TYPE (default: false)
   - Enable only if the model accepts responseMimeType/responseJsonSchema; invalid argument may return 400.

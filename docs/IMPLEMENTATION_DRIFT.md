@@ -13,6 +13,7 @@ This file tracks known drifts between docs and current implementation.
 - CC allows PDF input; current flow assumes one page per PDF (multi-page PDF may need future handling).
 - CC now caches Stage1 JSON in ocr_json and runs Stage2 in a later worker (ocr_json may hold stage1 cache or stage2 final JSON).
 - CC can send responseMimeType/responseJsonSchema only when enabled via BELLE_CC_* properties.
+- Bank OCR can override generationConfig via BELLE_BANK_STAGE2_GENCFG_JSON (applied last).
 - Export writes CSVs under doc_type subfolders (receipt/, cc_statement/, bank_statement/). CC and bank export use Stage2 transactions (1 file -> multiple rows).
 - Bank export skips rows with amount_sign=unknown or missing/non-positive amount_yen (EXPORT_SKIP_LOG reasons: BANK_AMOUNT_SIGN_UNKNOWN, BANK_AMOUNT_MISSING).
 - Export resolves output subfolders strictly; duplicate subfolder names stop export for that doc_type.
