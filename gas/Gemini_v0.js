@@ -33,14 +33,14 @@ function belle_callGeminiOcr(imageBlob, opt) {
   const mimeType = imageBlob.getContentType();
   const b64 = Utilities.base64Encode(imageBlob.getBytes());
   const url = "https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(cfg.model) + ":generateContent?key=" + encodeURIComponent(cfg.apiKey);
-  const temp = (opt && typeof opt.temperature === "number" && !isNaN(opt.temperature))
+  const baseTemp = (opt && typeof opt.temperature === "number" && !isNaN(opt.temperature))
     ? belle_ocr_clampTemperature_(opt.temperature)
     : 0.0;
   const responseMimeType = opt && opt.responseMimeType ? String(opt.responseMimeType) : "";
   const responseJsonSchema = opt && opt.responseJsonSchema ? opt.responseJsonSchema : null;
   const generationConfigOverride = opt && opt.generationConfig ? opt.generationConfig : null;
 
-  const generationConfig = { temperature: temp };
+  const generationConfig = { temperature: baseTemp };
   if (generationConfigOverride && typeof generationConfigOverride === "object") {
     const overrideKeys = Object.keys(generationConfigOverride);
     for (let i = 0; i < overrideKeys.length; i++) {
@@ -52,6 +52,12 @@ function belle_callGeminiOcr(imageBlob, opt) {
   }
   if (responseJsonSchema && typeof responseJsonSchema === "object") {
     generationConfig.responseJsonSchema = responseJsonSchema;
+  }
+  const finalTemp = generationConfig.temperature;
+  if (typeof finalTemp === "number" && !isNaN(finalTemp)) {
+    generationConfig.temperature = belle_ocr_clampTemperature_(finalTemp);
+  } else {
+    generationConfig.temperature = baseTemp;
   }
 
   const payload = {
@@ -273,24 +279,22 @@ function belle_ocr_cc_mergeGenCfg_(baseCfg, overrideCfg) {
 function belle_ocr_cc_getStage1GenCfg_(props) {
   const p = props || belle_cfg_getProps_();
   const defaults = {
-    temperature: 0.0,
     topP: 0.1,
     maxOutputTokens: 512,
     thinkingConfig: { thinkingLevel: "low" }
   };
-  const override = belle_ocr_cc_parseGenCfg_(p.getProperty("BELLE_CC_STAGE1_GENCFG_JSON"), null);
+  const override = belle_cfg_getOcrGenCfgOverride_(p, "cc_statement", "stage1");
   return belle_ocr_cc_mergeGenCfg_(defaults, override);
 }
 
 function belle_ocr_cc_getStage2GenCfg_(props) {
   const p = props || belle_cfg_getProps_();
   const defaults = {
-    temperature: 0.0,
     topP: 0.1,
     maxOutputTokens: 8192,
     thinkingConfig: { thinkingLevel: "low" }
   };
-  const override = belle_ocr_cc_parseGenCfg_(p.getProperty("BELLE_CC_STAGE2_GENCFG_JSON"), null);
+  const override = belle_cfg_getOcrGenCfgOverride_(p, "cc_statement", "stage2");
   return belle_ocr_cc_mergeGenCfg_(defaults, override);
 }
 

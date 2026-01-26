@@ -124,26 +124,69 @@ function belle_cfg_getExportGuardLogSheetName_(props) {
   return belle_cfg_getString_(props, "BELLE_EXPORT_GUARD_LOG_SHEET_NAME", { required: false, defaultValue: "EXPORT_GUARD_LOG" });
 }
 
-function belle_cfg_getBankStage2GenCfgOverride_(props) {
+function belle_cfg_getOcrGenCfgOverride_(props, docType, stage) {
   const p = props || belle_cfg_getProps_();
-  const key = "BELLE_BANK_STAGE2_GENCFG_JSON";
-  const raw = p.getProperty(key);
-  if (raw === null || raw === undefined || raw === "") return null;
-  const sentinel = { __invalid: true };
-  const parsed = belle_cfg_getJson_(p, key, { required: false, defaultValue: sentinel });
-  if (parsed === sentinel) {
-    if (typeof belle_configWarnOnce === "function") {
-      belle_configWarnOnce("BELLE_BANK_STAGE2_GENCFG_JSON_INVALID", "Invalid JSON for " + key);
-    }
-    return null;
+  const typeKey = String(docType || "");
+  const stageKey = String(stage || "");
+  const unifiedKey = "BELLE_OCR_GENCFG_JSON__" + typeKey + "__" + stageKey;
+
+  function isPlainObject_(value) {
+    return !!value && typeof value === "object" && !Array.isArray(value);
   }
-  if (!parsed || typeof parsed !== "object") {
-    if (typeof belle_configWarnOnce === "function") {
-      belle_configWarnOnce("BELLE_BANK_STAGE2_GENCFG_JSON_INVALID", "JSON must be an object for " + key);
+
+  function parseOverride_(key, invalidWarnKey) {
+    const raw = p.getProperty(key);
+    if (raw === null || raw === undefined || raw === "") {
+      return { found: false, value: null };
     }
-    return null;
+    const sentinel = { __invalid: true };
+    const parsed = belle_cfg_getJson_(p, key, { required: false, defaultValue: sentinel });
+    if (parsed === sentinel) {
+      if (typeof belle_configWarnOnce === "function") {
+        belle_configWarnOnce(invalidWarnKey, "Invalid JSON for " + key);
+      }
+      return { found: true, value: null };
+    }
+    if (!isPlainObject_(parsed)) {
+      if (typeof belle_configWarnOnce === "function") {
+        belle_configWarnOnce(invalidWarnKey, "JSON must be an object for " + key);
+      }
+      return { found: true, value: null };
+    }
+    return { found: true, value: parsed };
   }
-  return parsed;
+
+  const unifiedInvalidKey = "BELLE_OCR_GENCFG_JSON_INVALID__" + typeKey + "__" + stageKey;
+  const unified = parseOverride_(unifiedKey, unifiedInvalidKey);
+  if (unified.found) return unified.value;
+
+  let legacyKey = "";
+  let legacyInvalidKey = "";
+  if (typeKey === "cc_statement" && stageKey === "stage1") {
+    legacyKey = "BELLE_CC_STAGE1_GENCFG_JSON";
+    legacyInvalidKey = "BELLE_CC_STAGE1_GENCFG_JSON_INVALID";
+  } else if (typeKey === "cc_statement" && stageKey === "stage2") {
+    legacyKey = "BELLE_CC_STAGE2_GENCFG_JSON";
+    legacyInvalidKey = "BELLE_CC_STAGE2_GENCFG_JSON_INVALID";
+  } else if (typeKey === "bank_statement" && stageKey === "stage1") {
+    legacyKey = "BELLE_BANK_STAGE2_GENCFG_JSON";
+    legacyInvalidKey = "BELLE_BANK_STAGE2_GENCFG_JSON_INVALID";
+  }
+
+  if (!legacyKey) return null;
+  const legacy = parseOverride_(legacyKey, legacyInvalidKey);
+  if (!legacy.found || !legacy.value) return null;
+  if (typeof belle_configWarnOnce === "function") {
+    belle_configWarnOnce(
+      "BELLE_OCR_GENCFG_JSON_LEGACY__" + typeKey + "__" + stageKey,
+      "Using legacy " + legacyKey + "; prefer " + unifiedKey
+    );
+  }
+  return legacy.value;
+}
+
+function belle_cfg_getBankStage2GenCfgOverride_(props) {
+  return belle_cfg_getOcrGenCfgOverride_(props, "bank_statement", "stage1");
 }
 
 function belle_cfg_getQueueSheetNameForDocType_(props, docType) {

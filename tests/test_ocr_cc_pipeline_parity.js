@@ -119,4 +119,7 @@ expect(stage2EmptyRes.errorCode === 'CC_NO_ROWS_EXTRACTED', 'stage2 empty errorC
 expect(stage2EmptyRes.keepOcrJsonOnError === true, 'stage2 empty should preserve cache');
 expect(stage2EmptyRes.nextRetryIso && stage2EmptyRes.nextRetryIso.indexOf('T') > 0, 'stage2 empty should set nextRetryIso');
 
+require('./test_ocr_cc_temperature_precedence');
+require('./test_ocr_cc_gencfg_override_new_key');
+
 console.log('OK: test_ocr_cc_pipeline_parity');
