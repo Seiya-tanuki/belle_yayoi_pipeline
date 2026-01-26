@@ -7,13 +7,13 @@ function belle_export_runDocTypes(handlers) {
 }
 
 function belle_exportYayoiCsv(options) {
-  return belle_exportYayoiCsvFallbackInternal_(options);
+  return belle_exportYayoiCsvInternal_(options);
 }
 
 function belle_exportYayoiCsvReceipt(options) {
-  return belle_exportYayoiCsvReceiptFallbackInternal_(options);
+  return belle_exportYayoiCsvReceiptInternal_(options);
 }
 
 function belle_exportYayoiCsvCcStatement(options) {
-  return belle_exportYayoiCsvCcStatementFallbackInternal_(options);
+  return belle_exportYayoiCsvCcStatementInternal_(options);
 }

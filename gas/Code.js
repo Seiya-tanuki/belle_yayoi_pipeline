@@ -15,5 +15,5 @@ function belle_runPipelineBatch() {
 }
 
 function belle_resetSpreadsheetToInitialState() {
-  return belle_resetSpreadsheetToInitialState_fallback_v0Internal_();
+  return belle_resetSpreadsheetToInitialStateInternal_();
 }

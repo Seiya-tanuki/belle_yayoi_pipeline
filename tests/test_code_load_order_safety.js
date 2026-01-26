@@ -30,9 +30,9 @@ const queueResult = sandbox.belle_queueFolderFilesToSheet();
 expect(queueResult === 'ok', 'queue wrapper should call internal implementation');
 
 expect(typeof sandbox.belle_resetSpreadsheetToInitialState === 'function', 'missing belle_resetSpreadsheetToInitialState wrapper');
-expect(typeof sandbox.belle_resetSpreadsheetToInitialState_fallback_v0Internal_ === 'function', 'missing belle_resetSpreadsheetToInitialState_fallback_v0Internal_');
+expect(typeof sandbox.belle_resetSpreadsheetToInitialStateInternal_ === 'function', 'missing belle_resetSpreadsheetToInitialStateInternal_');
 
-sandbox.belle_resetSpreadsheetToInitialState_fallback_v0Internal_ = () => 'ok';
+sandbox.belle_resetSpreadsheetToInitialStateInternal_ = () => 'ok';
 const resetResult = sandbox.belle_resetSpreadsheetToInitialState();
 expect(resetResult === 'ok', 'reset wrapper should call internal implementation');
 

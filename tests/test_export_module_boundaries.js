@@ -36,10 +36,10 @@ const requiredExport = [
   'belle_export_resolveOutputFolderByDocType_',
   'belle_export_runDocTypesInternal_',
   'belle_export_getHandlersByRegistry_',
-  'belle_exportYayoiCsvFallbackInternal_',
-  'belle_exportYayoiCsvReceiptFallbackInternal_',
-  'belle_exportYayoiCsvCcStatementFallbackInternal_',
-  'belle_exportYayoiCsvFromReviewInternal_'
+  'belle_exportYayoiCsvInternal_',
+  'belle_exportYayoiCsvReceiptInternal_',
+  'belle_exportYayoiCsvCcStatementInternal_',
+  'belle_exportYayoiCsvInternalFromReview_'
 ];
 
 const missing = requiredExport.filter((n) => !exportDefs.includes(n));

@@ -105,18 +105,18 @@ function belle_export_getHandlersByRegistry_(options) {
   for (let i = 0; i < specs.length; i++) {
     const key = specs[i].export_handler_key;
     if (key === BELLE_DOC_TYPE_CC_STATEMENT) {
-      handlers[key] = function () { return belle_exportYayoiCsvCcStatementFallbackInternal_(options); };
+      handlers[key] = function () { return belle_exportYayoiCsvCcStatementInternal_(options); };
     } else if (key === BELLE_DOC_TYPE_BANK_STATEMENT) {
-      handlers[key] = function () { return belle_exportYayoiCsvBankStatementFallbackInternal_(options); };
+      handlers[key] = function () { return belle_exportYayoiCsvBankStatementInternal_(options); };
     } else if (key === BELLE_DOC_TYPE_RECEIPT) {
-      handlers[key] = function () { return belle_exportYayoiCsvReceiptFallbackInternal_(options); };
+      handlers[key] = function () { return belle_exportYayoiCsvReceiptInternal_(options); };
     }
   }
   return handlers;
 }
 
 
-function belle_exportYayoiCsvFallbackInternal_(options) {
+function belle_exportYayoiCsvInternal_(options) {
   const handlers = belle_export_getHandlersByRegistry_(options);
   const results = belle_export_runDocTypesInternal_(handlers);
   const ccWrap = results[BELLE_DOC_TYPE_CC_STATEMENT];
@@ -147,7 +147,7 @@ function belle_exportYayoiCsvFallbackInternal_(options) {
   return { phase: "EXPORT_ERROR", ok: false, reason: "EXPORT_DOC_ERROR", errors: results };
 }
 
-function belle_exportYayoiCsvReceiptFallbackInternal_(options) {
+function belle_exportYayoiCsvReceiptInternal_(options) {
   const props = belle_cfg_getProps_();
   const sheetId = belle_cfg_getSheetIdOrThrow_(props);
   const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_RECEIPT);
@@ -157,7 +157,7 @@ function belle_exportYayoiCsvReceiptFallbackInternal_(options) {
   const batchMaxRows = Number(props.getProperty("BELLE_EXPORT_BATCH_MAX_ROWS") || "5000");
   const appendInvoiceSuffix = belle_parseBool(props.getProperty("BELLE_FALLBACK_APPEND_INVOICE_SUFFIX"), true);
   // Default label must be a plain value (no extra description).
-  const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "‘ÎÛŠO");
+  const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "ï¿½ÎÛŠO");
   const errorFinalTekiyoLabel = String(props.getProperty("BELLE_ERROR_FINAL_TEKIYO_LABEL") || "BELLE");
   const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
   const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
@@ -423,19 +423,19 @@ function belle_exportYayoiCsvReceiptFallbackInternal_(options) {
       let dmFlag = false;
       if (status === "ERROR_FINAL") {
         rid = "OCR_ERROR_FINAL";
-        fix = "OCRƒGƒ‰[—vŠm”F";
+        fix = "OCRï¿½Gï¿½ï¿½ï¿½[ï¿½vï¿½mï¿½F";
       } else {
         const ridInfo = belle_yayoi_pickRidAndFix(parsed, rateInfo);
         rid = ridInfo.rid;
         fix = ridInfo.fix;
         if ((rid === "OK" || rid === "TAX_INFERRED") && !debit) {
           rid = "TAX_UNKNOWN";
-          if (!fix) fix = "Å—¦/Å‹æ•ª—vŠm”F";
+          if (!fix) fix = "ï¿½Å—ï¿½/ï¿½Å‹æ•ªï¿½vï¿½mï¿½F";
         }
       }
 
       if (status === "ERROR_FINAL") {
-        fix = "‘Sƒf[ƒ^Šm”F";
+        fix = "ï¿½Sï¿½fï¿½[ï¿½^ï¿½mï¿½F";
         dmFlag = true;
       }
 
@@ -455,7 +455,7 @@ function belle_exportYayoiCsvReceiptFallbackInternal_(options) {
       }
       if (dmFlag) {
         rid = "OCR_ERROR_FINAL";
-        fix = "‘Sƒf[ƒ^Šm”F";
+        fix = "ï¿½Sï¿½fï¿½[ï¿½^ï¿½mï¿½F";
       }
 
       let gross = null;
@@ -467,7 +467,7 @@ function belle_exportYayoiCsvReceiptFallbackInternal_(options) {
         gross = 1;
         if (!fix && rid === "OK") {
           rid = "AMOUNT_FALLBACK";
-          fix = "‹àŠz—vŠm”F";
+          fix = "ï¿½ï¿½zï¿½vï¿½mï¿½F";
         }
       }
 
@@ -563,7 +563,7 @@ function belle_exportYayoiCsvReceiptFallbackInternal_(options) {
   }
 }
 
-function belle_exportYayoiCsvBankStatementFallbackInternal_(options) {
+function belle_exportYayoiCsvBankStatementInternal_(options) {
   const props = belle_cfg_getProps_();
   const sheetId = belle_cfg_getSheetIdOrEmpty_(props);
   const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_BANK_STATEMENT);
@@ -927,7 +927,7 @@ function belle_exportYayoiCsvBankStatementFallbackInternal_(options) {
   }
 }
 
-function belle_exportYayoiCsvCcStatementFallbackInternal_(options) {
+function belle_exportYayoiCsvCcStatementInternal_(options) {
   const props = belle_cfg_getProps_();
   const sheetId = belle_cfg_getSheetIdOrEmpty_(props);
   const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_CC_STATEMENT);
@@ -1292,9 +1292,9 @@ function belle_exportYayoiCsvCcStatementFallbackInternal_(options) {
 }
 
 /**
- * @deprecated Use belle_exportYayoiCsvFallbackInternal_.
+ * @deprecated Use belle_exportYayoiCsvInternal_.
  */
-function belle_exportYayoiCsvFromReviewInternal_(options) {
-  return belle_exportYayoiCsvFallbackInternal_(options);
+function belle_exportYayoiCsvInternalFromReview_(options) {
+  return belle_exportYayoiCsvInternal_(options);
 }
 

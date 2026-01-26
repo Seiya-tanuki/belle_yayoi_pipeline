@@ -124,7 +124,7 @@ function belle_export_flushExportLog_(exportLog, fileIds, nowIso, csvFileId, chu
 }
 
 
-function belle_resetSpreadsheetToInitialState_fallback_v0Internal_() {
+function belle_resetSpreadsheetToInitialStateInternal_() {
   const EXPECTED_RESET_TOKEN = "RESET_FALLBACK_V0_CONFIRM";
   const props = belle_cfg_getProps_();
   const token = String(props.getProperty("BELLE_RESET_TOKEN") || "");
