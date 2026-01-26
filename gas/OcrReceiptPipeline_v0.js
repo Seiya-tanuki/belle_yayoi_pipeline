@@ -15,6 +15,7 @@ function belle_ocr_receipt_runOnce_(ctx) {
   const prevError = String(c.prevError || "");
   const prevErrorDetail = String(c.prevErrorDetail || "");
 
+  const backoffSeconds = Number(props.getProperty("BELLE_OCR_RETRY_BACKOFF_SECONDS") || "300");
   let geminiElapsedMs = 0;
   let httpStatus = 0;
   let jsonStr = "";
@@ -26,6 +27,33 @@ function belle_ocr_receipt_runOnce_(ctx) {
   let nextRetryIso = "";
   let keepOcrJsonOnError = false;
   let throwError = "";
+
+  function buildInvalidSchemaResult_(reason) {
+    const message = "INVALID_SCHEMA: " + String(reason || "");
+    let status = "ERROR_RETRYABLE";
+    let code = "INVALID_SCHEMA";
+    if (attempt >= maxAttempts) {
+      status = "ERROR_FINAL";
+      code = "MAX_ATTEMPTS_EXCEEDED";
+    }
+    const detail = jsonStr ? belle_ocr_buildInvalidSchemaLogDetail_(jsonStr) : "";
+    const nextRetry = status === "ERROR_RETRYABLE"
+      ? new Date(Date.now() + belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds)).toISOString()
+      : "";
+    return {
+      statusOut: status,
+      outcome: status,
+      errorCode: code,
+      errorMessage: message,
+      errorDetail: detail,
+      nextRetryIso: nextRetry,
+      keepOcrJsonOnError: keepOcrJsonOnError,
+      jsonStr: jsonStr,
+      geminiElapsedMs: geminiElapsedMs,
+      httpStatus: httpStatus,
+      throwError: ""
+    };
+  }
 
   if (mimeType === "application/pdf" && !belle_ocr_allowPdfForDocType_(docType)) {
     outcome = "ERROR_FINAL";
@@ -116,38 +144,12 @@ function belle_ocr_receipt_runOnce_(ctx) {
   try {
     parsed = JSON.parse(jsonStr);
   } catch (e) {
-    throwError = "INVALID_SCHEMA: PARSE_ERROR";
-    return {
-      statusOut: statusOut,
-      outcome: outcome,
-      errorCode: errorCode,
-      errorMessage: errorMessage,
-      errorDetail: errorDetail,
-      nextRetryIso: nextRetryIso,
-      keepOcrJsonOnError: keepOcrJsonOnError,
-      jsonStr: jsonStr,
-      geminiElapsedMs: geminiElapsedMs,
-      httpStatus: httpStatus,
-      throwError: throwError
-    };
+    return buildInvalidSchemaResult_("PARSE_ERROR");
   }
 
   const validation = belle_ocr_validateSchema(parsed);
   if (!validation.ok) {
-    throwError = "INVALID_SCHEMA: " + validation.reason;
-    return {
-      statusOut: statusOut,
-      outcome: outcome,
-      errorCode: errorCode,
-      errorMessage: errorMessage,
-      errorDetail: errorDetail,
-      nextRetryIso: nextRetryIso,
-      keepOcrJsonOnError: keepOcrJsonOnError,
-      jsonStr: jsonStr,
-      geminiElapsedMs: geminiElapsedMs,
-      httpStatus: httpStatus,
-      throwError: throwError
-    };
+    return buildInvalidSchemaResult_(validation.reason);
   }
 
   outcome = "DONE";

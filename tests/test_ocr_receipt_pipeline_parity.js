@@ -64,8 +64,15 @@ expect(ok.jsonStr === receiptJson, 'receipt success should return json');
 expect(ok.errorCode === '', 'receipt success errorCode should be empty');
 
 const invalid = runWithResponse(invalidJson);
-expect(invalid.throwError.indexOf('INVALID_SCHEMA') >= 0, 'invalid schema should throw INVALID_SCHEMA');
-expect(invalid.jsonStr === invalidJson, 'invalid schema should keep json for error handling');
+expect(invalid.statusOut === 'ERROR_RETRYABLE', 'invalid schema should be retryable');
+expect(invalid.errorCode === 'INVALID_SCHEMA', 'invalid schema should set errorCode INVALID_SCHEMA');
+expect(invalid.errorMessage.indexOf('INVALID_SCHEMA') >= 0, 'invalid schema should set errorMessage');
+expect(invalid.errorDetail.length > 0, 'invalid schema should set errorDetail');
+expect(invalid.nextRetryIso, 'invalid schema should set nextRetryIso');
+
+const invalidMax = runWithResponse(invalidJson, { attempt: 3, maxAttempts: 3 });
+expect(invalidMax.statusOut === 'ERROR_FINAL', 'invalid schema at max attempts should be ERROR_FINAL');
+expect(invalidMax.errorCode === 'MAX_ATTEMPTS_EXCEEDED', 'invalid schema at max attempts should set MAX_ATTEMPTS_EXCEEDED');
 
 const pdfRes = runWithResponse(receiptJson, { mimeType: 'application/pdf' });
 expect(pdfRes.statusOut === 'ERROR_FINAL', 'receipt pdf should be ERROR_FINAL');
