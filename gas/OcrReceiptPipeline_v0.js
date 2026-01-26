@@ -8,6 +8,7 @@ function belle_ocr_receipt_runOnce_(ctx) {
   const fileId = String(c.fileId || "");
   const mimeType = String(c.mimeType || "");
   const docType = String(c.docType || "");
+  const docSpec = belle_docType_getSpec_(docType);
   const attempt = Number(c.attempt || 0) || 0;
   const maxAttempts = Number(c.maxAttempts || 0) || 0;
   const statusBefore = String(c.statusBefore || "");
@@ -53,6 +54,48 @@ function belle_ocr_receipt_runOnce_(ctx) {
       httpStatus: httpStatus,
       throwError: ""
     };
+  }
+
+  function buildBankNoRowsResult_() {
+    const message = "BANK_NO_ROWS_EXTRACTED";
+    let status = "ERROR_RETRYABLE";
+    let code = "BANK_NO_ROWS_EXTRACTED";
+    if (attempt >= maxAttempts) {
+      status = "ERROR_FINAL";
+      code = "MAX_ATTEMPTS_EXCEEDED";
+    }
+    const nextRetry = status === "ERROR_RETRYABLE"
+      ? new Date(Date.now() + belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds)).toISOString()
+      : "";
+    return {
+      statusOut: status,
+      outcome: status,
+      errorCode: code,
+      errorMessage: message,
+      errorDetail: message,
+      nextRetryIso: nextRetry,
+      keepOcrJsonOnError: keepOcrJsonOnError,
+      jsonStr: jsonStr,
+      geminiElapsedMs: geminiElapsedMs,
+      httpStatus: httpStatus,
+      throwError: ""
+    };
+  }
+
+  function isBankStatement_() {
+    return docType === BELLE_DOC_TYPE_BANK_STATEMENT;
+  }
+
+  function resolvePromptText_() {
+    if (docSpec && typeof docSpec.stage2_prompt_getter === "function") {
+      return docSpec.stage2_prompt_getter();
+    }
+    return "";
+  }
+
+  function validateParsed_(parsed) {
+    if (isBankStatement_()) return belle_ocr_validateBankStatement_(parsed);
+    return belle_ocr_validateSchema(parsed);
   }
 
   if (mimeType === "application/pdf" && !belle_ocr_allowPdfForDocType_(docType)) {
@@ -101,7 +144,10 @@ function belle_ocr_receipt_runOnce_(ctx) {
 
   const geminiStartMs = Date.now();
   try {
-    jsonStr = belle_callGeminiOcr(blob, { temperature: tempInfo.temperature });
+    const promptText = resolvePromptText_();
+    const geminiOptions = { temperature: tempInfo.temperature };
+    if (promptText) geminiOptions.promptText = promptText;
+    jsonStr = belle_callGeminiOcr(blob, geminiOptions);
   } catch (e) {
     geminiElapsedMs = Date.now() - geminiStartMs;
     throwError = String(e && e.message ? e.message : e);
@@ -147,7 +193,13 @@ function belle_ocr_receipt_runOnce_(ctx) {
     return buildInvalidSchemaResult_("PARSE_ERROR");
   }
 
-  const validation = belle_ocr_validateSchema(parsed);
+  if (isBankStatement_()) {
+    if (Array.isArray(parsed && parsed.transactions) && parsed.transactions.length === 0) {
+      return buildBankNoRowsResult_();
+    }
+  }
+
+  const validation = validateParsed_(parsed);
   if (!validation.ok) {
     return buildInvalidSchemaResult_(validation.reason);
   }

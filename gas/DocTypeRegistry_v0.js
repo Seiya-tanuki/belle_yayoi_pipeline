@@ -182,10 +182,10 @@ function belle_ocr_getQueueSheetNameForDocType_(props, docType) {
 
 function belle_ocr_allowPdfForDocType_(docType) {
   var spec = belle_docType_getSpec_(docType);
-  return !!(spec && spec.pipeline_kind === BELLE_DOC_PIPELINE_TWO_STAGE);
+  return !!(spec && spec.allow_pdf === true);
 }
 
 function belle_ocr_shouldStopAfterItem_(docType) {
   var spec = belle_docType_getSpec_(docType);
-  return !!(spec && spec.pipeline_kind === BELLE_DOC_PIPELINE_TWO_STAGE);
+  return !!(spec && spec.stop_after_item === true);
 }

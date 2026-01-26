@@ -51,3 +51,42 @@ function belle_ocr_validateCcStage2_(obj) {
   }
   return { ok: true, reason: "" };
 }
+
+function belle_ocr_validateBankStatement_(obj) {
+  if (!obj || typeof obj !== "object") return { ok: false, reason: "NOT_OBJECT" };
+  if (obj.task !== "transaction_extraction") return { ok: false, reason: "INVALID_TASK" };
+  if (!Array.isArray(obj.transactions)) return { ok: false, reason: "INVALID_TRANSACTIONS" };
+  for (let i = 0; i < obj.transactions.length; i++) {
+    const row = obj.transactions[i];
+    if (!row || typeof row !== "object") return { ok: false, reason: "INVALID_TRANSACTION_ROW" };
+    if (typeof row.row_no !== "number" || isNaN(row.row_no)) return { ok: false, reason: "INVALID_ROW_NO" };
+    if (!("raw_use_date_text" in row)) return { ok: false, reason: "MISSING_RAW_USE_DATE_TEXT" };
+    const rawText = row.raw_use_date_text;
+    if (!(typeof rawText === "string" || rawText === null)) return { ok: false, reason: "INVALID_RAW_USE_DATE_TEXT" };
+    if (!("use_month" in row)) return { ok: false, reason: "MISSING_USE_MONTH" };
+    const useMonth = row.use_month;
+    if (!(typeof useMonth === "number" || useMonth === null) || (typeof useMonth === "number" && isNaN(useMonth))) {
+      return { ok: false, reason: "INVALID_USE_MONTH" };
+    }
+    if (!("use_day" in row)) return { ok: false, reason: "MISSING_USE_DAY" };
+    const useDay = row.use_day;
+    if (!(typeof useDay === "number" || useDay === null) || (typeof useDay === "number" && isNaN(useDay))) {
+      return { ok: false, reason: "INVALID_USE_DAY" };
+    }
+    if (!("merchant" in row)) return { ok: false, reason: "MISSING_MERCHANT" };
+    const merchant = row.merchant;
+    if (!(typeof merchant === "string" || merchant === null)) return { ok: false, reason: "INVALID_MERCHANT" };
+    if (!("amount_yen" in row)) return { ok: false, reason: "MISSING_AMOUNT_YEN" };
+    const amount = row.amount_yen;
+    if (!(typeof amount === "number" || amount === null) || (typeof amount === "number" && isNaN(amount))) {
+      return { ok: false, reason: "INVALID_AMOUNT_YEN" };
+    }
+    const sign = row.amount_sign;
+    if (sign !== "debit" && sign !== "credit" && sign !== "unknown") return { ok: false, reason: "INVALID_AMOUNT_SIGN" };
+    if (!Array.isArray(row.issues)) return { ok: false, reason: "INVALID_ISSUES" };
+    for (let j = 0; j < row.issues.length; j++) {
+      if (typeof row.issues[j] !== "string") return { ok: false, reason: "INVALID_ISSUES" };
+    }
+  }
+  return { ok: true, reason: "" };
+}
