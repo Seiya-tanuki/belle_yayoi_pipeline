@@ -99,14 +99,16 @@ function belle_docType_buildBankSpec_() {
     ocr_sheet_name_getter: function (props) {
       return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_BANK_STATEMENT);
     },
-    pipeline_kind: BELLE_DOC_PIPELINE_INACTIVE,
+    pipeline_kind: BELLE_DOC_PIPELINE_SINGLE_STAGE,
     stage1_prompt_getter: null,
-    stage2_prompt_getter: null,
+    stage2_prompt_getter: function () {
+      return belle_ocr_getBankStatementPrompt_v0_();
+    },
     export_subfolder_name: "bank_statement",
-    export_handler_key: "",
-    allow_pdf: false,
-    stop_after_item: false,
-    export_order: 99
+    export_handler_key: BELLE_DOC_TYPE_BANK_STATEMENT,
+    allow_pdf: true,
+    stop_after_item: true,
+    export_order: 3
   };
 }
 

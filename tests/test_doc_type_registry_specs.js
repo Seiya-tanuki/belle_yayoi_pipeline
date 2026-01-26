@@ -46,7 +46,9 @@ expect(bankSpec.export_subfolder_name === 'bank_statement', 'bank export subfold
 expect(bankSpec.ocr_sheet_name_default === 'OCR_BANK', 'bank default sheet mismatch');
 expect(typeof bankSpec.ocr_sheet_name_getter === 'function', 'bank sheet getter missing');
 expect(bankSpec.ocr_sheet_name_getter({ getProperty: () => '' }) === 'OCR_BANK', 'bank sheet getter default mismatch');
-expect(bankSpec.pipeline_kind === 'inactive', 'bank pipeline_kind mismatch');
+expect(bankSpec.pipeline_kind === 'single_stage', 'bank pipeline_kind mismatch');
+expect(bankSpec.export_handler_key === 'bank_statement', 'bank export handler key mismatch');
+expect(typeof bankSpec.stage2_prompt_getter === 'function', 'bank stage2 prompt getter missing');
 
 console.log('OK: test_doc_type_registry_specs');
 

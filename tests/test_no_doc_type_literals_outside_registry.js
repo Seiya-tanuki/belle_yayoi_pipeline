@@ -3,7 +3,8 @@ const path = require('path');
 
 const allowlist = new Set([
   'DocTypeRegistry_v0.js',
-  'OcrPrompt_v0.js'
+  'OcrPrompt_v0.js',
+  'OcrPromptBankStatement_v0.js'
 ]);
 
 const tokenRe = /(['"`])([^'"`]*\\b(receipt|cc_statement|bank_statement)\\b[^'"`]*)\\1/g;

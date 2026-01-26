@@ -22,7 +22,7 @@ const requiredKeys = [
 ];
 
 const pipelineAllow = ['single_stage', 'two_stage', 'inactive'];
-const exportHandlerAllow = ['receipt', 'cc_statement', '', 'bank_inactive'];
+const exportHandlerAllow = ['receipt', 'cc_statement', 'bank_statement', '', 'bank_inactive'];
 
 const supported = sandbox.belle_docType_getSupportedDocTypes_();
 expect(Array.isArray(supported) && supported.length > 0, 'supported doc types missing');
