@@ -1,7 +1,6 @@
-const fs = require('fs');
+﻿const fs = require('fs');
 const vm = require('vm');
 
-const logs = [];
 let fileCounter = 0;
 
 class MockRange {
@@ -117,6 +116,18 @@ class MockFolder {
   }
 }
 
+function countFiles(folder) {
+  let count = folder.files.length;
+  const names = Object.keys(folder.subfolders || {});
+  for (let i = 0; i < names.length; i++) {
+    const list = folder.subfolders[names[i]] || [];
+    for (let j = 0; j < list.length; j++) {
+      count += countFiles(list[j]);
+    }
+  }
+  return count;
+}
+
 function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
@@ -130,6 +141,7 @@ const props = {
   BELLE_CSV_EOL: 'LF'
 };
 
+const logs = [];
 const mockSpreadsheet = new MockSpreadsheet();
 const rootFolder = new MockFolder('root');
 
@@ -156,14 +168,14 @@ const sandbox = {
   }
 };
 
+const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue_v0.js', 'utf8')
+  + '\n' + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8')
+  + '\n' + fs.readFileSync('gas/OcrValidation_v0.js', 'utf8')
+  + '\n' + fs.readFileSync('gas/Export_v0.js', 'utf8')
+  + '\n' + fs.readFileSync('gas/Review_v0.js', 'utf8');
+
 vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync('gas/Config_v0.js', 'utf8'), sandbox);
-vm.runInContext(fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8'), sandbox);
-vm.runInContext(fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue_v0.js', 'utf8'), sandbox);
-vm.runInContext(fs.readFileSync('gas/YayoiExport_v0.js', 'utf8'), sandbox);
-vm.runInContext(fs.readFileSync('gas/OcrValidation_v0.js', 'utf8'), sandbox);
-vm.runInContext(fs.readFileSync('gas/Export_v0.js', 'utf8'), sandbox);
-vm.runInContext(fs.readFileSync('gas/Review_v0.js', 'utf8'), sandbox);
+vm.runInContext(code, sandbox);
 
 const baseHeader = sandbox.belle_getQueueHeaderColumns_v0();
 const lockHeader = sandbox.belle_getQueueLockHeaderColumns_v0_();
@@ -178,63 +190,67 @@ function buildRow(values) {
   return row;
 }
 
-const receiptSheet = mockSpreadsheet.insertSheet('OCR_RECEIPT');
-receiptSheet.appendRow(header);
-receiptSheet.appendRow(buildRow({
-  status: 'QUEUED',
-  file_id: 'r1',
-  file_name: 'r1.jpg',
-  mime_type: 'image/jpeg',
-  drive_url: 'https://example.com/r1',
-  queued_at_iso: '2025-01-01T00:00:00Z',
-  doc_type: 'receipt',
-  source_subfolder: 'receipt',
-  ocr_json: ''
-}));
-
-const ccSheet = mockSpreadsheet.insertSheet('OCR_CC');
-ccSheet.appendRow(header);
-ccSheet.appendRow(buildRow({
-  status: 'DONE',
-  file_id: 'cc1',
-  file_name: 'cc1.pdf',
+const bankSheet = mockSpreadsheet.insertSheet('OCR_BANK');
+bankSheet.appendRow(header);
+bankSheet.appendRow(buildRow({
+  status: 'ERROR_FINAL',
+  file_id: 'bank_err',
+  file_name: 'bank_err.pdf',
   mime_type: 'application/pdf',
-  drive_url: 'https://example.com/cc1',
+  drive_url: 'https://example.com/bank_err',
   queued_at_iso: '2025-01-01T00:00:00Z',
-  doc_type: 'cc_statement',
-  source_subfolder: 'cc_statement',
+  doc_type: 'bank_statement',
+  source_subfolder: 'bank_statement',
+  ocr_error_code: 'BANK_PARSE_ERROR',
+  ocr_error_detail: '{"task":"transaction_extraction"}'
+}));
+bankSheet.appendRow(buildRow({
+  status: 'DONE',
+  file_id: 'bank_ok',
+  file_name: 'bank_ok.pdf',
+  mime_type: 'application/pdf',
+  drive_url: 'https://example.com/bank_ok',
+  queued_at_iso: '2025-01-01T00:00:00Z',
+  doc_type: 'bank_statement',
+  source_subfolder: 'bank_statement',
   ocr_json: JSON.stringify({
     task: 'transaction_extraction',
     transactions: [
       {
         row_no: 1,
-        raw_use_date_text: '4?1?',
+        raw_use_date_text: '4/1',
         use_month: 4,
         use_day: 1,
-        merchant: 'SHOP C',
+        merchant: 'SHOP BANK',
         amount_yen: 1200,
         amount_sign: 'debit',
+        issues: []
+      },
+      {
+        row_no: 2,
+        raw_use_date_text: '4/2',
+        use_month: 4,
+        use_day: 2,
+        merchant: 'SHOP BANK 2',
+        amount_yen: 800,
+        amount_sign: 'unknown',
         issues: []
       }
     ]
   })
 }));
 
-const res = sandbox.belle_exportYayoiCsvFallback({});
-expect(res && res.ok === true, 'export should succeed overall');
+const res1 = sandbox.belle_exportYayoiCsvBankStatementFallbackInternal_({});
+expect(res1 && res1.ok === true, 'first export should succeed');
+expect(countFiles(rootFolder) === 1, 'first export should create one csv file');
 
-const guardSheet = mockSpreadsheet.getSheetByName('EXPORT_GUARD_LOG');
-expect(guardSheet, 'EXPORT_GUARD_LOG should exist');
-expect(guardSheet.data.length === 3, 'should log guard rows for receipt and bank plus header');
-const guardDocTypes = guardSheet.data.slice(1).map((row) => String(row[2] || ''));
-expect(guardDocTypes.includes('receipt'), 'guard rows should include receipt');
-expect(guardDocTypes.includes('bank_statement'), 'guard rows should include bank_statement');
+const skipSheet = mockSpreadsheet.getSheetByName('EXPORT_SKIP_LOG');
+expect(skipSheet, 'EXPORT_SKIP_LOG should exist');
+expect(skipSheet.data.length === 3, 'skip log should have header + 2 rows');
 
-console.log('OK: test_export_guard_log_blocked');
+const res2 = sandbox.belle_exportYayoiCsvBankStatementFallbackInternal_({});
+expect(res2 && res2.ok === true, 'second export should return ok');
+expect(countFiles(rootFolder) === 1, 'second export should not create new csv file');
+expect(skipSheet.data.length === 3, 'skip log should not append duplicates');
 
-
-
-
-
-
-
+console.log('OK: test_export_bank_statement_dedupe');

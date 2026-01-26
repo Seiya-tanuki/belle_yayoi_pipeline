@@ -503,6 +503,106 @@ function belle_yayoi_buildCcRowsFromStage2_(parsed, ctx, fiscal) {
   return result;
 }
 
+function belle_yayoi_buildBankRow_(params) {
+  return [
+    "2000", // 1
+    "", // 2
+    "", // 3
+    params.date, // 4
+    params.debitAccount, // 5
+    "", // 6
+    "", // 7
+    params.debitTaxKubun, // 8
+    params.gross, // 9
+    "", // 10
+    params.creditAccount, // 11
+    "", // 12
+    "", // 13
+    "対象外", // 14
+    params.gross, // 15
+    "", // 16
+    params.summary, // 17
+    "", // 18
+    "", // 19
+    "0", // 20
+    "", // 21
+    params.memo, // 22
+    "", // 23
+    "", // 24
+    "NO" // 25
+  ];
+}
+
+function belle_yayoi_buildBankSummary_(merchant) {
+  const label = merchant ? String(merchant) : "BANK";
+  return belle_yayoi_trimTextShiftJis(label, 120);
+}
+
+function belle_yayoi_buildBankMemo_(params) {
+  const parts = ["BANK", "DT=" + BELLE_DOC_TYPE_BANK_STATEMENT];
+  const rowNo = params.rowNo !== undefined && params.rowNo !== null ? String(params.rowNo) : "";
+  if (rowNo) parts.push("ROW=" + rowNo);
+  const sign = params.amountSign ? String(params.amountSign) : "";
+  if (sign) parts.push("SIGN=" + sign);
+  const amount = params.amountYen !== undefined && params.amountYen !== null ? String(params.amountYen) : "";
+  if (amount) parts.push("AMT=" + amount);
+  if (params.fileId) parts.push("FID=" + params.fileId);
+  const name = belle_yayoi_sanitizeFileName(params.fileName || "");
+  if (name) parts.push("FN=" + name);
+  const issues = Array.isArray(params.issues) ? params.issues.filter(Boolean) : [];
+  if (issues.length > 0) parts.push("ISS=" + issues.join(","));
+  return belle_yayoi_trimShiftJis(parts.join("|"), 180);
+}
+
+function belle_yayoi_buildBankRowsFromStage2_(parsed, ctx, fiscal) {
+  const result = { rows: [], skipped: 0, skipDetails: [] };
+  if (!parsed || !Array.isArray(parsed.transactions)) return result;
+  const fileId = ctx && ctx.fileId ? String(ctx.fileId) : "";
+  const fileName = ctx && ctx.fileName ? String(ctx.fileName) : "";
+  const debitTaxKubun = "課対仕入込10%適格";
+  for (let i = 0; i < parsed.transactions.length; i++) {
+    const row = parsed.transactions[i] || {};
+    const rowNo = row.row_no;
+    const amountSign = String(row.amount_sign || "");
+    if (amountSign !== "debit" && amountSign !== "credit") {
+      const detail = "row_no=" + rowNo + " amount_sign=" + amountSign;
+      result.skipped++;
+      result.skipDetails.push({ reason: "BANK_AMOUNT_SIGN_UNKNOWN", detail: detail, row_no: rowNo });
+      continue;
+    }
+    const amount = belle_yayoi_isNumber(row.amount_yen);
+    if (amount === null || amount <= 0) {
+      const detail = "row_no=" + rowNo + " amount_sign=" + amountSign + " amount_yen=" + row.amount_yen;
+      result.skipped++;
+      result.skipDetails.push({ reason: "BANK_AMOUNT_MISSING", detail: detail, row_no: rowNo });
+      continue;
+    }
+    const debitAccount = amountSign === "debit" ? "現金" : "仮払金";
+    const creditAccount = amountSign === "debit" ? "仮払金" : "現金";
+    const dateInfo = belle_yayoi_resolveCcTransactionDate_(row.use_month, row.use_day, fiscal);
+    const memo = belle_yayoi_buildBankMemo_({
+      fileId: fileId,
+      fileName: fileName,
+      rowNo: rowNo,
+      amountSign: amountSign,
+      amountYen: amount,
+      issues: row.issues
+    });
+    const summary = belle_yayoi_buildBankSummary_(row.merchant);
+    const row25 = belle_yayoi_buildBankRow_({
+      date: dateInfo.dateYmdSlash,
+      debitTaxKubun: debitTaxKubun,
+      gross: String(amount),
+      summary: summary,
+      memo: memo,
+      debitAccount: debitAccount,
+      creditAccount: creditAccount
+    });
+    result.rows.push(row25);
+  }
+  return result;
+}
+
 
 function belle_yayoi_trimTekyoPreserveRegNo(merchant, regNo, maxBytes) {
   const safeMerchant = merchant ? String(merchant) : "";
