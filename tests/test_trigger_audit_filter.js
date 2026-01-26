@@ -23,7 +23,7 @@ const triggers = [
   },
   {
     id: 't3',
-    handler: 'belle_ocr_workerTick_fallback_v0',
+    handler: 'belle_ocr_workerTick',
     eventType: 'TIME',
     getHandlerFunction() { return this.handler; },
     getEventType() { return this.eventType; },
@@ -31,7 +31,7 @@ const triggers = [
   },
   {
     id: 't4',
-    handler: 'belle_exportYayoiCsvFallback',
+    handler: 'belle_exportYayoiCsv',
     eventType: 'MANUAL',
     getHandlerFunction() { return this.handler; },
     getEventType() { return this.eventType; },
@@ -55,7 +55,7 @@ function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-const res = sandbox.belle_triggerAuditOnly_v0();
+const res = sandbox.belle_triggerAuditOnly();
 expect(res && res.removedCount === 2, 'removedCount should be 2');
 deleted.sort();
 expect(deleted.join(',') === 't1,t2', 'deleted triggers mismatch');

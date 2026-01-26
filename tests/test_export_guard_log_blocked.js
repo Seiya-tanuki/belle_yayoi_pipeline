@@ -220,7 +220,7 @@ ccSheet.appendRow(buildRow({
   })
 }));
 
-const res = sandbox.belle_exportYayoiCsvFallback({});
+const res = sandbox.belle_exportYayoiCsv({});
 expect(res && res.ok === true, 'export should succeed overall');
 
 const guardSheet = mockSpreadsheet.getSheetByName('EXPORT_GUARD_LOG');

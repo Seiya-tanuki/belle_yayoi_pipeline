@@ -29,11 +29,11 @@ sandbox.belle_queueFolderFilesToSheetInternal_ = () => 'ok';
 const queueResult = sandbox.belle_queueFolderFilesToSheet();
 expect(queueResult === 'ok', 'queue wrapper should call internal implementation');
 
-expect(typeof sandbox.belle_resetSpreadsheetToInitialState_fallback_v0 === 'function', 'missing belle_resetSpreadsheetToInitialState_fallback_v0 wrapper');
+expect(typeof sandbox.belle_resetSpreadsheetToInitialState === 'function', 'missing belle_resetSpreadsheetToInitialState wrapper');
 expect(typeof sandbox.belle_resetSpreadsheetToInitialState_fallback_v0Internal_ === 'function', 'missing belle_resetSpreadsheetToInitialState_fallback_v0Internal_');
 
 sandbox.belle_resetSpreadsheetToInitialState_fallback_v0Internal_ = () => 'ok';
-const resetResult = sandbox.belle_resetSpreadsheetToInitialState_fallback_v0();
+const resetResult = sandbox.belle_resetSpreadsheetToInitialState();
 expect(resetResult === 'ok', 'reset wrapper should call internal implementation');
 
 console.log('OK: test_code_load_order_safety');

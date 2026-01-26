@@ -19,12 +19,10 @@ const exportContent = fs.readFileSync('gas/Export_v0.js', 'utf8');
 
 const reviewDefs = collectFunctionNames(reviewContent).filter((n) => n.startsWith('belle_export'));
 const reviewAllowed = [
-  'belle_export_runDocTypes_',
-  'belle_exportYayoiCsvFallback',
-  'belle_exportYayoiCsvFallback_v0',
-  'belle_exportYayoiCsvReceiptFallback_',
-  'belle_exportYayoiCsvCcStatementFallback_',
-  'belle_exportYayoiCsvFromReview'
+  'belle_export_runDocTypes',
+  'belle_exportYayoiCsv',
+  'belle_exportYayoiCsvReceipt',
+  'belle_exportYayoiCsvCcStatement'
 ];
 
 const unexpectedReview = reviewDefs.filter((n) => !reviewAllowed.includes(n));

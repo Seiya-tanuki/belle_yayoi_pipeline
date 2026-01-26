@@ -18,7 +18,7 @@ expect(threw === false, 'Review_v0.js should load before Export_v0.js without th
 
 vm.runInContext(fs.readFileSync('gas/Export_v0.js', 'utf8'), sandbox);
 
-const res = sandbox.belle_export_runDocTypes_({
+const res = sandbox.belle_export_runDocTypes({
   receipt: () => ({ ok: true })
 });
 expect(res && res.receipt && res.receipt.ok === true, 'wrapper should call internal export runner');

@@ -11,8 +11,8 @@ function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-const runDocTypes = sandbox.belle_export_runDocTypes_;
-expect(typeof runDocTypes === 'function', 'missing belle_export_runDocTypes_');
+const runDocTypes = sandbox.belle_export_runDocTypes;
+expect(typeof runDocTypes === 'function', 'missing belle_export_runDocTypes');
 
 const calls = [];
 const results = runDocTypes({

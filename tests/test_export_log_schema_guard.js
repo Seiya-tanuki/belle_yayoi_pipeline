@@ -210,7 +210,7 @@ function buildRow(header, values) {
   const exportLog = sheet.insertSheet('EXPORT_LOG');
   exportLog.appendRow(['file_id']);
 
-  const res = sandbox.belle_exportYayoiCsvFallback({});
+  const res = sandbox.belle_exportYayoiCsv({});
   expect(res && res.reason === 'EXPORT_LOG_SCHEMA_MISMATCH', 'should guard on export log schema mismatch');
   expect(countFiles(folder) === 0, 'no CSV should be created on guard');
 
@@ -266,7 +266,7 @@ function buildRow(header, values) {
   const exportLog = sheet.insertSheet('EXPORT_LOG');
   exportLog.appendRow(['csv_file_id', 'file_id', 'exported_at_iso', 'extra_col']);
 
-  const res1 = sandbox.belle_exportYayoiCsvFallback({});
+  const res1 = sandbox.belle_exportYayoiCsv({});
   expect(res1 && res1.ok === true, 'export should succeed with extra columns');
   expect(countFiles(folder) === 1, 'CSV should be created');
 
@@ -275,7 +275,7 @@ function buildRow(header, values) {
   expect(exportLog.data.length === 2, 'EXPORT_LOG should have header + 1 row');
   expect(exportLog.data[1][fileIdIdx] === 'r1', 'file_id should be written to correct column');
 
-  const res2 = sandbox.belle_exportYayoiCsvFallback({});
+  const res2 = sandbox.belle_exportYayoiCsv({});
   expect(res2 && res2.ok === true, 'second export should not error');
   expect(countFiles(folder) === 1, 'dedupe should prevent second CSV');
   expect(exportLog.data.length === 2, 'EXPORT_LOG should not grow on dedupe');

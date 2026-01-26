@@ -240,7 +240,7 @@ ccSheet.appendRow(buildRow({
   })
 }));
 
-const res1 = sandbox.belle_exportYayoiCsvCcStatementFallback_({});
+const res1 = sandbox.belle_exportYayoiCsvCcStatement({});
 expect(res1 && res1.ok === true, 'first export should succeed');
 expect(countFiles(rootFolder) === 1, 'first export should create one csv file');
 
@@ -248,7 +248,7 @@ const skipSheet = mockSpreadsheet.getSheetByName('EXPORT_SKIP_LOG');
 expect(skipSheet, 'EXPORT_SKIP_LOG should exist');
 expect(skipSheet.data.length === 3, 'skip log should have header + 2 rows');
 
-const res2 = sandbox.belle_exportYayoiCsvCcStatementFallback_({});
+const res2 = sandbox.belle_exportYayoiCsvCcStatement({});
 expect(res2 && res2.ok === true, 'second export should return ok');
 expect(countFiles(rootFolder) === 1, 'second export should not create new csv file');
 expect(skipSheet.data.length === 3, 'skip log should not append duplicates');

@@ -10,10 +10,10 @@ function belle_processQueueOnce(options) {
   return belle_processQueueOnceInternal_(options);
 }
 
-function belle_runPipelineBatch_v0() {
+function belle_runPipelineBatch() {
   return belle_runPipelineBatchInternal_();
 }
 
-function belle_resetSpreadsheetToInitialState_fallback_v0() {
+function belle_resetSpreadsheetToInitialState() {
   return belle_resetSpreadsheetToInitialState_fallback_v0Internal_();
 }

@@ -209,7 +209,7 @@ function buildStage2Json() {
     transactions: [
       {
         row_no: 1,
-        raw_use_date_text: '7ŒŽ1“ú',
+        raw_use_date_text: '7ï¿½ï¿½1ï¿½ï¿½',
         use_month: 7,
         use_day: 1,
         merchant: 'SHOP A',
@@ -219,7 +219,7 @@ function buildStage2Json() {
       },
       {
         row_no: 2,
-        raw_use_date_text: '7ŒŽ2“ú',
+        raw_use_date_text: '7ï¿½ï¿½2ï¿½ï¿½',
         use_month: 7,
         use_day: 2,
         merchant: 'SHOP B',
@@ -250,7 +250,7 @@ function runExportWithSchemaMismatch() {
   const exportLog = spreadsheet.insertSheet('EXPORT_LOG');
   exportLog.appendRow(['file_id']);
 
-  const res = sandbox.belle_exportYayoiCsvFallback({});
+  const res = sandbox.belle_exportYayoiCsv({});
   expect(res && res.cc_statement, 'cc_statement result should be attached');
   expect(res.cc_statement.reason === 'EXPORT_LOG_SCHEMA_MISMATCH', 'cc export should guard on schema mismatch');
 }
@@ -265,7 +265,7 @@ function runExportWithSkipLog() {
   seedReceiptSheet(sandbox, spreadsheet, header);
   seedCcSheet(sandbox, spreadsheet, header, 'cc_skip', buildStage2Json());
 
-  const res = sandbox.belle_exportYayoiCsvFallback({});
+  const res = sandbox.belle_exportYayoiCsv({});
   expect(res && res.cc_statement, 'cc_statement result should be attached');
 
   const skipSheetName = sandbox.belle_getSkipLogSheetName({
@@ -296,7 +296,7 @@ function runExportWithDedupe() {
   exportLog.appendRow(['cc_dedupe', '2025-01-01T00:00:00Z', 'csv_1']);
 
   const beforeFiles = folder.files.length;
-  const res = sandbox.belle_exportYayoiCsvFallback({});
+  const res = sandbox.belle_exportYayoiCsv({});
   expect(res && res.cc_statement, 'cc_statement result should be attached');
   const afterFiles = folder.files.length;
   expect(afterFiles === beforeFiles, 'dedupe should prevent new export files');

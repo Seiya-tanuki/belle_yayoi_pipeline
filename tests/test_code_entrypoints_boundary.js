@@ -15,8 +15,8 @@ while ((m = pattern.exec(content)) !== null) {
 const allowlist = [
   'belle_queueFolderFilesToSheet',
   'belle_processQueueOnce',
-  'belle_runPipelineBatch_v0',
-  'belle_resetSpreadsheetToInitialState_fallback_v0'
+  'belle_runPipelineBatch',
+  'belle_resetSpreadsheetToInitialState'
 ];
 
 const unexpected = defs.filter((name) => !allowlist.includes(name));

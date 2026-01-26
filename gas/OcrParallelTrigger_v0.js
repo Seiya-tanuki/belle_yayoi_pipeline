@@ -6,14 +6,14 @@ const BELLE_TRIGGER_AUDIT_REMOVED_HANDLERS_ = [
   "belle_queueFolderFilesToSheet_test",
   "belle_processQueueOnce_test",
   "belle_ocr_claimNextRow_fallback_v0_test",
-  "belle_runPipelineBatch_v0_test",
-  "belle_resetSpreadsheetToInitialState_fallback_v0_test",
-  "belle_exportYayoiCsvFromReview_test",
+  "belle_runPipelineBatch_test",
+  "belle_resetSpreadsheetToInitialState_test",
+  "belle_exportYayoiCsv_test",
   "belle_ocr_workerLoop_fallback_v0_test",
   "belle_ocr_parallel_smoke_test",
-  "belle_ocr_parallel_enable_fallback_v0_test",
-  "belle_ocr_parallel_disable_fallback_v0_test",
-  "belle_ocr_parallel_status_fallback_v0_test",
+  "belle_ocr_parallel_enable_test",
+  "belle_ocr_parallel_disable_test",
+  "belle_ocr_parallel_status_test",
   "belle_chatwork_webhook_mock_test",
   "belle_chatworkSendTestMessage_v0_test",
   "belle_chatwork_sendLatestCsv_test"
@@ -54,7 +54,7 @@ function belle_triggerAudit_run_(opts) {
   return res;
 }
 
-function belle_triggerAuditOnly_v0() {
+function belle_triggerAuditOnly() {
   return belle_triggerAudit_run_({ remove: true });
 }
 
@@ -153,7 +153,7 @@ function belle_ocr_parallel_getTriggersByHandler_(handlerName) {
   return out;
 }
 
-function belle_ocr_workerTick_fallback_v0(e) {
+function belle_ocr_workerTick(e) {
   const props = belle_cfg_getProps_();
   const enabled = belle_parseBool(props.getProperty("BELLE_OCR_PARALLEL_ENABLED"), false);
   if (!enabled) {
@@ -204,7 +204,7 @@ function belle_ocr_workerTick_fallback_v0(e) {
   return res;
 }
 
-function belle_ocr_parallel_enable_fallback_v0() {
+function belle_ocr_parallel_enable() {
   const props = belle_cfg_getProps_();
   const requested = belle_ocr_parallel_getWorkerCount_(props);
   if (!requested || requested < 1 || requested > 20) {
@@ -216,7 +216,7 @@ function belle_ocr_parallel_enable_fallback_v0() {
   const tag = belle_ocr_parallel_getTag_(props);
   const ids = belle_ocr_parallel_parseTriggerIds_(props);
 
-  const handlerName = "belle_ocr_workerTick_fallback_v0";
+  const handlerName = "belle_ocr_workerTick";
   const existingById = belle_ocr_parallel_getTriggersByIds_(ids);
   const existingByHandler = belle_ocr_parallel_getTriggersByHandler_(handlerName);
   let deletedOld = 0;
@@ -232,7 +232,7 @@ function belle_ocr_parallel_enable_fallback_v0() {
 
   const triggerIds = [];
   for (let i = 0; i < requested; i++) {
-    const t = ScriptApp.newTrigger("belle_ocr_workerTick_fallback_v0").timeBased().everyMinutes(1).create();
+    const t = ScriptApp.newTrigger("belle_ocr_workerTick").timeBased().everyMinutes(1).create();
     triggerIds.push(t.getUniqueId());
   }
   props.setProperty("BELLE_OCR_PARALLEL_TRIGGER_IDS", JSON.stringify(triggerIds));
@@ -242,7 +242,7 @@ function belle_ocr_parallel_enable_fallback_v0() {
   return res;
 }
 
-function belle_ocr_parallel_disable_fallback_v0(opts) {
+function belle_ocr_parallel_disable(opts) {
   const audit = belle_triggerAudit_run_({ remove: true });
   if (opts === true || (opts && opts.auditOnly)) {
     const res = { phase: "OCR_PARALLEL_DISABLE", ok: true, auditOnly: true, audit: audit };
@@ -253,7 +253,7 @@ function belle_ocr_parallel_disable_fallback_v0(opts) {
   const enabledBefore = belle_parseBool(props.getProperty("BELLE_OCR_PARALLEL_ENABLED"), false);
   const ids = belle_ocr_parallel_parseTriggerIds_(props);
 
-  const handlerName = "belle_ocr_workerTick_fallback_v0";
+  const handlerName = "belle_ocr_workerTick";
   const triggers = belle_ocr_parallel_getTriggersByIds_(ids);
   const existingByHandler = ids.length === 0 ? belle_ocr_parallel_getTriggersByHandler_(handlerName) : [];
   let deleted = 0;
