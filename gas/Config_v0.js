@@ -108,10 +108,6 @@ function belle_cfg_getQueueSheetNameOverride_(props) {
   return belle_cfg_getString_(props, "BELLE_QUEUE_SHEET_NAME", { required: false, defaultValue: "" });
 }
 
-function belle_cfg_getLegacyQueueSheetNameOverride_(props) {
-  return belle_cfg_getString_(props, "BELLE_SHEET_NAME", { required: false, defaultValue: "" });
-}
-
 function belle_cfg_getSkipLogSheetName_(props) {
   return belle_cfg_getString_(props, "BELLE_SKIP_LOG_SHEET_NAME", { required: false, defaultValue: "EXPORT_SKIP_LOG" });
 }
@@ -128,61 +124,29 @@ function belle_cfg_getOcrGenCfgOverride_(props, docType, stage) {
   const p = props || belle_cfg_getProps_();
   const typeKey = String(docType || "");
   const stageKey = String(stage || "");
-  const unifiedKey = "BELLE_OCR_GENCFG_JSON__" + typeKey + "__" + stageKey;
+  const key = "BELLE_OCR_GENCFG_JSON__" + typeKey + "__" + stageKey;
 
   function isPlainObject_(value) {
     return !!value && typeof value === "object" && !Array.isArray(value);
   }
 
-  function parseOverride_(key, invalidWarnKey) {
-    const raw = p.getProperty(key);
-    if (raw === null || raw === undefined || raw === "") {
-      return { found: false, value: null };
+  const raw = p.getProperty(key);
+  if (raw === null || raw === undefined || raw === "") return null;
+  const sentinel = { __invalid: true };
+  const parsed = belle_cfg_getJson_(p, key, { required: false, defaultValue: sentinel });
+  if (parsed === sentinel) {
+    if (typeof belle_configWarnOnce === "function") {
+      belle_configWarnOnce("BELLE_OCR_GENCFG_JSON_INVALID__" + typeKey + "__" + stageKey, "Invalid JSON for " + key);
     }
-    const sentinel = { __invalid: true };
-    const parsed = belle_cfg_getJson_(p, key, { required: false, defaultValue: sentinel });
-    if (parsed === sentinel) {
-      if (typeof belle_configWarnOnce === "function") {
-        belle_configWarnOnce(invalidWarnKey, "Invalid JSON for " + key);
-      }
-      return { found: true, value: null };
+    return null;
+  }
+  if (!isPlainObject_(parsed)) {
+    if (typeof belle_configWarnOnce === "function") {
+      belle_configWarnOnce("BELLE_OCR_GENCFG_JSON_INVALID__" + typeKey + "__" + stageKey, "JSON must be an object for " + key);
     }
-    if (!isPlainObject_(parsed)) {
-      if (typeof belle_configWarnOnce === "function") {
-        belle_configWarnOnce(invalidWarnKey, "JSON must be an object for " + key);
-      }
-      return { found: true, value: null };
-    }
-    return { found: true, value: parsed };
+    return null;
   }
-
-  const unifiedInvalidKey = "BELLE_OCR_GENCFG_JSON_INVALID__" + typeKey + "__" + stageKey;
-  const unified = parseOverride_(unifiedKey, unifiedInvalidKey);
-  if (unified.found) return unified.value;
-
-  let legacyKey = "";
-  let legacyInvalidKey = "";
-  if (typeKey === "cc_statement" && stageKey === "stage1") {
-    legacyKey = "BELLE_CC_STAGE1_GENCFG_JSON";
-    legacyInvalidKey = "BELLE_CC_STAGE1_GENCFG_JSON_INVALID";
-  } else if (typeKey === "cc_statement" && stageKey === "stage2") {
-    legacyKey = "BELLE_CC_STAGE2_GENCFG_JSON";
-    legacyInvalidKey = "BELLE_CC_STAGE2_GENCFG_JSON_INVALID";
-  } else if (typeKey === "bank_statement" && stageKey === "stage1") {
-    legacyKey = "BELLE_BANK_STAGE2_GENCFG_JSON";
-    legacyInvalidKey = "BELLE_BANK_STAGE2_GENCFG_JSON_INVALID";
-  }
-
-  if (!legacyKey) return null;
-  const legacy = parseOverride_(legacyKey, legacyInvalidKey);
-  if (!legacy.found || !legacy.value) return null;
-  if (typeof belle_configWarnOnce === "function") {
-    belle_configWarnOnce(
-      "BELLE_OCR_GENCFG_JSON_LEGACY__" + typeKey + "__" + stageKey,
-      "Using legacy " + legacyKey + "; prefer " + unifiedKey
-    );
-  }
-  return legacy.value;
+  return parsed;
 }
 
 function belle_cfg_getBankStage2GenCfgOverride_(props) {
@@ -195,13 +159,6 @@ function belle_cfg_getQueueSheetNameForDocType_(props, docType) {
   if (key === BELLE_DOC_TYPE_RECEIPT) {
     const name = belle_cfg_getQueueSheetNameOverride_(p);
     if (name) return name;
-    const legacy = belle_cfg_getLegacyQueueSheetNameOverride_(p);
-    if (legacy) {
-      if (typeof belle_configWarnOnce === "function") {
-        belle_configWarnOnce("BELLE_SHEET_NAME_DEPRECATED", "Use BELLE_QUEUE_SHEET_NAME instead.");
-      }
-      return legacy;
-    }
   }
   return belle_ocr_getFixedQueueSheetNameForDocType_(key);
 }
@@ -211,9 +168,6 @@ function belle_cfg_getOcrClaimCursorRaw_(props, docType, cursorKey) {
   const key = String(cursorKey || "");
   const raw = belle_cfg_getString_(p, key, { required: false, defaultValue: "" });
   if (raw) return raw;
-  if (String(docType || "") === BELLE_DOC_TYPE_RECEIPT) {
-    return belle_cfg_getString_(p, "BELLE_OCR_CLAIM_CURSOR", { required: false, defaultValue: "" });
-  }
   return "";
 }
 

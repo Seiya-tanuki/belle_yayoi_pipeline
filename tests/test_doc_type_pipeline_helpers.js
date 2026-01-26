@@ -30,7 +30,7 @@ expect(sandbox.belle_ocr_getQueueSheetNameForDocType_(propsEmptyQueue, 'bank_sta
 const keyReceipt = sandbox.belle_ocr_buildClaimCursorKey_('receipt');
 expect(keyReceipt === 'BELLE_OCR_CLAIM_CURSOR__receipt', 'claim cursor key mismatch');
 const keyEmpty = sandbox.belle_ocr_buildClaimCursorKey_('');
-expect(keyEmpty === 'BELLE_OCR_CLAIM_CURSOR', 'empty claim cursor key mismatch');
+expect(keyEmpty === 'BELLE_OCR_CLAIM_CURSOR__receipt', 'empty claim cursor key mismatch');
 
 const files = [{ id: 'A' }, { id: 'B' }, { id: 'A' }, { id: '' }, {}];
 const existing = new Set(['A']);

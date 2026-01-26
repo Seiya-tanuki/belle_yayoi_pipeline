@@ -202,7 +202,7 @@ function belle_ocr_buildClaimScanPlan_(totalRows, cursorValue, maxScanRows) {
 
 function belle_ocr_buildClaimCursorKey_(docType) {
   const key = String(docType || "").trim();
-  if (!key) return "BELLE_OCR_CLAIM_CURSOR";
+  if (!key) return "BELLE_OCR_CLAIM_CURSOR__receipt";
   return "BELLE_OCR_CLAIM_CURSOR__" + key;
 }
 
@@ -297,9 +297,6 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
     const scanPlan = belle_ocr_buildClaimScanPlan_(values.length, cursorRaw, scanMaxRaw);
     const scanIndices = scanPlan.indices;
     props.setProperty(cursorKey, String(scanPlan.nextCursor));
-    if (docType === BELLE_DOC_TYPE_RECEIPT) {
-      props.setProperty("BELLE_OCR_CLAIM_CURSOR", String(scanPlan.nextCursor));
-    }
 
     const staleFixed = [];
     for (let s = 0; s < scanIndices.length; s++) {

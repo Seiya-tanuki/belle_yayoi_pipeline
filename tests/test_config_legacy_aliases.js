@@ -31,9 +31,6 @@ function runQueueSheet(props, docType) {
 const q1 = runQueueSheet({ BELLE_QUEUE_SHEET_NAME: 'QUEUE_CUSTOM' }, 'receipt');
 expect(q1 === 'QUEUE_CUSTOM', 'queue override should win');
 
-const q2 = runQueueSheet({ BELLE_SHEET_NAME: 'QUEUE_LEGACY' }, 'receipt');
-expect(q2 === 'QUEUE_LEGACY', 'legacy queue override should be used');
-
 const q3 = runQueueSheet({}, 'receipt');
 expect(q3 === 'OCR_RECEIPT', 'receipt should fall back to OCR_RECEIPT');
 
@@ -43,14 +40,11 @@ expect(q4 === 'OCR_CC', 'cc_statement should ignore receipt override');
 const cursorKey = sandbox.belle_ocr_buildClaimCursorKey_('receipt');
 const getCursor = sandbox.belle_cfg_getOcrClaimCursorRaw_;
 
-const c1 = getCursor({ getProperty: (key) => ({ BELLE_OCR_CLAIM_CURSOR: '7' }[key] || '') }, 'receipt', cursorKey);
-expect(c1 === '7', 'legacy cursor should be used when new key missing');
+const c1 = getCursor({ getProperty: (key) => ({ [cursorKey]: '7' }[key] || '') }, 'receipt', cursorKey);
+expect(c1 === '7', 'receipt cursor should use canonical key');
 
-const c2 = getCursor({ getProperty: (key) => ({ [cursorKey]: '9', BELLE_OCR_CLAIM_CURSOR: '7' }[key] || '') }, 'receipt', cursorKey);
-expect(c2 === '9', 'doc-type cursor should win over legacy');
-
-const c3 = getCursor({ getProperty: (key) => ({ BELLE_OCR_CLAIM_CURSOR: '7' }[key] || '') }, 'cc_statement', 'BELLE_OCR_CLAIM_CURSOR__cc_statement');
-expect(c3 === '', 'non-receipt should ignore legacy cursor');
+const c2 = getCursor({ getProperty: (key) => ({ BELLE_OCR_CLAIM_CURSOR__cc_statement: '5' }[key] || '') }, 'cc_statement', 'BELLE_OCR_CLAIM_CURSOR__cc_statement');
+expect(c2 === '5', 'doc-type cursor should use canonical key');
 
 console.log('OK: test_config_legacy_aliases');
 

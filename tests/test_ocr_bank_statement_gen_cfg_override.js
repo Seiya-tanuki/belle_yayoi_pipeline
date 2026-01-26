@@ -90,7 +90,7 @@ function runOnce(sandbox, props) {
 {
   const { sandbox, captured } = buildSandbox();
   const props = buildProps({
-    BELLE_BANK_STAGE2_GENCFG_JSON: '{"temperature":0,"topP":0.1,"maxOutputTokens":512}'
+    BELLE_OCR_GENCFG_JSON__bank_statement__stage1: '{"temperature":0,"topP":0.1,"maxOutputTokens":512}'
   });
   const res = runOnce(sandbox, props);
   expect(res.statusOut === 'DONE', 'bank run should succeed');
@@ -104,28 +104,15 @@ function runOnce(sandbox, props) {
 {
   const { sandbox, captured, logs } = buildSandbox();
   const props = buildProps({
-    BELLE_BANK_STAGE2_GENCFG_JSON: '{invalid'
+    BELLE_OCR_GENCFG_JSON__bank_statement__stage1: '{invalid'
   });
   const res = runOnce(sandbox, props);
   expect(res.statusOut === 'DONE', 'bank run should succeed with invalid override');
   const payload = JSON.parse(captured.options.payload);
   expect(payload.generationConfig.temperature === 0.7, 'temperature should use policy value');
   expect(payload.generationConfig.topP === undefined, 'topP should not be set');
-  const hasWarn = logs.some((entry) => entry && entry.phase === 'CONFIG_WARN' && entry.key === 'BELLE_BANK_STAGE2_GENCFG_JSON_INVALID');
+  const hasWarn = logs.some((entry) => entry && entry.phase === 'CONFIG_WARN' && entry.key === 'BELLE_OCR_GENCFG_JSON_INVALID__bank_statement__stage1');
   expect(hasWarn, 'invalid JSON should emit CONFIG_WARN');
-}
-
-// Test 3: unified key should apply and win over temperature policy.
-{
-  const { sandbox, captured } = buildSandbox();
-  const props = buildProps({
-    BELLE_OCR_GENCFG_JSON__bank_statement__stage1: '{"temperature":0.2,"topP":0.25}'
-  });
-  const res = runOnce(sandbox, props);
-  expect(res.statusOut === 'DONE', 'bank run should succeed with unified key');
-  const payload = JSON.parse(captured.options.payload);
-  expect(payload.generationConfig.temperature === 0.2, 'unified override temperature should win');
-  expect(payload.generationConfig.topP === 0.25, 'unified override topP should apply');
 }
 
 console.log('OK: test_ocr_bank_statement_gen_cfg_override');
