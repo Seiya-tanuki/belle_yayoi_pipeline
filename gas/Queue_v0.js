@@ -443,7 +443,7 @@ function belle_processQueueOnceInternal_(options) {
       if (res && res.processed > 0) return res;
       if (res && res.reason && res.reason !== "NO_TARGET") return res;
     }
-    return last || { ok: true, processed: 0, reason: "NO_TARGET" };
+    return last || { ok: true, processed: 0, reason: "NO_TARGET", errorsCount: 0 };
   } finally {
     if (lock) lock.releaseLock();
   }
@@ -465,16 +465,16 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
   const extraHeader = belle_getQueueLockHeaderColumns_v0_();
   const lastRow = sh.getLastRow();
   if (lastRow < 1) {
-    return { ok: false, processed: 0, reason: "QUEUE_EMPTY: sheet has no header", docType: docType, queueSheetName: queueSheetName };
+    return { ok: false, processed: 0, reason: "QUEUE_EMPTY: sheet has no header", errorsCount: 0, docType: docType, queueSheetName: queueSheetName };
   }
 
   const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
   if (!headerMap) {
-    return { ok: false, processed: 0, reason: "INVALID_QUEUE_HEADER: missing required columns", docType: docType, queueSheetName: queueSheetName };
+    return { ok: false, processed: 0, reason: "INVALID_QUEUE_HEADER: missing required columns", errorsCount: 0, docType: docType, queueSheetName: queueSheetName };
   }
 
   if (lastRow < 2) {
-    return { ok: false, processed: 0, reason: "QUEUE_EMPTY: run belle_queueFolderFilesToSheet first", docType: docType, queueSheetName: queueSheetName };
+    return { ok: false, processed: 0, reason: "QUEUE_EMPTY: run belle_queueFolderFilesToSheet first", errorsCount: 0, docType: docType, queueSheetName: queueSheetName };
   }
 
   const values = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();

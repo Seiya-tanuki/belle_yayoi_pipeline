@@ -12,7 +12,7 @@ function buildCode() {
     + '\n' + fs.readFileSync('gas/OcrValidation_v0.js', 'utf8')
     + '\n' + fs.readFileSync('gas/OcrCommon_v0.js', 'utf8')
     + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8')
-    + '\n' + fs.readFileSync('gas/OcrReceiptPipeline_v0.js', 'utf8');
+    + '\n' + fs.readFileSync('gas/OcrBankStatementPipeline_v0.js', 'utf8');
 }
 
 function buildSandbox() {
@@ -83,7 +83,7 @@ function runOnce(sandbox, props) {
     prevError: '',
     prevErrorDetail: ''
   };
-  return sandbox.belle_ocr_receipt_runOnce_(ctx);
+  return sandbox.belle_ocr_bank_runOnce_(ctx);
 }
 
 // Test 1: valid override should apply to generationConfig and win over temperature policy.

@@ -7,7 +7,7 @@ const code = fs.readFileSync('gas/Config_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/OcrValidation_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/OcrCommon_v0.js', 'utf8')
   + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/OcrReceiptPipeline_v0.js', 'utf8');
+  + '\n' + fs.readFileSync('gas/OcrBankStatementPipeline_v0.js', 'utf8');
 
 const sandbox = {
   console,
@@ -47,7 +47,7 @@ function runWithResponse(response, ctxOverrides) {
     prevError: '',
     prevErrorDetail: ''
   }, ctxOverrides || {});
-  return sandbox.belle_ocr_receipt_runOnce_(ctx);
+  return sandbox.belle_ocr_bank_runOnce_(ctx);
 }
 
 const bankJson = JSON.stringify({

@@ -2,7 +2,7 @@
 
 // NOTE: Keep comments ASCII only.
 
-function belle_ocr_receipt_runOnce_(ctx) {
+function belle_ocr_bank_runOnce_(ctx) {
   const c = ctx || {};
   const props = c.props || belle_cfg_getProps_();
   const fileId = String(c.fileId || "");
@@ -47,6 +47,32 @@ function belle_ocr_receipt_runOnce_(ctx) {
       errorCode: code,
       errorMessage: message,
       errorDetail: detail,
+      nextRetryIso: nextRetry,
+      keepOcrJsonOnError: keepOcrJsonOnError,
+      jsonStr: jsonStr,
+      geminiElapsedMs: geminiElapsedMs,
+      httpStatus: httpStatus,
+      throwError: ""
+    };
+  }
+
+  function buildBankNoRowsResult_() {
+    const message = "BANK_NO_ROWS_EXTRACTED";
+    let status = "ERROR_RETRYABLE";
+    let code = "BANK_NO_ROWS_EXTRACTED";
+    if (attempt >= maxAttempts) {
+      status = "ERROR_FINAL";
+      code = "MAX_ATTEMPTS_EXCEEDED";
+    }
+    const nextRetry = status === "ERROR_RETRYABLE"
+      ? new Date(Date.now() + belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds)).toISOString()
+      : "";
+    return {
+      statusOut: status,
+      outcome: status,
+      errorCode: code,
+      errorMessage: message,
+      errorDetail: message,
       nextRetryIso: nextRetry,
       keepOcrJsonOnError: keepOcrJsonOnError,
       jsonStr: jsonStr,
@@ -112,6 +138,8 @@ function belle_ocr_receipt_runOnce_(ctx) {
     const promptText = resolvePromptText_();
     const geminiOptions = { temperature: tempInfo.temperature };
     if (promptText) geminiOptions.promptText = promptText;
+    const bankGenCfg = belle_cfg_getBankStage2GenCfgOverride_(props);
+    if (bankGenCfg) geminiOptions.generationConfig = bankGenCfg;
     jsonStr = belle_callGeminiOcr(blob, geminiOptions);
   } catch (e) {
     geminiElapsedMs = Date.now() - geminiStartMs;
@@ -157,7 +185,12 @@ function belle_ocr_receipt_runOnce_(ctx) {
   } catch (e) {
     return buildInvalidSchemaResult_("PARSE_ERROR");
   }
-  const validation = belle_ocr_validateSchema(parsed);
+
+  if (Array.isArray(parsed && parsed.transactions) && parsed.transactions.length === 0) {
+    return buildBankNoRowsResult_();
+  }
+
+  const validation = belle_ocr_validateBankStatement_(parsed);
   if (!validation.ok) {
     return buildInvalidSchemaResult_(validation.reason);
   }

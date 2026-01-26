@@ -227,31 +227,67 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
         }
       },
       single_stage: function () {
-        const receiptResult = belle_ocr_receipt_runOnce_({
-          props: props,
-          fileId: fileId,
-          mimeType: mimeType,
-          docType: docType,
-          attempt: attempt,
-          maxAttempts: maxAttempts,
-          statusBefore: statusBefore,
-          prevErrorCode: ocrErrorCode,
-          prevError: ocrError,
-          prevErrorDetail: ocrErrorDetail
-        });
-        geminiElapsedMs = receiptResult.geminiElapsedMs;
-        httpStatus = receiptResult.httpStatus;
-        jsonStr = receiptResult.jsonStr;
-        statusOut = receiptResult.statusOut;
-        outcome = receiptResult.outcome;
-        errorCode = receiptResult.errorCode;
-        errorMessage = receiptResult.errorMessage;
-        errorDetail = receiptResult.errorDetail;
-        nextRetryIso = receiptResult.nextRetryIso;
-        keepOcrJsonOnError = receiptResult.keepOcrJsonOnError === true;
-        if (receiptResult.throwError) {
-          throw new Error(receiptResult.throwError);
+        if (docType === BELLE_DOC_TYPE_RECEIPT) {
+          const receiptResult = belle_ocr_receipt_runOnce_({
+            props: props,
+            fileId: fileId,
+            mimeType: mimeType,
+            docType: docType,
+            attempt: attempt,
+            maxAttempts: maxAttempts,
+            statusBefore: statusBefore,
+            prevErrorCode: ocrErrorCode,
+            prevError: ocrError,
+            prevErrorDetail: ocrErrorDetail
+          });
+          geminiElapsedMs = receiptResult.geminiElapsedMs;
+          httpStatus = receiptResult.httpStatus;
+          jsonStr = receiptResult.jsonStr;
+          statusOut = receiptResult.statusOut;
+          outcome = receiptResult.outcome;
+          errorCode = receiptResult.errorCode;
+          errorMessage = receiptResult.errorMessage;
+          errorDetail = receiptResult.errorDetail;
+          nextRetryIso = receiptResult.nextRetryIso;
+          keepOcrJsonOnError = receiptResult.keepOcrJsonOnError === true;
+          if (receiptResult.throwError) {
+            throw new Error(receiptResult.throwError);
+          }
+          return;
         }
+        if (docType === BELLE_DOC_TYPE_BANK_STATEMENT) {
+          const bankResult = belle_ocr_bank_runOnce_({
+            props: props,
+            fileId: fileId,
+            mimeType: mimeType,
+            docType: docType,
+            attempt: attempt,
+            maxAttempts: maxAttempts,
+            statusBefore: statusBefore,
+            prevErrorCode: ocrErrorCode,
+            prevError: ocrError,
+            prevErrorDetail: ocrErrorDetail
+          });
+          geminiElapsedMs = bankResult.geminiElapsedMs;
+          httpStatus = bankResult.httpStatus;
+          jsonStr = bankResult.jsonStr;
+          statusOut = bankResult.statusOut;
+          outcome = bankResult.outcome;
+          errorCode = bankResult.errorCode;
+          errorMessage = bankResult.errorMessage;
+          errorDetail = bankResult.errorDetail;
+          nextRetryIso = bankResult.nextRetryIso;
+          keepOcrJsonOnError = bankResult.keepOcrJsonOnError === true;
+          if (bankResult.throwError) {
+            throw new Error(bankResult.throwError);
+          }
+          return;
+        }
+        statusOut = "ERROR_FINAL";
+        outcome = "ERROR_FINAL";
+        errorCode = "UNSUPPORTED_SINGLE_STAGE_DOC_TYPE";
+        errorMessage = "Unsupported single stage docType: " + docType;
+        errorDetail = "Unsupported single stage docType: " + docType;
       },
       inactive: function () {
         statusOut = "ERROR_FINAL";
