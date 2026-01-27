@@ -1,7 +1,6 @@
 # PROJECT_STATE_SNAPSHOT_fallback_branch
 
 ## 1. Overview (pipeline stages)
-- runner: belle_runPipelineBatch_v0 (Queue -> OCR only; no export)
 - queue: belle_listFilesInFolder -> belle_queueFolderFilesToSheet -> belle_processQueueOnce
 - export (manual): belle_exportYayoiCsvFallback
 
@@ -74,7 +73,6 @@ Notes:
 - belle_listFilesInFolder
 - belle_queueFolderFilesToSheet
 - belle_processQueueOnce
-- belle_runPipelineBatch_v0
 - belle_exportYayoiCsvFallback
 - belle_ocr_workerTick_fallback_v0
 
@@ -104,10 +102,6 @@ Optional:
 - BELLE_CSV_EOL (default: CRLF)
 - BELLE_GEMINI_SLEEP_MS (default: 500)
 - BELLE_MAX_ITEMS_PER_RUN (default: 1)
-- BELLE_RUN_MAX_SECONDS (default: 240)
-- BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH (default: 5)
-- BELLE_RUN_DO_QUEUE (default: true)
-- BELLE_RUN_DO_OCR (default: true)
 - BELLE_OCR_MAX_ATTEMPTS (default: 3)
 - BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
 - BELLE_OCR_LOCK_TTL_SECONDS (default: 300)
@@ -130,29 +124,10 @@ Optional:
 - Export targets: DONE + ERROR_FINAL (1 file = 1 row)
 - EXPORT_LOG updates only when CSV is created
 
-## 8. Runner phases and reasons
-Phases:
-- RUN_START
-- RUN_GUARD (LOCK_BUSY)
-- OCR_ITEM_START
-- OCR_ITEM_DONE
-- OCR_ITEM_ERROR
-- RUN_STOP (TIME_BUDGET_EXCEEDED)
-- RUN_SUMMARY
-
-Reasons:
-- LOCK_BUSY
-- TIME_BUDGET_EXCEEDED
-- NO_OCR_TARGETS
-- OCR_NO_PROGRESS
-- HIT_MAX_OCR_ITEMS_PER_BATCH
-- NO_QUEUED_ITEMS
-- ERROR:...
-
-## 9. Known constraints (code facts)
+## 8. Known constraints (code facts)
 - No SpreadsheetApp.getUi usage in gas/*.js.
 - Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not referenced by code.
 
-## 10. Memo format (V column)
+## 9. Memo format (V column)
 - Order: FIX (optional) -> BELLE|FBK=1|RID -> DM (ERROR_FINAL only) -> DT (optional) -> FN (optional) -> ERR (optional) -> FID (always last)
 - FN is sanitized (replace "|", remove newlines, trim)

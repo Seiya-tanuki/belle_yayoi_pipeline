@@ -57,7 +57,7 @@ Notes:
 ## Export rules (fallback)
 - Output targets: DONE + ERROR_FINAL
 - 1 file = 1 row (no multi-rate split)
-- Debit/credit default: 借方=仮払��, 貸方=現釁E(belle_yayoi_buildRow)
+- Debit/credit default: 借方=仮払��, 貸方=現釁E(belle_yayoi_buildRow)
 - Debit tax default: BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象夁E
 
 ## Summary (摘要E
@@ -83,21 +83,14 @@ Notes:
 Priority:
 1) tax_meta.tax_rate_printed
 2) receipt_total_jpy + tax_total_jpy (tolerance 1 yen)
-3) line_items description with tax amount (冁E��費税筁EぁE��消費稁Eetc)
+3) line_items description with tax amount (冁E��費税筁EぁE��消費稁Eetc)
 4) unknown (RID=TAX_UNKNOWN or RID=MULTI_RATE)
 Note: overall_issues with only MISSING_TAX_INFO is treated as benign when tax rate is already confirmed (no FIX).
 
 ## 8% tax kubun (official wording)
-- From 2019-10-01 and later, 8% should use "課対仕�E込軽渁E%" in tax kubun notation.
+- From 2019-10-01 and later, 8% should use "課対仕�E込軽渁E%" in tax kubun notation.
 - Source: Yayoi Kaikei Next import format (tax kubun) lists 8% reduced as "軽渁E%".
 - Invoice suffix (適格) can be appended, but may be disabled via BELLE_FALLBACK_APPEND_INVOICE_SUFFIX.
-
-## Runner (time trigger)
-- belle_runPipelineBatch_v0 = Queue + OCR only (no export)
-- Guard: LOCK_BUSY if ScriptLock not available
-- Graceful stop: TIME_BUDGET_EXCEEDED
-- Runner OCR is skipped when BELLE_OCR_PARALLEL_ENABLED is true (RUN_GUARD: OCR_PARALLEL_ENABLED).
-- Parallel OCR ticks append PERF_LOG to the integrations sheet when BELLE_INTEGRATIONS_SHEET_ID is set.
 
 ## Script Properties (high impact)
 - BELLE_OCR_MAX_ATTEMPTS (default: 3)
@@ -116,7 +109,6 @@ Note: overall_issues with only MISSING_TAX_INFO is treated as benign when tax ra
 - belle_exportYayoiCsvFromReview (alias of fallback export)
 
 ## Restart checklist (quick)
-1) Run belle_runPipelineBatch_v0 -> check RUN_SUMMARY
 2) Run export with QUEUED remaining -> OCR_PENDING guard
 3) After DONE/ERROR_FINAL only -> export generates CSV and updates EXPORT_LOG
 

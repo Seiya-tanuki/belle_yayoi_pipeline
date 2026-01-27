@@ -27,7 +27,6 @@ flowchart LR
 - REVIEW_YAYOI is not referenced by code.
 
 ## Entry Points
-- Trigger: belle_runPipelineBatch_v0 (Queue -> OCR -> Review update)
 - Manual export: belle_exportYayoiCsvFromReview
 
 ## References

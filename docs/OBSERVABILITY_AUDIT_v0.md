@@ -38,7 +38,7 @@
 - e) Consumers: none in code (WEBHOOK_LOG is not read by runtime paths).
 
 1.6 Execution log (Apps Script Logger / console)
-- a) Sink: Logger.log and console.log, not persisted in a sheet (usage across gas/Code.js, gas/OcrWorkerParallel_v0.js, gas/OcrParallelTrigger_v0.js, gas/Review_v0.js, gas/ChatworkWebhook_v0.js; example in gas/Code.js belle_runPipelineBatch_v0 around lines 1717-1805).
+- a) Sink: Logger.log and console.log, not persisted in a sheet (usage across gas/Code.js, gas/OcrWorkerParallel_v0.js, gas/OcrParallelTrigger_v0.js, gas/Review_v0.js, gas/ChatworkWebhook_v0.js).
 - b) Schema: arbitrary JSON objects with phase fields (see Section 2 for phase taxonomy).
 - c) Append strategy: Logger.log / console.log only, no dedupe or chunking.
 - d) Producers: run/queue/ocr/export/webhook functions throughout GAS (see Section 2 references).
@@ -50,8 +50,7 @@
 - EXPORT_GUARD, EXPORT_START, EXPORT_DONE, EXPORT_ERROR, EXPORT_DOC_ERROR, TAX_RATE_METHOD, DATE_FALLBACK (gas/Review_v0.js; see phase literals around lines 45-851). These are emitted during receipt and cc export flows to indicate guard conditions, start, success, and taxonomy/date behaviors.
 - EXPORT_SKIP (skip log phase stored in EXPORT_SKIP_LOG, not Logger.log) (gas/Review_v0.js uses belle_appendSkipLogRows with phase "EXPORT_SKIP" around lines 300-832; gas/Code.js belle_appendSkipLogRows around lines 1614-1635).
 
-2.2 Queue / runner phases (execution log)
-- RUN_START, RUN_STOP, RUN_GUARD, RUN_SUMMARY, RUN_LOCK_RELEASE_ERROR (gas/Code.js belle_runPipelineBatch_v0 around lines 1717-1810).
+2.2 Queue phases (execution log)
 - CONFIG_WARN (gas/Code.js belle_configWarnOnce around lines 845-852).
 - OCR_ITEM_START, OCR_ITEM_DONE, OCR_ITEM_ERROR (gas/Code.js belle_processQueueOnce around lines 1218-1340) for non-parallel OCR.
 - OCR_CLAIM (gas/Code.js claim helpers return phase in result around lines 1388-1568).
@@ -162,7 +161,7 @@
 - Promote reason to a top-level filterable column is already present; next candidate would be a separate "skip_kind" (queue vs export) if logs are ever merged. Currently not needed because queue/export are separate sheets (gas/Code.js belle_getQueueSkipLogSheetName around lines 860-863; belle_getSkipLogSheetName around lines 855-860).
 
 7. Appendix: Source index
-- gas/Code.js: belle_listFilesInFolder (queue skip reasons), belle_queueFolderFilesToSheet (queue skip write), belle_appendSkipLogRows / belle_appendQueueSkipLogRows_ (skip log schema & append), belle_ocr_classifyError (error classification), belle_runPipelineBatch_v0 (run phases).
+- gas/Code.js: belle_listFilesInFolder (queue skip reasons), belle_queueFolderFilesToSheet (queue skip write), belle_appendSkipLogRows / belle_appendQueueSkipLogRows_ (skip log schema & append), belle_ocr_classifyError (error classification).
 - gas/Review_v0.js: belle_getOrCreateExportLogSheet (EXPORT_LOG schema/guard), belle_export_flushExportLog_ (append strategy), belle_exportYayoiCsvReceiptFallback_ / belle_exportYayoiCsvCcStatementFallback_ (export gating and skip logs).
 - gas/OcrWorkerParallel_v0.js: belle_ocr_perf_ensureLogSheet_ / belle_ocr_perf_appendFromSummary_ (PERF_LOG), belle_ocr_workerLoop_fallback_v0_ (summary detail keys), OCR_WORKER_ITEM logging.
 - gas/OcrParallelTrigger_v0.js: belle_ocr_workerTick_fallback_v0 and parallel guard/enable/disable/status phases.

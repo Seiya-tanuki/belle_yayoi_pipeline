@@ -37,16 +37,12 @@
 - BELLE_CSV_EOL (default: CRLF)
 - BELLE_GEMINI_SLEEP_MS (default: 500)
 - BELLE_MAX_ITEMS_PER_RUN (default: 1)
-- BELLE_RUN_MAX_SECONDS (default: 240)
-- BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH (default: 5)
-- BELLE_RUN_DO_QUEUE (default: true)
-- BELLE_RUN_DO_OCR (default: true)
 - BELLE_OCR_MAX_ATTEMPTS (default: 3)
 - BELLE_OCR_RETRY_BACKOFF_SECONDS (default: 300)
-- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: �ΏۊO)
+- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
   - The value must be a plain label (no extra description).
 - BELLE_FALLBACK_APPEND_INVOICE_SUFFIX (default: true)
-  - If false, do not append "�K�i" to tax kubun.
+  - If false, do not append "適格" to tax kubun.
 - BELLE_FISCAL_START_DATE (format: YYYY-MM-DD)
 - BELLE_FISCAL_END_DATE (format: YYYY-MM-DD)
   - Required for export; years must match and range must be valid.
@@ -77,7 +73,6 @@ Notes:
 - PERF_LOG v2 columns: logged_at_iso, phase, ok, doc_type, queue_sheet_name, last_reason, lock_busy_skipped, http_status, cc_error_code, cc_stage, cc_cache_hit, processing_count, detail_json.
 - QUEUE_SKIP_LOG columns: logged_at_iso, phase, file_id, file_name, drive_url, doc_type, source_subfolder, reason, detail, first_seen_at_iso, last_seen_at_iso, seen_count.
 - EXPORT_GUARD_LOG columns: logged_at_iso, phase, doc_type, queue_sheet_name, reason, counts_json, detail.
-- When parallel enabled, runner OCR is guarded with RUN_GUARD: OCR_PARALLEL_ENABLED.
 - Disable removes triggers only; BELLE_OCR_PARALLEL_ENABLED is unchanged.
 
 ## Notes
@@ -91,6 +86,5 @@ Notes:
 - docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md
 - docs/SYSTEM_OVERVIEW_FALLBACK_V0.md
 - docs/PLAN_FALLBACK_EXPORT_v0.md
-
 
 

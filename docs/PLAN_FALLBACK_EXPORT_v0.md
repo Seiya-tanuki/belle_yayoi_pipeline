@@ -1,69 +1,44 @@
 # PLAN_FALLBACK_EXPORT_v0
 
-## 1. 背景と目的
-- ゴール: 不明点があっても必ずCSV化し、修正は弥生側で行う。
-- 監査性: file_id / drive_url / 理由コードを弥生側で見える形で残す。
+## 1. 閭梧勹縺ｨ逶ｮ逧・- 繧ｴ繝ｼ繝ｫ: 荳肴・轤ｹ縺後≠縺｣縺ｦ繧ょｿ・★CSV蛹悶＠縲∽ｿｮ豁｣縺ｯ蠑･逕溷・縺ｧ陦後≧縲・- 逶｣譟ｻ諤ｧ: file_id / drive_url / 逅・罰繧ｳ繝ｼ繝峨ｒ蠑･逕溷・縺ｧ隕九∴繧句ｽ｢縺ｧ谿九☆縲・
+## 2. 迴ｾ陦鯉ｼ・eview-sheet-v0・峨・隕∫ｴ・- 繝代う繝励Λ繧､繝ｳ: belle_listFilesInFolder -> belle_queueFolderFilesToSheet -> belle_processQueueOnce -> belle_buildReviewFromDoneQueue -> belle_exportYayoiCsvFromReview
+- 繧ｷ繝ｼ繝・ REVIEW_STATE / REVIEW_UI / REVIEW_LOG / EXPORT_LOG / EXPORT_SKIP_LOG
 
-## 2. 現行（review-sheet-v0）の要約
-- パイプライン: belle_listFilesInFolder -> belle_queueFolderFilesToSheet -> belle_processQueueOnce -> belle_buildReviewFromDoneQueue -> belle_exportYayoiCsvFromReview
-- シート: REVIEW_STATE / REVIEW_UI / REVIEW_LOG / EXPORT_LOG / EXPORT_SKIP_LOG
-- 入口関数: belle_runPipelineBatch_v0（export無効が既定）, belle_exportYayoiCsvFallback（手動）
-- 参照: docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md
-
-## 3. フォールバック優先版 v0 要件
-- 不明点があってもCSVは必ず出す。
-- 弥生側で確実に識別・修正できるよう、memo/摘要に理由コード + file_id + file_name を残す。
-- REVIEW_UI/REVIEW_STATE は原則使わない方針（監査と再実行整合性は維持）。
-
-## 4. 差分方針（残す/置換/削除）
-- 残す:
+## 3. 繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ蜆ｪ蜈育沿 v0 隕∽ｻｶ
+- 荳肴・轤ｹ縺後≠縺｣縺ｦ繧・SV縺ｯ蠢・★蜃ｺ縺吶・- 蠑･逕溷・縺ｧ遒ｺ螳溘↓隴伜挨繝ｻ菫ｮ豁｣縺ｧ縺阪ｋ繧医≧縲［emo/鞫倩ｦ√↓逅・罰繧ｳ繝ｼ繝・+ file_id + file_name 繧呈ｮ九☆縲・- REVIEW_UI/REVIEW_STATE 縺ｯ蜴溷援菴ｿ繧上↑縺・婿驥晢ｼ育屮譟ｻ縺ｨ蜀榊ｮ溯｡梧紛蜷域ｧ縺ｯ邯ｭ謖・ｼ峨・
+## 4. 蟾ｮ蛻・婿驥晢ｼ域ｮ九☆/鄂ｮ謠・蜑企勁・・- 谿九☆:
   - belle_queueFolderFilesToSheet / belle_processQueueOnce / EXPORT_LOG / EXPORT_SKIP_LOG
-- 置換:
-  - belle_exportYayoiCsvFromReview をフォールバック優先に変更
-- 削除/無効化:
-  - REVIEW_UI 前提の STRICT_BLOCKED 運用（フォールバックでは不要）
-- 共存案:
-  - BELLE_EXPORT_MODE = REVIEW | FALLBACK を追加し、分岐で共存
-
-## 5. 実装ステップ案
-1) export 関数の分岐設計（REVIEW/FALLBACK）
-2) フォールバック用の memo/摘要設計（理由コード・file_id・file_name）
-3) EXPORT_LOG / EXPORT_SKIP_LOG の出力ルール調整
-4) REVIEW_STATE/REVIEW_UI の参照を最小化
-5) docs/WORKFLOW.md / docs/CONFIG.md をフォールバック運用に整理
-
-## 6. 設定（Script Properties）案
-- 追加案:
+- 鄂ｮ謠・
+  - belle_exportYayoiCsvFromReview 繧偵ヵ繧ｩ繝ｼ繝ｫ繝舌ャ繧ｯ蜆ｪ蜈医↓螟画峩
+- 蜑企勁/辟｡蜉ｹ蛹・
+  - REVIEW_UI 蜑肴署縺ｮ STRICT_BLOCKED 驕狗畑・医ヵ繧ｩ繝ｼ繝ｫ繝舌ャ繧ｯ縺ｧ縺ｯ荳崎ｦ・ｼ・- 蜈ｱ蟄俶｡・
+  - BELLE_EXPORT_MODE = REVIEW | FALLBACK 繧定ｿｽ蜉縺励∝・蟯舌〒蜈ｱ蟄・
+## 5. 螳溯｣・せ繝・ャ繝玲｡・1) export 髢｢謨ｰ縺ｮ蛻・ｲ占ｨｭ險茨ｼ・EVIEW/FALLBACK・・2) 繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ逕ｨ縺ｮ memo/鞫倩ｦ∬ｨｭ險茨ｼ育炊逕ｱ繧ｳ繝ｼ繝峨・file_id繝ｻfile_name・・3) EXPORT_LOG / EXPORT_SKIP_LOG 縺ｮ蜃ｺ蜉帙Ν繝ｼ繝ｫ隱ｿ謨ｴ
+4) REVIEW_STATE/REVIEW_UI 縺ｮ蜿ら・繧呈怙蟆丞喧
+5) docs/WORKFLOW.md / docs/CONFIG.md 繧偵ヵ繧ｩ繝ｼ繝ｫ繝舌ャ繧ｯ驕狗畑縺ｫ謨ｴ逅・
+## 6. 險ｭ螳夲ｼ・cript Properties・画｡・- 霑ｽ蜉譯・
   - BELLE_EXPORT_MODE (REVIEW|FALLBACK)
-  - BELLE_FALLBACK_REASON_PREFIX (memo識別子)
-- 既存利用:
+  - BELLE_FALLBACK_REASON_PREFIX (memo隴伜挨蟄・
+- 譌｢蟄伜茜逕ｨ:
   - BELLE_CSV_ENCODING / BELLE_CSV_EOL
   - BELLE_OUTPUT_FOLDER_ID / BELLE_SKIP_LOG_SHEET_NAME
 
-## 7. 監査ログ/運用フロー
-- EXPORT_LOG: 出力済み行の再出力防止（legacy IMPORT_LOG は手動で rename）
-- EXPORT_SKIP_LOG: それでも出力不能な例外だけ記録
-- memo/摘要に file_id / file_name / reason_code を必ず残す
+## 7. 逶｣譟ｻ繝ｭ繧ｰ/驕狗畑繝輔Ο繝ｼ
+- EXPORT_LOG: 蜃ｺ蜉帶ｸ医∩陦後・蜀榊・蜉幃亟豁｢・・egacy IMPORT_LOG 縺ｯ謇句虚縺ｧ rename・・- EXPORT_SKIP_LOG: 縺昴ｌ縺ｧ繧ょ・蜉帑ｸ崎・縺ｪ萓句､悶□縺題ｨ倬鹸
+- memo/鞫倩ｦ√↓ file_id / file_name / reason_code 繧貞ｿ・★谿九☆
 
-## 8. リスクと対策
-- 税区分の暫定値で過大控除の恐れ:
-  - 安全側の暫定値を採用し、理由コードで明示
-- 弥生側修正漏れ:
-- memo/摘要に識別子（file_id / file_name）を必ず残す
-- トレーサビリティ:
-  - file_id -> CSV -> EXPORT_LOG の紐付けを維持
+## 8. 繝ｪ繧ｹ繧ｯ縺ｨ蟇ｾ遲・- 遞主玄蛻・・證ｫ螳壼､縺ｧ驕主､ｧ謗ｧ髯､縺ｮ諱舌ｌ:
+  - 螳牙・蛛ｴ縺ｮ證ｫ螳壼､繧呈治逕ｨ縺励∫炊逕ｱ繧ｳ繝ｼ繝峨〒譏守､ｺ
+- 蠑･逕溷・菫ｮ豁｣貍上ｌ:
+- memo/鞫倩ｦ√↓隴伜挨蟄撰ｼ・ile_id / file_name・峨ｒ蠢・★谿九☆
+- 繝医Ξ繝ｼ繧ｵ繝薙Μ繝・ぅ:
+  - file_id -> CSV -> EXPORT_LOG 縺ｮ邏蝉ｻ倥￠繧堤ｶｭ謖・
+## 9. 謇句虚繝・せ繝郁ｦｳ轤ｹ
+1) 繝輔か繝ｼ繝ｫ繝舌ャ繧ｯ繝｢繝ｼ繝峨〒 CSV 縺悟ｿ・★蜃ｺ繧九％縺ｨ
+2) memo/鞫倩ｦ√↓ reason_code + file_id + file_name 縺梧ｮ九ｋ縺薙→
+3) EXPORT_LOG 縺ｫ險倬鹸縺輔ｌ繧九％縺ｨ
+4) EXPORT_SKIP_LOG 縺ｯ萓句､悶・縺ｿ險倬鹸縺輔ｌ繧九％縺ｨ
 
-## 9. 手動テスト観点
-1) フォールバックモードで CSV が必ず出ること
-2) memo/摘要に reason_code + file_id + file_name が残ること
-3) EXPORT_LOG に記録されること
-4) EXPORT_SKIP_LOG は例外のみ記録されること
-
-## 10. 次ターン実装対象（予定）
-- 変更対象ファイル:
-  - gas/Review_v0.js（export分岐の追加）
-  - gas/Code.js（Runnerのexport制御確認）
-  - docs/WORKFLOW.md / docs/CONFIG.md（フォールバック運用）
-- 追加/変更する関数:
-  - belle_exportYayoiCsvFromReview（REVIEW/FALLBACK分岐）
-  - fallback用のreason/memo生成ヘルパー（名称は実装時に確定）
+## 10. 谺｡繧ｿ繝ｼ繝ｳ螳溯｣・ｯｾ雎｡・井ｺ亥ｮ夲ｼ・- 螟画峩蟇ｾ雎｡繝輔ぃ繧､繝ｫ:
+  - gas/Review_v0.js・・xport蛻・ｲ舌・霑ｽ蜉・・  - gas/Code.js・・unner縺ｮexport蛻ｶ蠕｡遒ｺ隱搾ｼ・  - docs/WORKFLOW.md / docs/CONFIG.md・医ヵ繧ｩ繝ｼ繝ｫ繝舌ャ繧ｯ驕狗畑・・- 霑ｽ蜉/螟画峩縺吶ｋ髢｢謨ｰ:
+  - belle_exportYayoiCsvFromReview・・EVIEW/FALLBACK蛻・ｲ撰ｼ・  - fallback逕ｨ縺ｮreason/memo逕滓・繝倥Ν繝代・・亥錐遘ｰ縺ｯ螳溯｣・凾縺ｫ遒ｺ螳夲ｼ・

@@ -1,4 +1,4 @@
-﻿# PROJECT_STATE_SNAPSHOT
+# PROJECT_STATE_SNAPSHOT
 
 ## 1. 概要（パイプライン段階）
 - list: belle_listFilesInFolder (gas/Code.js)
@@ -6,7 +6,6 @@
 - ocr: belle_processQueueOnce (gas/Code.js)
 - review: belle_buildReviewFromDoneQueue (gas/Review_v0.js)
 - export: belle_exportYayoiCsvFromReview (gas/Review_v0.js)
-- runner: belle_runPipelineBatch_v0 (gas/Code.js)
 
 ## 2. シート一覧（コード上の正式名と用途）
 - OCR_RAW: belle_appendRow の既定シート名（gas/Code.js:36）
@@ -123,8 +122,6 @@ gas\Code.js:419:function belle_exportYayoiCsvFromDoneRows(options) {
 gas\Code.js:674:function belle_exportYayoiCsvFromDoneRows() {
 gas\Code.js:682:function belle_exportYayoiCsvFromDoneRows_force() {
 gas\Code.js:686:function belle_parseBool(value, defaultValue) {
-gas\Code.js:698:function belle_runPipelineBatch_v0() {
-gas\Code.js:805:function belle_runPipelineBatch_v0() {
 gas\ReviewReasons_ja_v0.js:5:function belle_reviewReasonJa(code, context) {
 ```
 
@@ -148,10 +145,6 @@ gas\ReviewReasons_ja_v0.js:5:function belle_reviewReasonJa(code, context) {
 - BELLE_GEMINI_MODEL: 必須（Gemini OCR で未設定時に例外）。
 - BELLE_GEMINI_SLEEP_MS: 任意（既定 500）。OCR処理の待機。
 - BELLE_MAX_ITEMS_PER_RUN: 任意（既定 1）。OCR処理の最大件数。
-- BELLE_RUN_MAX_SECONDS: 任意（既定 240）。Runnerの時間上限。
-- BELLE_RUN_MAX_OCR_ITEMS_PER_BATCH: 任意（既定 5）。RunnerのOCRループ上限。
-- BELLE_RUN_DO_QUEUE: 任意（既定 true）。RunnerでQueue実行を制御。
-- BELLE_RUN_DO_OCR: 任意（既定 true）。RunnerでOCR実行を制御。
 
 ## 6. 既知の注意点（コードから確実に言える範囲）
 - SpreadsheetApp.getUi の呼び出しは存在しない（gas内検索で該当なし）。
