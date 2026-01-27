@@ -38,7 +38,7 @@ function belle_ocr_worker_dispatchByPipelineKind_(pipelineKind, handlers) {
   return handlers && handlers.single_stage ? handlers.single_stage() : null;
 }
 
-function belle_ocr_workerOnce_fallback_v0_(opts) {
+function belle_ocr_workerOnce_(opts) {
   const totalStart = Date.now();
   const props = belle_cfg_getProps_();
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
@@ -103,8 +103,8 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   const sh = ss.getSheetByName(queueSheetName);
   if (!sh) throw new Error("Sheet not found: " + queueSheetName);
 
-  const baseHeader = belle_getQueueHeaderColumns_v0();
-  const extraHeader = belle_getQueueLockHeaderColumns_v0_();
+  const baseHeader = belle_getQueueHeaderColumns();
+  const extraHeader = belle_getQueueLockHeaderColumns_();
   const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
   if (!headerMap) {
     return { ok: false, processed: 0, reason: "INVALID_QUEUE_HEADER" };
@@ -409,7 +409,7 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   };
 }
 
-function belle_ocr_workerLoop_fallback_v0_(opts) {
+function belle_ocr_workerLoop_(opts) {
   const props = belle_cfg_getProps_();
   const maxItemsValue = opts && opts.maxItems !== undefined ? opts.maxItems : props.getProperty("BELLE_OCR_WORKER_MAX_ITEMS");
   const maxItems = belle_ocr_worker_resolveMaxItems_(maxItemsValue);
@@ -457,7 +457,7 @@ function belle_ocr_workerLoop_fallback_v0_(opts) {
   const geminiSamples = [];
   const totalSamples = [];
   for (let i = 0; i < maxItems; i++) {
-    const r = belle_ocr_workerOnce_fallback_v0_({ workerId: workerId, lockMode: lockMode, lockWaitMs: lockWaitMs, docTypes: docTypes });
+    const r = belle_ocr_workerOnce_({ workerId: workerId, lockMode: lockMode, lockWaitMs: lockWaitMs, docTypes: docTypes });
     if (!r || r.processed === 0) {
       summary.lastReason = r && r.reason ? r.reason : "NO_TARGET";
       if (summary.lastReason === "LOCK_BUSY") summary.lockBusySkipped = 1;

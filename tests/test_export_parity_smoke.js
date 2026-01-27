@@ -232,8 +232,8 @@ function buildStage2Json() {
 }
 
 function setupHeaders(sandbox) {
-  const baseHeader = sandbox.belle_getQueueHeaderColumns_v0();
-  const lockHeader = sandbox.belle_getQueueLockHeaderColumns_v0_();
+  const baseHeader = sandbox.belle_getQueueHeaderColumns();
+  const lockHeader = sandbox.belle_getQueueLockHeaderColumns_();
   return baseHeader.concat(lockHeader);
 }
 
@@ -291,7 +291,7 @@ function runExportWithDedupe() {
   seedCcSheet(sandbox, spreadsheet, header, 'cc_dedupe', buildStage2Json());
 
   const exportLog = spreadsheet.insertSheet('EXPORT_LOG');
-  const exportHeader = sandbox.belle_getExportLogHeaderColumns_v0();
+  const exportHeader = sandbox.belle_getExportLogHeaderColumns();
   exportLog.appendRow(exportHeader);
   exportLog.appendRow(['cc_dedupe', '2025-01-01T00:00:00Z', 'csv_1']);
 

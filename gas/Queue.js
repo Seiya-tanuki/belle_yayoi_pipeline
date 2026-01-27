@@ -1,6 +1,6 @@
 // NOTE: Keep comments ASCII only.
 
-function belle_getQueueHeaderColumns_v0() {
+function belle_getQueueHeaderColumns() {
   return [
     "status",
     "file_id",
@@ -20,7 +20,7 @@ function belle_getQueueHeaderColumns_v0() {
   ];
 }
 
-function belle_getQueueLockHeaderColumns_v0_() {
+function belle_getQueueLockHeaderColumns_() {
   return ["ocr_lock_owner", "ocr_lock_until_iso", "ocr_processing_started_at_iso"];
 }
 
@@ -77,8 +77,8 @@ function belle_queueFolderFilesToSheetInternal_() {
   const activeDocTypes = belle_ocr_getActiveDocTypes_(props);
 
   const ss = SpreadsheetApp.openById(sheetId);
-  const baseHeader = belle_getQueueHeaderColumns_v0();
-  const extraHeader = belle_getQueueLockHeaderColumns_v0_();
+  const baseHeader = belle_getQueueHeaderColumns();
+  const extraHeader = belle_getQueueLockHeaderColumns_();
   const nowIso = new Date().toISOString();
   const queuedByDocType = {};
   let queuedTotal = 0;
@@ -146,8 +146,8 @@ function belle_queue_getStatusCounts() {
   const counts = { totalCount: 0, queuedRemaining: 0, doneCount: 0, errorRetryableCount: 0, errorFinalCount: 0 };
   const ss = SpreadsheetApp.openById(sheetId);
   const queueNames = belle_ocr_getActiveDocTypes_(props);
-  const baseHeader = belle_getQueueHeaderColumns_v0();
-  const extraHeader = belle_getQueueLockHeaderColumns_v0_();
+  const baseHeader = belle_getQueueHeaderColumns();
+  const extraHeader = belle_getQueueLockHeaderColumns_();
 
   for (let i = 0; i < queueNames.length; i++) {
     const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, queueNames[i]);
@@ -176,8 +176,8 @@ function belle_queue_getStatusCounts() {
 }
 
 
-function belle_getQueueHeader_fallback_v0_() {
-  return belle_getQueueHeaderColumns_v0().concat(belle_getQueueLockHeaderColumns_v0_());
+function belle_getQueueHeader_() {
+  return belle_getQueueHeaderColumns().concat(belle_getQueueLockHeaderColumns_());
 }
 
 function belle_ocr_resolveClaimScanMax_(value, totalRows) {
@@ -231,7 +231,7 @@ function belle_ocr_buildStaleRecovery_(row, headerMap, nowMs) {
   };
 }
 
-function belle_ocr_claimNextRow_fallback_v0_(opts) {
+function belle_ocr_claimNextRow_(opts) {
   const props = belle_cfg_getProps_();
   const sheetId = belle_cfg_getSheetIdOrThrow_(props);
   const docType = opts && opts.docType ? String(opts.docType) : BELLE_DOC_TYPE_RECEIPT;
@@ -267,8 +267,8 @@ function belle_ocr_claimNextRow_fallback_v0_(opts) {
     const sh = ss.getSheetByName(queueSheetName);
     if (!sh) throw new Error("Sheet not found: " + queueSheetName);
 
-    const baseHeader = belle_getQueueHeaderColumns_v0();
-    const extraHeader = belle_getQueueLockHeaderColumns_v0_();
+    const baseHeader = belle_getQueueHeaderColumns();
+    const extraHeader = belle_getQueueLockHeaderColumns_();
     const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
     if (!headerMap) {
       const res = { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "INVALID_QUEUE_HEADER" };
@@ -407,7 +407,7 @@ function belle_ocr_claimNextRowByDocTypes_(opts) {
   let last = null;
   for (let i = 0; i < docTypes.length; i++) {
     const docType = docTypes[i];
-    const res = belle_ocr_claimNextRow_fallback_v0_({
+    const res = belle_ocr_claimNextRow_({
       workerId: opts && opts.workerId ? opts.workerId : undefined,
       ttlSeconds: opts && opts.ttlSeconds !== undefined ? opts.ttlSeconds : undefined,
       lockMode: opts && opts.lockMode ? opts.lockMode : undefined,
@@ -458,8 +458,8 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
   const sh = ss.getSheetByName(queueSheetName);
   if (!sh) throw new Error("Sheet not found: " + queueSheetName);
 
-  const baseHeader = belle_getQueueHeaderColumns_v0();
-  const extraHeader = belle_getQueueLockHeaderColumns_v0_();
+  const baseHeader = belle_getQueueHeaderColumns();
+  const extraHeader = belle_getQueueLockHeaderColumns_();
   const lastRow = sh.getLastRow();
   if (lastRow < 1) {
     return { ok: false, processed: 0, reason: "QUEUE_EMPTY: sheet has no header", errorsCount: 0, docType: docType, queueSheetName: queueSheetName };

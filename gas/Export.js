@@ -2,7 +2,7 @@
 
 // NOTE: Keep comments ASCII only.
 
-function belle_getExportLogHeaderColumns_v0() {
+function belle_getExportLogHeaderColumns() {
   return ["file_id","exported_at_iso","csv_file_id"];
 }
 
@@ -199,8 +199,8 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       return res;
     }
 
-    const baseHeader = belle_getQueueHeaderColumns_v0();
-    const extraHeader = belle_getQueueLockHeaderColumns_v0_();
+    const baseHeader = belle_getQueueHeaderColumns();
+    const extraHeader = belle_getQueueLockHeaderColumns_();
     const lastRow = queue.getLastRow();
     if (lastRow < 2) {
       logGuard("NO_ROWS", null, "");
@@ -312,7 +312,7 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       };
     }
     const exportLog = exportLogResult.sheet;
-    const exportHeader = belle_getExportLogHeaderColumns_v0();
+    const exportHeader = belle_getExportLogHeaderColumns();
     const exportHeaderInfo = belle_exportLog_buildHeaderMap_(exportLog, exportHeader);
     if (!exportHeaderInfo.ok) {
       const detail = belle_exportLog_buildSchemaMismatchDetail_(BELLE_DOC_TYPE_RECEIPT, "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
@@ -611,8 +611,8 @@ function belle_exportYayoiCsvBankStatementInternal_(options) {
       return res;
     }
 
-    const baseHeader = belle_getQueueHeaderColumns_v0();
-    const extraHeader = belle_getQueueLockHeaderColumns_v0_();
+    const baseHeader = belle_getQueueHeaderColumns();
+    const extraHeader = belle_getQueueLockHeaderColumns_();
     const lastRow = queue.getLastRow();
     if (lastRow < 2) {
       logGuard("NO_ROWS", null, "");
@@ -728,7 +728,7 @@ function belle_exportYayoiCsvBankStatementInternal_(options) {
       };
     }
     const exportLog = exportLogResult.sheet;
-    const exportHeader = belle_getExportLogHeaderColumns_v0();
+    const exportHeader = belle_getExportLogHeaderColumns();
     const exportHeaderInfo = belle_exportLog_buildHeaderMap_(exportLog, exportHeader);
     if (!exportHeaderInfo.ok) {
       const detail = belle_exportLog_buildSchemaMismatchDetail_(BELLE_DOC_TYPE_BANK_STATEMENT, "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
@@ -975,8 +975,8 @@ function belle_exportYayoiCsvCcStatementInternal_(options) {
       return res;
     }
 
-    const baseHeader = belle_getQueueHeaderColumns_v0();
-    const extraHeader = belle_getQueueLockHeaderColumns_v0_();
+    const baseHeader = belle_getQueueHeaderColumns();
+    const extraHeader = belle_getQueueLockHeaderColumns_();
     const lastRow = queue.getLastRow();
     if (lastRow < 2) {
       logGuard("NO_ROWS", null, "");
@@ -1092,7 +1092,7 @@ function belle_exportYayoiCsvCcStatementInternal_(options) {
       };
     }
     const exportLog = exportLogResult.sheet;
-    const exportHeader = belle_getExportLogHeaderColumns_v0();
+    const exportHeader = belle_getExportLogHeaderColumns();
     const exportHeaderInfo = belle_exportLog_buildHeaderMap_(exportLog, exportHeader);
     if (!exportHeaderInfo.ok) {
       const detail = belle_exportLog_buildSchemaMismatchDetail_(BELLE_DOC_TYPE_CC_STATEMENT, "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);

@@ -75,6 +75,6 @@ Digit handling:
 Return ONLY the JSON object.
 `;
 
-function belle_ocr_getBankStatementPrompt_v0_() {
+function belle_ocr_getBankStatementPrompt_() {
   return BELLE_OCR_BANK_STATEMENT_PROMPT_V0;
 }

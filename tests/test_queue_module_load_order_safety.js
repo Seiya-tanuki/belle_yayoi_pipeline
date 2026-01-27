@@ -23,8 +23,8 @@ expect(threw === false, 'Code.js should load before Queue.js without throwing');
 
 vm.runInContext(fs.readFileSync('gas/Queue.js', 'utf8'), sandbox);
 
-expect(typeof sandbox.belle_getQueueHeaderColumns_v0 === 'function', 'missing belle_getQueueHeaderColumns_v0');
-const header = sandbox.belle_getQueueHeaderColumns_v0();
+expect(typeof sandbox.belle_getQueueHeaderColumns === 'function', 'missing belle_getQueueHeaderColumns');
+const header = sandbox.belle_getQueueHeaderColumns();
 expect(Array.isArray(header) && header.length > 0, 'queue header should be a non-empty array');
 
 expect(typeof sandbox.belle_queue_filterNewFiles_ === 'function', 'missing belle_queue_filterNewFiles_');

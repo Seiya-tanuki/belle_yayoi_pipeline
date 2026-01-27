@@ -203,7 +203,7 @@ function belle_resetSpreadsheetToInitialStateInternal_() {
       ss.deleteSheet(sh);
     }
 
-    const queueHeader = belle_getQueueHeaderColumns_v0();
+    const queueHeader = belle_getQueueHeaderColumns();
     const createdSheets = [];
     for (let i = 0; i < queueNames.length; i++) {
       const name = queueNames[i];
@@ -213,7 +213,7 @@ function belle_resetSpreadsheetToInitialStateInternal_() {
     }
 
     const exportLogSheet = ss.insertSheet(exportLogName);
-    const exportHeader = belle_getExportLogHeaderColumns_v0();
+    const exportHeader = belle_getExportLogHeaderColumns();
     exportLogSheet.getRange(1, 1, 1, exportHeader.length).setValues([exportHeader]);
 
     if (temp) ss.deleteSheet(temp);

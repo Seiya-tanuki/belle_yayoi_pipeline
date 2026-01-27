@@ -160,8 +160,8 @@ function buildSandbox(spreadsheet, folder, props) {
 }
 
 function buildQueueHeader(sandbox) {
-  const base = sandbox.belle_getQueueHeaderColumns_v0();
-  const extra = sandbox.belle_getQueueLockHeaderColumns_v0_();
+  const base = sandbox.belle_getQueueHeaderColumns();
+  const extra = sandbox.belle_getQueueLockHeaderColumns_();
   return base.concat(extra);
 }
 

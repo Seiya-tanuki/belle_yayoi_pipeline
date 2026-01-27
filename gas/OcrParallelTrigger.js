@@ -5,16 +5,16 @@
 const BELLE_TRIGGER_AUDIT_REMOVED_HANDLERS_ = [
   "belle_queueFolderFilesToSheet_test",
   "belle_processQueueOnce_test",
-  "belle_ocr_claimNextRow_fallback_v0_test",
+  "belle_ocr_claimNextRow_test",
   "belle_resetSpreadsheetToInitialState_test",
   "belle_exportYayoiCsv_test",
-  "belle_ocr_workerLoop_fallback_v0_test",
+  "belle_ocr_workerLoop_test",
   "belle_ocr_parallel_smoke_test",
   "belle_ocr_parallel_enable_test",
   "belle_ocr_parallel_disable_test",
   "belle_ocr_parallel_status_test",
   "belle_chatwork_webhook_mock_test",
-  "belle_chatworkSendTestMessage_v0_test",
+  "belle_chatworkSendTestMessage_test",
   "belle_chatwork_sendLatestCsv_test"
 ];
 
@@ -172,7 +172,7 @@ function belle_ocr_workerTick(e) {
   if (staggerMs > 0) Utilities.sleep(staggerMs);
 
   const workerId = Utilities.getUuid();
-  const result = belle_ocr_workerLoop_fallback_v0_({ workerId: workerId, maxItems: 1, lockMode: "try", lockWaitMs: 500, docTypes: docTypes });
+  const result = belle_ocr_workerLoop_({ workerId: workerId, maxItems: 1, lockMode: "try", lockWaitMs: 500, docTypes: docTypes });
   try {
     belle_ocr_perf_appendFromSummary_(result);
   } catch (e) {

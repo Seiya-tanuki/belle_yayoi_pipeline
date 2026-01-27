@@ -16,7 +16,7 @@ sandbox.belle_ocr_claimNextRowByDocTypes_ = () => ({ claimed: false, reason: 'NO
 
 let res = null;
 try {
-  res = sandbox.belle_ocr_workerOnce_fallback_v0_({});
+  res = sandbox.belle_ocr_workerOnce_({});
 } catch (e) {
   throw new Error('workerOnce should not throw on NO_TARGET');
 }

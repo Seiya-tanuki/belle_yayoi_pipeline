@@ -105,7 +105,7 @@ function belle_docType_buildBankSpec_() {
     ocr_run_once_fn: "belle_ocr_bank_runOnce_",
     stage1_prompt_getter: null,
     stage2_prompt_getter: function () {
-      return belle_ocr_getBankStatementPrompt_v0_();
+      return belle_ocr_getBankStatementPrompt_();
     },
     export_subfolder_name: "bank_statement",
     export_handler_key: BELLE_DOC_TYPE_BANK_STATEMENT,

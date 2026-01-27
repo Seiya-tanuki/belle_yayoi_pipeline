@@ -177,8 +177,8 @@ const code = fs.readFileSync('gas/Config.js', 'utf8') + '\n' + fs.readFileSync('
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
 
-const baseHeader = sandbox.belle_getQueueHeaderColumns_v0();
-const lockHeader = sandbox.belle_getQueueLockHeaderColumns_v0_();
+const baseHeader = sandbox.belle_getQueueHeaderColumns();
+const lockHeader = sandbox.belle_getQueueLockHeaderColumns_();
 const header = baseHeader.concat(lockHeader);
 
 function buildRow(values) {

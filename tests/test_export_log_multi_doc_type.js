@@ -162,8 +162,8 @@ vm.runInContext(fs.readFileSync('gas/OcrValidation.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/Export.js', 'utf8'), sandbox);
 vm.runInContext(fs.readFileSync('gas/Review.js', 'utf8'), sandbox);
 
-const baseHeader = sandbox.belle_getQueueHeaderColumns_v0();
-const lockHeader = sandbox.belle_getQueueLockHeaderColumns_v0_();
+const baseHeader = sandbox.belle_getQueueHeaderColumns();
+const lockHeader = sandbox.belle_getQueueLockHeaderColumns_();
 const header = baseHeader.concat(lockHeader);
 
 function buildRow(values) {
