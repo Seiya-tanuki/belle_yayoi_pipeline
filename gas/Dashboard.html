@@ -579,16 +579,25 @@
           var opts = options || {};
           var button = opts.button;
           var toastOnSuccess = opts.toastOnSuccess === true;
+          var onError = typeof opts.onError === "function" ? opts.onError : null;
           setLoading(button, true);
           setStatus("Loading overview...");
           callServer("belle_dash_getOverview", undefined, function (err, res) {
             setLoading(button, false);
             if (err) {
+              if (onError) {
+                onError();
+                return;
+              }
               setStatus("Overview failed to load.", true);
               showToast("Overview load failed.", "error");
               return;
             }
             if (!res.ok) {
+              if (onError) {
+                onError();
+                return;
+              }
               setStatus(res.message || "Overview failed.", true);
               showToast(res.message || "Overview failed.", "error");
               return;
@@ -623,7 +632,9 @@
           });
         }
 
-        function runOp(button, fnName, confirmText, successText) {
+        function runOp(button, fnName, confirmText, successText, options) {
+          var opts = options || {};
+          var onSuccess = typeof opts.onSuccess === "function" ? opts.onSuccess : null;
           if (confirmText && !window.confirm(confirmText)) return;
           setLoading(button, true);
           setStatus("Running " + fnName + "...");
@@ -641,6 +652,13 @@
             }
             setStatus(res.message || successText);
             showToast(successText, "success");
+            if (onSuccess) {
+              try {
+                onSuccess(res);
+              } catch (e) {
+                // ignore post-success errors
+              }
+            }
           });
         }
 
@@ -677,7 +695,17 @@
             refreshLogs({ toastOnSuccess: true, button: btnRefreshLogs });
           });
           btnQueue.addEventListener("click", function () {
-            runOp(btnQueue, "belle_dash_opQueue", null, "Queue complete.");
+            runOp(btnQueue, "belle_dash_opQueue", null, "Queue complete.", {
+              onSuccess: function () {
+                refreshOverview({
+                  button: btnRefreshOverview,
+                  onError: function () {
+                    setStatus("Queue completed, but overview refresh failed.", true);
+                    showToast("Queue completed, but overview refresh failed.", "error");
+                  }
+                });
+              }
+            });
           });
           btnOcrEnable.addEventListener("click", function () {
             runOp(btnOcrEnable, "belle_dash_opOcrEnable", null, "OCR enabled.");
