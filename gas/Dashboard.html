@@ -575,7 +575,10 @@
           renderLogTable("#log-queue-skip", queueSkip.rows, ["ts_iso", "reason", "doc_type", "seen_count"], queueEmpty);
         }
 
-        function refreshOverview(announce, button) {
+        function refreshOverview(options) {
+          var opts = options || {};
+          var button = opts.button;
+          var toastOnSuccess = opts.toastOnSuccess === true;
           setLoading(button, true);
           setStatus("Loading overview...");
           callServer("belle_dash_getOverview", undefined, function (err, res) {
@@ -592,11 +595,14 @@
             }
             renderOverview(res);
             setStatus("Overview updated.");
-            if (announce) showToast("Overview refreshed.", "success");
+            if (toastOnSuccess) showToast("Overview updated.", "success");
           });
         }
 
-        function refreshLogs(announce, button) {
+        function refreshLogs(options) {
+          var opts = options || {};
+          var button = opts.button;
+          var toastOnSuccess = opts.toastOnSuccess === true;
           setLoading(button, true);
           setStatus("Loading logs...");
           callServer("belle_dash_getLogs", undefined, function (err, res) {
@@ -613,7 +619,7 @@
             }
             renderLogs(res);
             setStatus("Logs updated.");
-            if (announce) showToast("Logs refreshed.", "success");
+            if (toastOnSuccess) showToast("Logs updated.", "success");
           });
         }
 
@@ -665,10 +671,10 @@
           var btnExport = document.getElementById("btn-export");
 
           btnRefreshOverview.addEventListener("click", function () {
-            refreshOverview(true, btnRefreshOverview);
+            refreshOverview({ toastOnSuccess: true, button: btnRefreshOverview });
           });
           btnRefreshLogs.addEventListener("click", function () {
-            refreshLogs(true, btnRefreshLogs);
+            refreshLogs({ toastOnSuccess: true, button: btnRefreshLogs });
           });
           btnQueue.addEventListener("click", function () {
             runOp(btnQueue, "belle_dash_opQueue", null, "Queue complete.");
@@ -684,8 +690,8 @@
           });
 
           initTabs();
-          refreshOverview(false, btnRefreshOverview);
-          refreshLogs(false, btnRefreshLogs);
+          refreshOverview({ button: btnRefreshOverview });
+          refreshLogs({ button: btnRefreshLogs });
         }
 
         document.addEventListener("DOMContentLoaded", init);

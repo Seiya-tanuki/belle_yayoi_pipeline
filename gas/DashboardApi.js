@@ -26,17 +26,43 @@ function belle_dash_result_(ok, reason, message, data) {
 
 function belle_dash_wrap_(action, handler) {
   var rid = belle_dash_buildRid_();
+  var res;
   try {
     var result = handler();
     var ok = result && typeof result.ok === "boolean" ? result.ok : true;
     var reason = result && result.reason ? String(result.reason) : (ok ? "OK" : "ERROR");
     var message = result && result.message ? String(result.message) : (ok ? "OK" : "Request failed");
     var data = result && result.data !== undefined ? result.data : null;
-    return { ok: ok, rid: rid, action: action, reason: reason, message: message, data: data };
+    res = { ok: ok, rid: rid, action: action, reason: reason, message: message, data: data };
+    return belle_dash_attachAudit_(res);
   } catch (e) {
     var msg = belle_dash_shortText_(e && e.message ? e.message : e, 120);
-    return { ok: false, rid: rid, action: action, reason: "EXCEPTION", message: msg, data: null };
+    res = { ok: false, rid: rid, action: action, reason: "EXCEPTION", message: msg, data: null };
+    return belle_dash_attachAudit_(res);
   }
+}
+
+function belle_dash_attachAudit_(result) {
+  if (!result) return result;
+  if (typeof belle_dash_audit_append_ !== "function") return result;
+  var audit = belle_dash_audit_append_({
+    rid: result.rid,
+    action: result.action,
+    ok: result.ok,
+    reason: result.reason,
+    message: result.message
+  });
+  if (audit && audit.written === false) {
+    var data = result.data;
+    if (data === null || data === undefined) data = {};
+    else if (typeof data !== "object") data = { value: data };
+    data.audit_log = {
+      written: false,
+      reason: audit.reason ? String(audit.reason) : "AUDIT_WRITE_FAILED"
+    };
+    result.data = data;
+  }
+  return result;
 }
 
 function belle_dash_buildHeaderMap_(headerRow) {
