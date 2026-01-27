@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Belle Yayoi Dashboard</title>
+    <style>
+      :root {
+        --bg: #eef2f7;
+        --panel: #ffffff;
+        --ink: #1f2937;
+        --muted: #5f6b7a;
+        --accent: #0b7285;
+        --accent-strong: #0a5563;
+        --border: #d7dee8;
+        --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+        --success: #027a48;
+        --warning: #b45309;
+        --danger: #b42318;
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Trebuchet MS", "Noto Sans", sans-serif;
+        color: var(--ink);
+        background: radial-gradient(circle at 10% 0%, #f6f8fb 0%, #eef2f7 45%, #e7ecf4 100%);
+      }
+      .page {
+        max-width: 1200px;
+        margin: 24px auto;
+        padding: 0 20px 40px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        animation: rise 0.5s ease;
+      }
+
+      header.app-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px 22px;
+        border-radius: 16px;
+        background: var(--panel);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow);
+      }
+      header .title-block h1 {
+        margin: 0 0 6px 0;
+        font-size: 22px;
+        letter-spacing: 0.2px;
+      }
+      header .title-block .subtitle {
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .actor {
+        text-align: right;
+        font-size: 13px;
+      }
+      .actor .email {
+        font-weight: 600;
+      }
+      .role-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        background: #e2e8f0;
+        color: #334155;
+      }
+      .role-badge[data-role="admin"] { background: #dcfce7; color: #14532d; }
+      .role-badge[data-role="user"] { background: #dbeafe; color: #1e3a8a; }
+      .role-badge[data-role="none"] { background: #fee2e2; color: #7f1d1d; }
+
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 16px 18px 18px;
+        box-shadow: var(--shadow);
+      }
+      .panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 12px;
+      }
+      .panel-header h2 {
+        margin: 0;
+        font-size: 16px;
+      }
+      .panel-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn {
+        border: 1px solid var(--border);
+        background: #f8fafc;
+        color: var(--ink);
+        padding: 8px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-size: 13px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.2s ease;
+      }
+      .btn:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08); }
+      .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
+      .btn.primary { background: var(--accent); color: #ffffff; border-color: transparent; }
+      .btn.primary:hover { background: var(--accent-strong); }
+      .btn.ghost { background: transparent; }
+      .btn.danger { background: #fff1f2; color: var(--danger); border-color: #fecdd3; }
+      .btn.danger:hover { background: #ffe4e6; }
+
+      .table-wrap { overflow-x: auto; }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      thead th {
+        text-align: left;
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      tbody td {
+        padding: 10px 8px;
+        border-bottom: 1px solid #eef2f7;
+      }
+      tbody tr:hover { background: #f8fafc; }
+      .mono { font-family: "Consolas", "Courier New", monospace; font-size: 12px; }
+
+      .status-line {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .ops-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 12px;
+      }
+      .ops-card {
+        border: 1px solid #e2e8f0;
+        border-radius: 14px;
+        padding: 12px;
+        background: #f8fafc;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .ops-card p {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .tabs {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      .tab {
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #eef2f7;
+        border: 1px solid transparent;
+        font-size: 12px;
+        cursor: pointer;
+      }
+      .tab.active {
+        background: #ffffff;
+        border-color: var(--border);
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
+      }
+      .tab-panel { display: none; }
+      .tab-panel.active { display: block; }
+
+      footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .toast {
+        position: fixed;
+        right: 20px;
+        bottom: 20px;
+        background: #0f172a;
+        color: #fff;
+        padding: 12px 16px;
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        opacity: 0;
+        transform: translateY(12px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        z-index: 1000;
+      }
+      .toast.show { opacity: 1; transform: translateY(0); }
+      .toast.success { background: #0f766e; }
+      .toast.error { background: #b42318; }
+
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+
+      @media (max-width: 720px) {
+        header.app-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        footer {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 6px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <header class="app-header">
+        <div class="title-block">
+          <h1>Belle Yayoi Dashboard</h1>
+          <div class="subtitle">Phase 1 operational console</div>
+        </div>
+        <div class="actor">
+          <div class="email" id="actor-email">loading...</div>
+          <div class="role-badge" id="actor-role" data-role="none">role: none</div>
+        </div>
+      </header>
+
+      <section class="panel" id="overview-panel" aria-live="polite">
+        <div class="panel-header">
+          <h2>Overview</h2>
+          <div class="panel-actions">
+            <button class="btn" id="refresh-overview">Refresh</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table id="overview-table">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="status-line" id="overview-status">Idle</div>
+      </section>
+
+      <section class="panel" id="ops-panel">
+        <div class="panel-header">
+          <h2>Operations</h2>
+          <div class="panel-actions">
+            <span class="status-line" id="ops-status">Admin only</span>
+          </div>
+        </div>
+        <div class="ops-grid">
+          <div class="ops-card">
+            <button class="btn primary" id="btn-queue">Queue</button>
+            <p>Scan Drive folder and queue new files.</p>
+          </div>
+          <div class="ops-card">
+            <button class="btn" id="btn-ocr-enable">Enable OCR Parallel</button>
+            <p>Enable background OCR worker triggers.</p>
+          </div>
+          <div class="ops-card">
+            <button class="btn danger" id="btn-ocr-disable">Disable OCR Parallel</button>
+            <p>Stop OCR worker triggers immediately.</p>
+          </div>
+          <div class="ops-card">
+            <button class="btn danger" id="btn-export">Export</button>
+            <p>Generate latest CSV export.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel" id="logs-panel" aria-live="polite">
+        <div class="panel-header">
+          <h2>Logs</h2>
+          <div class="panel-actions">
+            <button class="btn" id="refresh-logs">Refresh</button>
+          </div>
+        </div>
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-tab="guard" role="tab" aria-selected="true">Export Guard</button>
+          <button class="tab" data-tab="skip" role="tab" aria-selected="false">Export Skip</button>
+          <button class="tab" data-tab="queue" role="tab" aria-selected="false">Queue Skip</button>
+        </div>
+        <div class="tab-panel active" id="tab-guard" role="tabpanel"></div>
+        <div class="tab-panel" id="tab-skip" role="tabpanel"></div>
+        <div class="tab-panel" id="tab-queue" role="tabpanel"></div>
+        <div class="status-line" id="logs-status">Idle</div>
+      </section>
+
+      <footer>
+        <div>Build: Phase 1 dashboard</div>
+        <div id="last-refresh">Last refresh: --</div>
+      </footer>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script>
+      var state = {
+        role: "none",
+        actorEmail: "",
+        overview: null,
+        logs: null,
+        lastRefresh: null
+      };
+
+      function $(id) {
+        return document.getElementById(id);
+      }
+
+      function showToast(message, type) {
+        var toast = $("toast");
+        toast.textContent = message;
+        toast.className = "toast show" + (type ? " " + type : "");
+        setTimeout(function () {
+          toast.className = "toast";
+        }, 2600);
+      }
+
+      function callApi(name) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        return new Promise(function (resolve, reject) {
+          var runner = google.script.run
+            .withSuccessHandler(function (res) { resolve(res); })
+            .withFailureHandler(function (err) { reject(err); });
+          runner[name].apply(runner, args);
+        });
+      }
+
+      function applyActor(res) {
+        if (!res) return;
+        state.role = res.role || "none";
+        state.actorEmail = res.actor_email || "";
+        $("actor-email").textContent = state.actorEmail || "unknown user";
+        var badge = $("actor-role");
+        badge.textContent = "role: " + state.role;
+        badge.setAttribute("data-role", state.role);
+        updateAccess();
+      }
+
+      function updateAccess() {
+        var isAdmin = state.role === "admin";
+        var isUser = state.role === "user" || isAdmin;
+        $("refresh-overview").disabled = !isUser;
+        $("refresh-logs").disabled = !isUser;
+        $("btn-queue").disabled = !isAdmin;
+        $("btn-ocr-enable").disabled = !isAdmin;
+        $("btn-ocr-disable").disabled = !isAdmin;
+        $("btn-export").disabled = !isAdmin;
+        $("ops-status").textContent = isAdmin ? "Admin actions enabled" : "Admin only";
+      }
+
+      function setStatus(id, message) {
+        var el = $(id);
+        if (el) el.textContent = message;
+      }
+
+      function renderOverview(data) {
+        state.overview = data || null;
+        var tableHead = $("overview-table").querySelector("thead");
+        var tableBody = $("overview-table").querySelector("tbody");
+        tableHead.innerHTML = "";
+        tableBody.innerHTML = "";
+        if (!data) return;
+        var statusOrder = data.status_order || [];
+        var headerRow = document.createElement("tr");
+        var th = document.createElement("th");
+        th.textContent = "Doc Type";
+        headerRow.appendChild(th);
+        statusOrder.forEach(function (status) {
+          var cell = document.createElement("th");
+          cell.textContent = status;
+          headerRow.appendChild(cell);
+        });
+        var totalCell = document.createElement("th");
+        totalCell.textContent = "Total";
+        headerRow.appendChild(totalCell);
+        tableHead.appendChild(headerRow);
+
+        var rows = data.by_doc_type || [];
+        rows.forEach(function (row) {
+          var tr = document.createElement("tr");
+          var name = document.createElement("td");
+          name.textContent = row.doc_type || "-";
+          name.className = "mono";
+          tr.appendChild(name);
+          var counts = row.counts || {};
+          statusOrder.forEach(function (status) {
+            var td = document.createElement("td");
+            td.textContent = counts[status] || 0;
+            tr.appendChild(td);
+          });
+          var total = document.createElement("td");
+          total.textContent = counts.total || 0;
+          tr.appendChild(total);
+          tableBody.appendChild(tr);
+        });
+
+        if (data.totals) {
+          var totalRow = document.createElement("tr");
+          var label = document.createElement("td");
+          label.textContent = "TOTAL";
+          label.className = "mono";
+          totalRow.appendChild(label);
+          statusOrder.forEach(function (status) {
+            var td = document.createElement("td");
+            td.textContent = data.totals[status] || 0;
+            totalRow.appendChild(td);
+          });
+          var totalAll = document.createElement("td");
+          totalAll.textContent = data.totals.total || 0;
+          totalRow.appendChild(totalAll);
+          tableBody.appendChild(totalRow);
+        }
+      }
+
+      function formatCounts(counts) {
+        if (!counts) return "-";
+        var keys = Object.keys(counts);
+        if (keys.length === 0) return "-";
+        return keys.map(function (k) { return k + ":" + counts[k]; }).join(", ");
+      }
+
+      function renderLogTable(targetId, entries) {
+        var target = $(targetId);
+        target.innerHTML = "";
+        var table = document.createElement("table");
+        var thead = document.createElement("thead");
+        var headRow = document.createElement("tr");
+        ["Time", "Reason", "Doc Type", "Counts", "OK"].forEach(function (label) {
+          var th = document.createElement("th");
+          th.textContent = label;
+          headRow.appendChild(th);
+        });
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        var tbody = document.createElement("tbody");
+        if (!entries || entries.length === 0) {
+          var emptyRow = document.createElement("tr");
+          var cell = document.createElement("td");
+          cell.colSpan = 5;
+          cell.textContent = "No entries";
+          emptyRow.appendChild(cell);
+          tbody.appendChild(emptyRow);
+        } else {
+          entries.forEach(function (item) {
+            var tr = document.createElement("tr");
+            var tdTime = document.createElement("td");
+            tdTime.textContent = item.ts_iso || "";
+            var tdReason = document.createElement("td");
+            tdReason.textContent = item.reason || "";
+            var tdDoc = document.createElement("td");
+            tdDoc.textContent = item.doc_type || "";
+            var tdCounts = document.createElement("td");
+            tdCounts.textContent = formatCounts(item.counts || {});
+            var tdOk = document.createElement("td");
+            tdOk.textContent = item.ok ? "yes" : "no";
+            tr.appendChild(tdTime);
+            tr.appendChild(tdReason);
+            tr.appendChild(tdDoc);
+            tr.appendChild(tdCounts);
+            tr.appendChild(tdOk);
+            tbody.appendChild(tr);
+          });
+        }
+        table.appendChild(tbody);
+        target.appendChild(table);
+      }
+
+      function renderLogs(data) {
+        state.logs = data || null;
+        if (!data) return;
+        renderLogTable("tab-guard", data.export_guard);
+        renderLogTable("tab-skip", data.export_skip);
+        renderLogTable("tab-queue", data.queue_skip);
+      }
+
+      function updateLastRefresh() {
+        var now = new Date();
+        state.lastRefresh = now;
+        $("last-refresh").textContent = "Last refresh: " + now.toISOString();
+      }
+
+      function refreshOverview() {
+        setStatus("overview-status", "Loading overview...");
+        return callApi("belle_dashboard_getOverview")
+          .then(function (res) {
+            applyActor(res);
+            if (!res || res.ok !== true) {
+              showToast(res && res.message ? res.message : "Overview failed.", "error");
+              setStatus("overview-status", "Failed to load overview");
+              return;
+            }
+            renderOverview(res.data);
+            setStatus("overview-status", "Overview updated");
+            updateLastRefresh();
+          })
+          .catch(function () {
+            showToast("Overview request failed.", "error");
+            setStatus("overview-status", "Failed to load overview");
+          });
+      }
+
+      function refreshLogs() {
+        setStatus("logs-status", "Loading logs...");
+        return callApi("belle_dashboard_getLogs")
+          .then(function (res) {
+            applyActor(res);
+            if (!res || res.ok !== true) {
+              showToast(res && res.message ? res.message : "Logs failed.", "error");
+              setStatus("logs-status", "Failed to load logs");
+              return;
+            }
+            renderLogs(res.data);
+            setStatus("logs-status", "Logs updated");
+            updateLastRefresh();
+          })
+          .catch(function () {
+            showToast("Logs request failed.", "error");
+            setStatus("logs-status", "Failed to load logs");
+          });
+      }
+
+      function runAction(buttonId, apiName, options) {
+        var btn = $(buttonId);
+        var original = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Running...";
+        return callApi(apiName)
+          .then(function (res) {
+            applyActor(res);
+            if (!res || res.ok !== true) {
+              showToast(res && res.message ? res.message : "Action failed.", "error");
+            } else {
+              showToast(res.message || "Action completed.", "success");
+              if (!options || options.skipRefresh !== true) {
+                refreshOverview();
+                refreshLogs();
+              }
+            }
+          })
+          .catch(function () {
+            showToast("Action request failed.", "error");
+          })
+          .finally(function () {
+            btn.disabled = false;
+            btn.textContent = original;
+          });
+      }
+
+      function initTabs() {
+        var tabs = document.querySelectorAll(".tab");
+        tabs.forEach(function (tab) {
+          tab.addEventListener("click", function () {
+            tabs.forEach(function (t) {
+              t.classList.remove("active");
+              t.setAttribute("aria-selected", "false");
+            });
+            tab.classList.add("active");
+            tab.setAttribute("aria-selected", "true");
+            var name = tab.getAttribute("data-tab");
+            ["guard", "skip", "queue"].forEach(function (panel) {
+              var el = $("tab-" + panel);
+              if (!el) return;
+              el.classList.toggle("active", panel === name);
+            });
+          });
+        });
+      }
+
+      function bootstrap() {
+        initTabs();
+        callApi("belle_dashboard_getBootstrap")
+          .then(function (res) {
+            applyActor(res);
+            if (!res || res.ok !== true) {
+              showToast(res && res.message ? res.message : "Not authorized.", "error");
+              return;
+            }
+            refreshOverview();
+            refreshLogs();
+          })
+          .catch(function () {
+            showToast("Bootstrap failed.", "error");
+          });
+
+        $("refresh-overview").addEventListener("click", refreshOverview);
+        $("refresh-logs").addEventListener("click", refreshLogs);
+
+        $("btn-queue").addEventListener("click", function () {
+          runAction("btn-queue", "belle_dashboard_actionQueue");
+        });
+        $("btn-ocr-enable").addEventListener("click", function () {
+          runAction("btn-ocr-enable", "belle_dashboard_actionOcrEnable");
+        });
+        $("btn-ocr-disable").addEventListener("click", function () {
+          var ok = window.confirm("Disable OCR parallel now?");
+          if (!ok) return;
+          runAction("btn-ocr-disable", "belle_dashboard_actionOcrDisable");
+        });
+        $("btn-export").addEventListener("click", function () {
+          var ok = window.confirm("Start export now? This will generate CSV output.");
+          if (!ok) return;
+          runAction("btn-export", "belle_dashboard_actionExport");
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", bootstrap);
+    </script>
+  </body>
+</html>
