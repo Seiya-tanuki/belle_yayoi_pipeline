@@ -15,7 +15,6 @@ while ((m = pattern.exec(content)) !== null) {
 const allowlist = [
   'belle_queueFolderFilesToSheet',
   'belle_processQueueOnce',
-  'belle_runPipelineBatch',
   'belle_resetSpreadsheetToInitialState'
 ];
 

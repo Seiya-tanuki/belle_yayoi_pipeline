@@ -6,7 +6,6 @@ const BELLE_TRIGGER_AUDIT_REMOVED_HANDLERS_ = [
   "belle_queueFolderFilesToSheet_test",
   "belle_processQueueOnce_test",
   "belle_ocr_claimNextRow_fallback_v0_test",
-  "belle_runPipelineBatch_test",
   "belle_resetSpreadsheetToInitialState_test",
   "belle_exportYayoiCsv_test",
   "belle_ocr_workerLoop_fallback_v0_test",
