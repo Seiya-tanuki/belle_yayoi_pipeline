@@ -23,12 +23,6 @@ function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-sandbox.belle_ocr_computeGeminiTemperature_ = () => ({
-  temperature: 0,
-  defaultTemp: 0,
-  addTemp: 0,
-  overridden: false
-});
 sandbox.belle_ocr_getCcStage1Prompt_ = () => 'STAGE1_PROMPT';
 sandbox.belle_ocr_getCcStage2Prompt_ = () => 'STAGE2_PROMPT';
 

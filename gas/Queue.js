@@ -600,30 +600,9 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
         continue;
       }
 
-      const file = DriveApp.getFileById(fileId);
-      const blob = file.getBlob();
-      const tempInfo = belle_ocr_computeGeminiTemperature_({
-        attempt: attempt,
-        maxAttempts: maxAttempts,
-        statusBefore: normalized,
-        prevErrorCode: ocrErrCode,
-        prevError: ocrErr,
-        prevErrorDetail: ocrErrDetail
-      });
-      if (tempInfo.overridden) {
-        Logger.log({
-          phase: "GEMINI_TEMPERATURE_POLICY",
-          temperature: tempInfo.temperature,
-          defaultTemp: tempInfo.defaultTemp,
-          addTemp: tempInfo.addTemp,
-          attempt: attempt,
-          maxAttempts: maxAttempts,
-          statusBefore: normalized,
-          prevErrorCode: ocrErrCode,
-          doc_type: rowDocType
-        });
-      }
-      jsonStr = belle_callGeminiOcr(blob, { temperature: tempInfo.temperature });
+        const file = DriveApp.getFileById(fileId);
+        const blob = file.getBlob();
+        jsonStr = belle_callGeminiOcr(blob);
       const MAX_CELL_CHARS = 45000;
       if (jsonStr.length > MAX_CELL_CHARS) {
         throw new Error("OCR JSON too long for single cell: " + jsonStr.length);

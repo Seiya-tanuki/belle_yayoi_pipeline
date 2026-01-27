@@ -33,26 +33,6 @@ function belle_ocr_cc_runOnce_(ctx) {
 
   const file = DriveApp.getFileById(fileId);
   const blob = file.getBlob();
-  const tempInfo = belle_ocr_computeGeminiTemperature_({
-    attempt: attempt,
-    maxAttempts: maxAttempts,
-    statusBefore: statusBefore,
-    prevErrorCode: prevErrorCode,
-    prevError: prevError,
-    prevErrorDetail: prevErrorDetail
-  });
-  if (tempInfo.overridden) {
-    Logger.log({
-      phase: "GEMINI_TEMPERATURE_POLICY",
-      temperature: tempInfo.temperature,
-      defaultTemp: tempInfo.defaultTemp,
-      addTemp: tempInfo.addTemp,
-      attempt: attempt,
-      maxAttempts: maxAttempts,
-      statusBefore: statusBefore,
-      prevErrorCode: prevErrorCode
-    });
-  }
 
   const cacheInfo = belle_ocr_cc_detectStageFromCache_(ocrJsonBefore);
   ccStage = cacheInfo.stage;
@@ -67,7 +47,6 @@ function belle_ocr_cc_runOnce_(ctx) {
   if (ccStage === "stage1") {
     const stage1Prompt = belle_ocr_getCcStage1Prompt_();
     const stage1Options = {
-      temperature: tempInfo.temperature,
       promptText: stage1Prompt,
       generationConfig: belle_ocr_cc_getStage1GenCfg_(props)
     };
@@ -141,7 +120,6 @@ function belle_ocr_cc_runOnce_(ctx) {
     ccStage2Attempted = true;
     const stage2Prompt = belle_ocr_getCcStage2Prompt_();
     const stage2Options = {
-      temperature: tempInfo.temperature,
       promptText: stage2Prompt,
       generationConfig: belle_ocr_cc_getStage2GenCfg_(props)
     };

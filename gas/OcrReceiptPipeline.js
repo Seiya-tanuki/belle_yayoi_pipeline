@@ -86,31 +86,11 @@ function belle_ocr_receipt_runOnce_(ctx) {
 
   const file = DriveApp.getFileById(fileId);
   const blob = file.getBlob();
-  const tempInfo = belle_ocr_computeGeminiTemperature_({
-    attempt: attempt,
-    maxAttempts: maxAttempts,
-    statusBefore: statusBefore,
-    prevErrorCode: prevErrorCode,
-    prevError: prevError,
-    prevErrorDetail: prevErrorDetail
-  });
-  if (tempInfo.overridden) {
-    Logger.log({
-      phase: "GEMINI_TEMPERATURE_POLICY",
-      temperature: tempInfo.temperature,
-      defaultTemp: tempInfo.defaultTemp,
-      addTemp: tempInfo.addTemp,
-      attempt: attempt,
-      maxAttempts: maxAttempts,
-      statusBefore: statusBefore,
-      prevErrorCode: prevErrorCode
-    });
-  }
 
   const geminiStartMs = Date.now();
   try {
     const promptText = resolvePromptText_();
-    const geminiOptions = { temperature: tempInfo.temperature };
+    const geminiOptions = {};
     if (promptText) geminiOptions.promptText = promptText;
     jsonStr = belle_callGeminiOcr(blob, geminiOptions);
   } catch (e) {

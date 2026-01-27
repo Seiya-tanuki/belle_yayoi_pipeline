@@ -24,13 +24,6 @@ function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-sandbox.belle_ocr_computeGeminiTemperature_ = () => ({
-  temperature: 0,
-  defaultTemp: 0,
-  addTemp: 0,
-  overridden: false
-});
-
 const props = { getProperty: () => '' };
 
 function runWithResponse(response, ctxOverrides) {

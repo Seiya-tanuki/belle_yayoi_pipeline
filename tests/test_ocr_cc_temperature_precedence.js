@@ -54,8 +54,7 @@ function buildProps(extra) {
     BELLE_GEMINI_API_KEY: 'KEY',
     BELLE_GEMINI_MODEL: 'model-x',
     BELLE_GEMINI_SLEEP_MS: '500',
-    BELLE_MAX_ITEMS_PER_RUN: '1',
-    BELLE_GEMINI_TEMPERATURE_DEFAULT: '0.7'
+    BELLE_MAX_ITEMS_PER_RUN: '1'
   }, extra || {});
   return {
     getProperty: (key) => store[key] || ''
@@ -102,7 +101,7 @@ const res = sandbox.belle_ocr_cc_runOnce_({
 expect(res.statusOut === 'DONE', 'cc stage2 should succeed');
 expect(captured.options && captured.options.payload, 'should capture payload');
 const payload = JSON.parse(captured.options.payload);
-expect(payload.generationConfig.temperature === 0.7, 'policy temperature should apply');
+expect(payload.generationConfig.temperature === 0.0, 'default temperature should be 0.0');
 expect(payload.generationConfig.topP === 0.1, 'topP default should apply');
 expect(payload.generationConfig.maxOutputTokens === 8192, 'maxOutputTokens default should apply');
 expect(payload.generationConfig.thinkingConfig.thinkingLevel === 'low', 'thinkingConfig default should apply');

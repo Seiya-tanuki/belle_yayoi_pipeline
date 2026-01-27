@@ -113,50 +113,6 @@ function belle_ocr_clampTemperature_(value) {
   return n;
 }
 
-function belle_ocr_parseTemperatureValue_(value, fallback) {
-  const raw = String(value || "").trim();
-  if (!raw) return fallback;
-  const n = Number(raw);
-  if (isNaN(n)) return fallback;
-  return belle_ocr_clampTemperature_(n);
-}
-
-function belle_ocr_computeGeminiTemperatureWithConfig_(ctx, config) {
-  const defaultTemp = belle_ocr_parseTemperatureValue_(config && config.defaultRaw, 0.0);
-  const addTemp = belle_ocr_parseTemperatureValue_(config && config.addRaw, 0.0);
-  const attempt = Number((ctx && ctx.attempt) || 0);
-  const maxAttempts = Number((ctx && ctx.maxAttempts) || 0);
-  const statusBefore = String((ctx && ctx.statusBefore) || "");
-  const prevErrorCode = String((ctx && ctx.prevErrorCode) || "");
-  const prevError = String((ctx && ctx.prevError) || "");
-  const prevErrorDetail = String((ctx && ctx.prevErrorDetail) || "");
-  const combined = (prevError + " " + prevErrorDetail);
-  const isRetry = statusBefore === "ERROR_RETRYABLE" || statusBefore === "ERROR";
-  const isFinalAttempt = attempt > 0 && maxAttempts > 0 && attempt === maxAttempts;
-  const isInvalidSchema = prevErrorCode === "INVALID_SCHEMA" || combined.indexOf("INVALID_SCHEMA") >= 0;
-  const is503 = combined.indexOf("503") >= 0;
-
-  let temperature = defaultTemp;
-  let overridden = false;
-  if (isRetry && isFinalAttempt && isInvalidSchema && !is503 && addTemp > 0) {
-    temperature = belle_ocr_clampTemperature_(defaultTemp + addTemp);
-    overridden = true;
-  }
-  return {
-    temperature: temperature,
-    overridden: overridden,
-    defaultTemp: defaultTemp,
-    addTemp: addTemp
-  };
-}
-
-function belle_ocr_computeGeminiTemperature_(ctx) {
-  const props = belle_cfg_getProps_();
-  const defaultRaw = props.getProperty("BELLE_GEMINI_TEMPERATURE_DEFAULT");
-  const addRaw = props.getProperty("BELLE_GEMINI_TEMPERATURE_FINAL_RETRY_ADD");
-  return belle_ocr_computeGeminiTemperatureWithConfig_(ctx, { defaultRaw: defaultRaw, addRaw: addRaw });
-}
-
 function belle_ocr_getCcStage1Prompt_() {
   const prompt = (typeof BELLE_OCR_CC_STAGE1_PROMPT_V0 !== "undefined") ? BELLE_OCR_CC_STAGE1_PROMPT_V0 : "";
   if (!prompt) throw new Error("Missing OCR prompt constant: BELLE_OCR_CC_STAGE1_PROMPT_V0");

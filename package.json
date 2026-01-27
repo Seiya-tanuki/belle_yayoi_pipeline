@@ -16,7 +16,7 @@
     "test:date": "node tests/test_date_fallback.js",
     "test:ocr": "node tests/test_ocr_validation.js",
     "test:ocr-invalid-schema-log": "node tests/test_ocr_invalid_schema_log_detail.js",
-    "test:ocr-temperature": "node tests/test_ocr_temperature_policy.js",
+    "test:ocr-temperature": "node tests/test_ocr_temperature_default_zero.js",
     "test:perf-log": "node tests/test_perf_log_v2.js",
     "test:perf-rotation": "node tests/test_perf_log_rotation.js",
     "test:reset": "node tests/test_reset_headers.js",

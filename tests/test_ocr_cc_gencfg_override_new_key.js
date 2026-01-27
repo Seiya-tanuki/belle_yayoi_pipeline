@@ -54,8 +54,7 @@ function buildProps(extra) {
     BELLE_GEMINI_API_KEY: 'KEY',
     BELLE_GEMINI_MODEL: 'model-x',
     BELLE_GEMINI_SLEEP_MS: '500',
-    BELLE_MAX_ITEMS_PER_RUN: '1',
-    BELLE_GEMINI_TEMPERATURE_DEFAULT: '0.7'
+    BELLE_MAX_ITEMS_PER_RUN: '1'
   }, extra || {});
   return {
     getProperty: (key) => store[key] || ''

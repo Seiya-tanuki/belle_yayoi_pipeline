@@ -47,12 +47,6 @@ function buildSandbox() {
   };
   vm.createContext(sandbox);
   vm.runInContext(buildCode(), sandbox);
-  sandbox.belle_ocr_computeGeminiTemperature_ = () => ({
-    temperature: 0.7,
-    defaultTemp: 0,
-    addTemp: 0,
-    overridden: false
-  });
   return { sandbox, captured, logs };
 }
 
@@ -86,7 +80,7 @@ function runOnce(sandbox, props) {
   return sandbox.belle_ocr_bank_runOnce_(ctx);
 }
 
-// Test 1: valid override should apply to generationConfig and win over temperature policy.
+// Test 1: valid override should apply to generationConfig.
 {
   const { sandbox, captured } = buildSandbox();
   const props = buildProps({
@@ -109,7 +103,7 @@ function runOnce(sandbox, props) {
   const res = runOnce(sandbox, props);
   expect(res.statusOut === 'DONE', 'bank run should succeed with invalid override');
   const payload = JSON.parse(captured.options.payload);
-  expect(payload.generationConfig.temperature === 0.7, 'temperature should use policy value');
+  expect(payload.generationConfig.temperature === 0.0, 'temperature should default to 0.0');
   expect(payload.generationConfig.topP === undefined, 'topP should not be set');
   const hasWarn = logs.some((entry) => entry && entry.phase === 'CONFIG_WARN' && entry.key === 'BELLE_OCR_GENCFG_JSON_INVALID__bank_statement__stage1');
   expect(hasWarn, 'invalid JSON should emit CONFIG_WARN');
