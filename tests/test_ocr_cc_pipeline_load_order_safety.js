@@ -10,14 +10,14 @@ vm.createContext(sandbox);
 
 let threw = false;
 try {
-  vm.runInContext(fs.readFileSync('gas/OcrWorkerParallel_v0.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('gas/OcrWorkerParallel.js', 'utf8'), sandbox);
 } catch (e) {
   threw = true;
 }
-expect(threw === false, 'OcrWorkerParallel_v0.js should load before OcrCcPipeline_v0.js without throwing');
+expect(threw === false, 'OcrWorkerParallel.js should load before OcrCcPipeline.js without throwing');
 
-vm.runInContext(fs.readFileSync('gas/OcrCcPipeline_v0.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('gas/OcrCcPipeline.js', 'utf8'), sandbox);
 
-expect(typeof sandbox.belle_ocr_cc_runOnce_ === 'function', 'missing belle_ocr_cc_runOnce_ after OcrCcPipeline_v0.js load');
+expect(typeof sandbox.belle_ocr_cc_runOnce_ === 'function', 'missing belle_ocr_cc_runOnce_ after OcrCcPipeline.js load');
 
 console.log('OK: test_ocr_cc_pipeline_load_order_safety');

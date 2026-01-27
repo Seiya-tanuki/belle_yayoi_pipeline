@@ -4,7 +4,7 @@ function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-const src = fs.readFileSync('gas/OcrWorkerParallel_v0.js', 'utf8');
+const src = fs.readFileSync('gas/OcrWorkerParallel.js', 'utf8');
 
 const forbidden = [
   /\bCC_/,
@@ -14,7 +14,7 @@ const forbidden = [
 ];
 
 for (const re of forbidden) {
-  expect(!re.test(src), 'forbidden token in OcrWorkerParallel_v0.js: ' + re);
+  expect(!re.test(src), 'forbidden token in OcrWorkerParallel.js: ' + re);
 }
 
 console.log('OK: test_ocr_worker_orchestrator_boundaries');

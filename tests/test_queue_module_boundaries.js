@@ -8,7 +8,7 @@ function expect(cond, msg) {
 const pattern = /function\s+(belle_queue_[A-Za-z0-9_]+)\s*\(/g;
 
 const allowInCode = new Set(['belle_queueFolderFilesToSheet']);
-const queueContent = fs.readFileSync(path.join('gas', 'Queue_v0.js'), 'utf8');
+const queueContent = fs.readFileSync(path.join('gas', 'Queue.js'), 'utf8');
 const codeContent = fs.readFileSync(path.join('gas', 'Code.js'), 'utf8');
 
 let queueDefs = [];
@@ -25,7 +25,7 @@ while ((m = pattern.exec(codeContent)) !== null) {
 
 const unexpected = codeDefs.filter((name) => !allowInCode.has(name));
 
-expect(queueDefs.length > 0, 'expected belle_queue_* definitions in gas/Queue_v0.js');
+expect(queueDefs.length > 0, 'expected belle_queue_* definitions in gas/Queue.js');
 expect(unexpected.length === 0, 'unexpected belle_queue_* definitions in gas/Code.js: ' + JSON.stringify(unexpected));
 
 console.log('OK: test_queue_module_boundaries');

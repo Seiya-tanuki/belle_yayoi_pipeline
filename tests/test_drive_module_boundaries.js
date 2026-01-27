@@ -26,7 +26,7 @@ for (const file of files) {
     listMatches.push(m[1]);
   }
   if (driveMatches.length === 0 && listMatches.length === 0) continue;
-  if (file === 'Drive_v0.js') {
+  if (file === 'Drive.js') {
     driveDefs = driveDefs.concat(driveMatches);
     listDefs = listDefs.concat(listMatches);
   } else {
@@ -34,7 +34,7 @@ for (const file of files) {
   }
 }
 
-expect(listDefs.length > 0, 'expected belle_listFilesInFolder in gas/Drive_v0.js');
-expect(offenders.length === 0, 'drive helpers found outside Drive_v0.js: ' + JSON.stringify(offenders));
+expect(listDefs.length > 0, 'expected belle_listFilesInFolder in gas/Drive.js');
+expect(offenders.length === 0, 'drive helpers found outside Drive.js: ' + JSON.stringify(offenders));
 
 console.log('OK: test_drive_module_boundaries');

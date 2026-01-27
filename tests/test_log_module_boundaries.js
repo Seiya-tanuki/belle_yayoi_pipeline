@@ -20,14 +20,14 @@ for (const file of files) {
     matches.push(m[1]);
   }
   if (matches.length === 0) continue;
-  if (file === 'Log_v0.js') {
+  if (file === 'Log.js') {
     logDefs = logDefs.concat(matches);
   } else {
     offenders.push({ file, names: matches });
   }
 }
 
-expect(logDefs.length > 0, 'expected belle_log_* definitions in gas/Log_v0.js');
-expect(offenders.length === 0, 'belle_log_* definitions found outside Log_v0.js: ' + JSON.stringify(offenders));
+expect(logDefs.length > 0, 'expected belle_log_* definitions in gas/Log.js');
+expect(offenders.length === 0, 'belle_log_* definitions found outside Log.js: ' + JSON.stringify(offenders));
 
 console.log('OK: test_log_module_boundaries');

@@ -18,9 +18,9 @@ try {
 } catch (e) {
   threw = true;
 }
-expect(threw === false, 'Code.js should load before Queue_v0.js and Sheet_v0.js without throwing');
+expect(threw === false, 'Code.js should load before Queue.js and Sheet.js without throwing');
 
-vm.runInContext(fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue_v0.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('gas/Sheet.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue.js', 'utf8'), sandbox);
 
 expect(typeof sandbox.belle_queueFolderFilesToSheet === 'function', 'missing belle_queueFolderFilesToSheet wrapper');
 expect(typeof sandbox.belle_queueFolderFilesToSheetInternal_ === 'function', 'missing belle_queueFolderFilesToSheetInternal_');

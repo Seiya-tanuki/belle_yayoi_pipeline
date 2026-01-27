@@ -2,9 +2,9 @@ const fs = require('fs');
 const path = require('path');
 
 const allowlist = new Set([
-  'DocTypeRegistry_v0.js',
-  'OcrPrompt_v0.js',
-  'OcrPromptBankStatement_v0.js'
+  'DocTypeRegistry.js',
+  'OcrPrompt.js',
+  'OcrPromptBankStatement.js'
 ]);
 
 const tokenRe = /(['"`])([^'"`]*\\b(receipt|cc_statement|bank_statement)\\b[^'"`]*)\\1/g;
@@ -26,7 +26,7 @@ for (const name of files) {
 
 if (violations.length > 0) {
   const lines = violations.map((v) => `${v.file}: ${v.snippet}`);
-  throw new Error('doc_type literals must be in DocTypeRegistry_v0.js only:\n' + lines.join('\n'));
+  throw new Error('doc_type literals must be in DocTypeRegistry.js only:\n' + lines.join('\n'));
 }
 
 console.log('OK: test_no_doc_type_literals_outside_registry');

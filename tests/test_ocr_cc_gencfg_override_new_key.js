@@ -6,12 +6,12 @@ function expect(cond, msg) {
 }
 
 function buildCode() {
-  return fs.readFileSync('gas/Config_v0.js', 'utf8')
-    + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8')
-    + '\n' + fs.readFileSync('gas/OcrValidation_v0.js', 'utf8')
-    + '\n' + fs.readFileSync('gas/OcrCommon_v0.js', 'utf8')
-    + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8')
-    + '\n' + fs.readFileSync('gas/OcrCcPipeline_v0.js', 'utf8');
+  return fs.readFileSync('gas/Config.js', 'utf8')
+    + '\n' + fs.readFileSync('gas/DocTypeRegistry.js', 'utf8')
+    + '\n' + fs.readFileSync('gas/OcrValidation.js', 'utf8')
+    + '\n' + fs.readFileSync('gas/OcrCommon.js', 'utf8')
+    + '\n' + fs.readFileSync('gas/Gemini.js', 'utf8')
+    + '\n' + fs.readFileSync('gas/OcrCcPipeline.js', 'utf8');
 }
 
 function buildSandbox(stage2Json) {

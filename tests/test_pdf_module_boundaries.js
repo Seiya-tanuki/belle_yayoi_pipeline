@@ -20,14 +20,14 @@ for (const file of files) {
     matches.push(m[1]);
   }
   if (matches.length === 0) continue;
-  if (file === 'Pdf_v0.js') {
+  if (file === 'Pdf.js') {
     pdfDefs = pdfDefs.concat(matches);
   } else {
     offenders.push({ file, names: matches });
   }
 }
 
-expect(pdfDefs.length > 0, 'expected belle_pdf_* definitions in gas/Pdf_v0.js');
-expect(offenders.length === 0, 'belle_pdf_* definitions found outside Pdf_v0.js: ' + JSON.stringify(offenders));
+expect(pdfDefs.length > 0, 'expected belle_pdf_* definitions in gas/Pdf.js');
+expect(offenders.length === 0, 'belle_pdf_* definitions found outside Pdf.js: ' + JSON.stringify(offenders));
 
 console.log('OK: test_pdf_module_boundaries');

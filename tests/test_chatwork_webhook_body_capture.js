@@ -2,7 +2,7 @@ const fs = require('fs');
 const vm = require('vm');
 const crypto = require('crypto');
 
-const code = fs.readFileSync('gas/ChatworkWebhook_v0.js', 'utf8');
+const code = fs.readFileSync('gas/ChatworkWebhook.js', 'utf8');
 const sandbox = {
   console,
   Utilities: {

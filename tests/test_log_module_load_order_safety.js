@@ -17,16 +17,16 @@ vm.createContext(sandbox);
 
 let threw = false;
 try {
-  vm.runInContext(fs.readFileSync('gas/Config_v0.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue_v0.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('gas/Config.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('gas/Sheet.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue.js', 'utf8'), sandbox);
 } catch (e) {
   threw = true;
 }
-expect(threw === false, 'Code.js should load before Log_v0.js without throwing');
+expect(threw === false, 'Code.js should load before Log.js without throwing');
 
-vm.runInContext(fs.readFileSync('gas/Log_v0.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('gas/Log.js', 'utf8'), sandbox);
 
-expect(typeof sandbox.belle_getSkipLogHeader_ === 'function', 'missing belle_getSkipLogHeader_ after Log_v0.js load');
+expect(typeof sandbox.belle_getSkipLogHeader_ === 'function', 'missing belle_getSkipLogHeader_ after Log.js load');
 const header = sandbox.belle_getSkipLogHeader_();
 expect(Array.isArray(header) && header.length > 0, 'belle_getSkipLogHeader_ should return a header array');
 

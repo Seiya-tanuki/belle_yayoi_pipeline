@@ -22,7 +22,7 @@ for (const file of files) {
     matches.push(m[1]);
   }
   if (matches.length > 0) {
-    if (file === 'Gemini_v0.js') geminiDefs = geminiDefs.concat(matches);
+    if (file === 'Gemini.js') geminiDefs = geminiDefs.concat(matches);
     else offenders.push({ file, names: matches });
   }
   if (content.indexOf(geminiHost) >= 0) {
@@ -30,8 +30,8 @@ for (const file of files) {
   }
 }
 
-expect(geminiDefs.length > 0, 'expected Gemini helpers in gas/Gemini_v0.js');
-expect(offenders.length === 0, 'Gemini helpers found outside Gemini_v0.js: ' + JSON.stringify(offenders));
-expect(hostHits.length === 1 && hostHits[0] === 'Gemini_v0.js', 'Gemini host should appear only in Gemini_v0.js: ' + JSON.stringify(hostHits));
+expect(geminiDefs.length > 0, 'expected Gemini helpers in gas/Gemini.js');
+expect(offenders.length === 0, 'Gemini helpers found outside Gemini.js: ' + JSON.stringify(offenders));
+expect(hostHits.length === 1 && hostHits[0] === 'Gemini.js', 'Gemini host should appear only in Gemini.js: ' + JSON.stringify(hostHits));
 
 console.log('OK: test_gemini_module_boundaries');

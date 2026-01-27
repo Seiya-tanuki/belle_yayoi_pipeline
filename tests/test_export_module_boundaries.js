@@ -14,8 +14,8 @@ function collectFunctionNames(content) {
   return names;
 }
 
-const reviewContent = fs.readFileSync('gas/Review_v0.js', 'utf8');
-const exportContent = fs.readFileSync('gas/Export_v0.js', 'utf8');
+const reviewContent = fs.readFileSync('gas/Review.js', 'utf8');
+const exportContent = fs.readFileSync('gas/Export.js', 'utf8');
 
 const reviewDefs = collectFunctionNames(reviewContent).filter((n) => n.startsWith('belle_export'));
 const reviewAllowed = [
@@ -26,7 +26,7 @@ const reviewAllowed = [
 ];
 
 const unexpectedReview = reviewDefs.filter((n) => !reviewAllowed.includes(n));
-expect(unexpectedReview.length === 0, 'unexpected export definitions in Review_v0.js: ' + JSON.stringify(unexpectedReview));
+expect(unexpectedReview.length === 0, 'unexpected export definitions in Review.js: ' + JSON.stringify(unexpectedReview));
 
 const exportDefs = collectFunctionNames(exportContent);
 const requiredExport = [
@@ -43,9 +43,9 @@ const requiredExport = [
 ];
 
 const missing = requiredExport.filter((n) => !exportDefs.includes(n));
-expect(missing.length === 0, 'missing export helpers in Export_v0.js: ' + JSON.stringify(missing));
+expect(missing.length === 0, 'missing export helpers in Export.js: ' + JSON.stringify(missing));
 
 const wrapperOverlap = reviewAllowed.filter((n) => exportDefs.includes(n));
-expect(wrapperOverlap.length === 0, 'wrapper names should not be defined in Export_v0.js: ' + JSON.stringify(wrapperOverlap));
+expect(wrapperOverlap.length === 0, 'wrapper names should not be defined in Export.js: ' + JSON.stringify(wrapperOverlap));
 
 console.log('OK: test_export_module_boundaries');

@@ -20,14 +20,14 @@ for (const file of files) {
     matches.push(m[1]);
   }
   if (matches.length === 0) continue;
-  if (file === 'Sheet_v0.js') {
+  if (file === 'Sheet.js') {
     sheetDefs = sheetDefs.concat(matches);
   } else {
     offenders.push({ file, names: matches });
   }
 }
 
-expect(sheetDefs.length > 0, 'expected belle_sheet_* definitions in gas/Sheet_v0.js');
-expect(offenders.length === 0, 'belle_sheet_* definitions found outside Sheet_v0.js: ' + JSON.stringify(offenders));
+expect(sheetDefs.length > 0, 'expected belle_sheet_* definitions in gas/Sheet.js');
+expect(offenders.length === 0, 'belle_sheet_* definitions found outside Sheet.js: ' + JSON.stringify(offenders));
 
 console.log('OK: test_sheet_module_boundaries');

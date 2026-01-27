@@ -1,6 +1,6 @@
 const fs = require('fs');
 
-const code = fs.readFileSync('gas/OcrParallelTrigger_v0.js', 'utf8');
+const code = fs.readFileSync('gas/OcrParallelTrigger.js', 'utf8');
 
 function expect(cond, msg) {
   if (!cond) throw new Error(msg);

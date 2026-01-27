@@ -1,7 +1,7 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8');
+const code = fs.readFileSync('gas/DocTypeRegistry.js', 'utf8') + '\n' + fs.readFileSync('gas/YayoiExport.js', 'utf8');
 const sandbox = {
   console,
   Utilities: {

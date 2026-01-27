@@ -11,7 +11,7 @@ const keys = [
 const regexes = keys.map((key) => new RegExp(`getProperty\\(\\s*['"]${key}['"]`));
 const gasDir = path.join(__dirname, '..', 'gas');
 const files = fs.readdirSync(gasDir)
-  .filter((name) => name.endsWith('.js') && name !== 'Config_v0.js');
+  .filter((name) => name.endsWith('.js') && name !== 'Config.js');
 
 const offenders = [];
 for (const file of files) {
@@ -22,7 +22,7 @@ for (const file of files) {
 }
 
 if (offenders.length) {
-  throw new Error(`Direct getProperty use for sheet/log keys outside Config_v0.js: ${offenders.join(', ')}`);
+  throw new Error(`Direct getProperty use for sheet/log keys outside Config.js: ${offenders.join(', ')}`);
 }
 
 console.log('OK: test_config_sheet_log_keys_guard');

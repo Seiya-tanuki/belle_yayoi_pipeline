@@ -119,19 +119,19 @@ function expect(cond, msg) {
 }
 
 function buildSandbox(spreadsheet, folder, propsMap) {
-  const code = fs.readFileSync('gas/Config_v0.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/Drive_v0.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/Pdf_v0.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/Gemini_v0.js', 'utf8') + '\n'
+  const code = fs.readFileSync('gas/Config.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/DocTypeRegistry.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/Log.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/Sheet.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/Drive.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/Pdf.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/Gemini.js', 'utf8') + '\n'
     + fs.readFileSync('gas/Code.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/Queue_v0.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/Export_v0.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/YayoiExport_v0.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/OcrValidation_v0.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/Review_v0.js', 'utf8');
+    + fs.readFileSync('gas/Queue.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/Export.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/YayoiExport.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/OcrValidation.js', 'utf8') + '\n'
+    + fs.readFileSync('gas/Review.js', 'utf8');
 
   const sandbox = {
     console,

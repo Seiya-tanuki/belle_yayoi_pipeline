@@ -20,14 +20,14 @@ vm.createContext(sandbox);
 
 let threw = false;
 try {
-  vm.runInContext(fs.readFileSync('gas/Config_v0.js', 'utf8'), sandbox);
-  vm.runInContext(fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue_v0.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('gas/Config.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('gas/Log.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue.js', 'utf8'), sandbox);
 } catch (e) {
   threw = true;
 }
 expect(threw === false, 'Code.js should load before DocTypeRegistry without throwing');
 
-vm.runInContext(fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8'), sandbox);
+vm.runInContext(fs.readFileSync('gas/DocTypeRegistry.js', 'utf8'), sandbox);
 
 const props = { getProperty: () => '' };
 const types = sandbox.belle_ocr_getActiveDocTypes_(props);

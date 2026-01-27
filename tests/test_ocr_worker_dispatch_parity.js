@@ -5,8 +5,8 @@ function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-const code = fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/OcrWorkerParallel_v0.js', 'utf8');
+const code = fs.readFileSync('gas/DocTypeRegistry.js', 'utf8')
+  + '\n' + fs.readFileSync('gas/OcrWorkerParallel.js', 'utf8');
 
 const sandbox = { console };
 vm.createContext(sandbox);

@@ -5,9 +5,9 @@ function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-const code = fs.readFileSync('gas/Config_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue_v0.js', 'utf8');
+const code = fs.readFileSync('gas/Config.js', 'utf8')
+  + '\n' + fs.readFileSync('gas/Gemini.js', 'utf8')
+  + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue.js', 'utf8');
 
 const captured = { url: '', options: null };
 const sandbox = {

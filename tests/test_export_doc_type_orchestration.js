@@ -1,8 +1,8 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 const vm = require('vm');
 
-const code = fs.readFileSync('gas/Export_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Review_v0.js', 'utf8');
+const code = fs.readFileSync('gas/Export.js', 'utf8')
+  + '\n' + fs.readFileSync('gas/Review.js', 'utf8');
 const sandbox = { console };
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);

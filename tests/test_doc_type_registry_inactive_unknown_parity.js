@@ -13,9 +13,9 @@ function makeIterator(list) {
   };
 }
 
-const code = fs.readFileSync('gas/Config_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/DocTypeRegistry_v0.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Log_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini_v0.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue_v0.js', 'utf8');
+const code = fs.readFileSync('gas/Config.js', 'utf8')
+  + '\n' + fs.readFileSync('gas/DocTypeRegistry.js', 'utf8')
+  + '\n' + fs.readFileSync('gas/Log.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue.js', 'utf8');
 
 const bankFolder = {
   getName: () => 'bank_statement',
