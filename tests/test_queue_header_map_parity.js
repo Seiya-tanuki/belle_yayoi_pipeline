@@ -7,7 +7,7 @@ const code = [
   fs.readFileSync('gas/DocTypeRegistry.js', 'utf8'),
   fs.readFileSync('gas/Log.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue.js', 'utf8'),
   fs.readFileSync('gas/Export.js', 'utf8'),
-  fs.readFileSync('gas/Review.js', 'utf8')
+  fs.readFileSync('gas/ExportEntrypoints.js', 'utf8')
 ].join('\n');
 
 const sandbox = { console };

@@ -504,7 +504,7 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
     const eol = eolMode === "LF" ? "\n" : "\r\n";
     const csvText = csvRows.join(eol);
     const ts = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmmss");
-    const filename = "belle_yayoi_review_export_" + ts + ".csv";
+    const filename = "belle_yayoi_receipt_export_" + ts + ".csv";
     const blob = Utilities.newBlob("", "text/csv", filename);
     if (encodingMode === "UTF8") {
       blob.setDataFromString(csvText, "UTF-8");
@@ -1294,7 +1294,7 @@ function belle_exportYayoiCsvCcStatementInternal_(options) {
 /**
  * @deprecated Use belle_exportYayoiCsvInternal_.
  */
-function belle_exportYayoiCsvInternalFromReview_(options) {
+function belle_exportYayoiCsvInternalFromEntrypoints_(options) {
   return belle_exportYayoiCsvInternal_(options);
 }
 

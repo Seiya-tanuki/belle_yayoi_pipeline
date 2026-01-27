@@ -2,7 +2,7 @@ const fs = require('fs');
 const vm = require('vm');
 
 const code = fs.readFileSync('gas/Export.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Review.js', 'utf8');
+  + '\n' + fs.readFileSync('gas/ExportEntrypoints.js', 'utf8');
 const sandbox = { console };
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);

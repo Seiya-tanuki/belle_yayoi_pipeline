@@ -10,11 +10,11 @@ vm.createContext(sandbox);
 
 let threw = false;
 try {
-  vm.runInContext(fs.readFileSync('gas/Review.js', 'utf8'), sandbox);
+  vm.runInContext(fs.readFileSync('gas/ExportEntrypoints.js', 'utf8'), sandbox);
 } catch (e) {
   threw = true;
 }
-expect(threw === false, 'Review.js should load before Export.js without throwing');
+expect(threw === false, 'ExportEntrypoints.js should load before Export.js without throwing');
 
 vm.runInContext(fs.readFileSync('gas/Export.js', 'utf8'), sandbox);
 

@@ -14,11 +14,11 @@ function collectFunctionNames(content) {
   return names;
 }
 
-const reviewContent = fs.readFileSync('gas/Review.js', 'utf8');
+const entrypointsContent = fs.readFileSync('gas/ExportEntrypoints.js', 'utf8');
 const exportContent = fs.readFileSync('gas/Export.js', 'utf8');
 
-const reviewDefs = collectFunctionNames(reviewContent).filter((n) => n.startsWith('belle_export'));
-const reviewAllowed = [
+const entrypointsDefs = collectFunctionNames(entrypointsContent).filter((n) => n.startsWith('belle_export'));
+const entrypointsAllowed = [
   'belle_export_runDocTypes',
   'belle_exportYayoiCsv',
   'belle_exportYayoiCsvReceipt',
@@ -26,8 +26,8 @@ const reviewAllowed = [
   'belle_exportYayoiCsvBankStatement'
 ];
 
-const unexpectedReview = reviewDefs.filter((n) => !reviewAllowed.includes(n));
-expect(unexpectedReview.length === 0, 'unexpected export definitions in Review.js: ' + JSON.stringify(unexpectedReview));
+const unexpectedEntrypoints = entrypointsDefs.filter((n) => !entrypointsAllowed.includes(n));
+expect(unexpectedEntrypoints.length === 0, 'unexpected export definitions in ExportEntrypoints.js: ' + JSON.stringify(unexpectedEntrypoints));
 
 const exportDefs = collectFunctionNames(exportContent);
 const requiredExport = [
@@ -41,13 +41,13 @@ const requiredExport = [
   'belle_exportYayoiCsvReceiptInternal_',
   'belle_exportYayoiCsvCcStatementInternal_',
   'belle_exportYayoiCsvBankStatementInternal_',
-  'belle_exportYayoiCsvInternalFromReview_'
+  'belle_exportYayoiCsvInternalFromEntrypoints_'
 ];
 
 const missing = requiredExport.filter((n) => !exportDefs.includes(n));
 expect(missing.length === 0, 'missing export helpers in Export.js: ' + JSON.stringify(missing));
 
-const wrapperOverlap = reviewAllowed.filter((n) => exportDefs.includes(n));
+const wrapperOverlap = entrypointsAllowed.filter((n) => exportDefs.includes(n));
 expect(wrapperOverlap.length === 0, 'wrapper names should not be defined in Export.js: ' + JSON.stringify(wrapperOverlap));
 
 console.log('OK: test_export_module_boundaries');

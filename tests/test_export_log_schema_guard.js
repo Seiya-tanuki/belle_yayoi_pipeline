@@ -133,7 +133,7 @@ function buildSandbox(spreadsheet, folder, props) {
     + fs.readFileSync('gas/YayoiExport.js', 'utf8') + '\n'
     + fs.readFileSync('gas/OcrValidation.js', 'utf8') + '\n'
     + fs.readFileSync('gas/Export.js', 'utf8') + '\n'
-    + fs.readFileSync('gas/Review.js', 'utf8');
+    + fs.readFileSync('gas/ExportEntrypoints.js', 'utf8');
   const sandbox = {
     console,
     Logger: { log: () => {} },

@@ -172,7 +172,7 @@ const code = fs.readFileSync('gas/Config.js', 'utf8') + '\n' + fs.readFileSync('
   + '\n' + fs.readFileSync('gas/YayoiExport.js', 'utf8')
   + '\n' + fs.readFileSync('gas/OcrValidation.js', 'utf8')
   + '\n' + fs.readFileSync('gas/Export.js', 'utf8')
-  + '\n' + fs.readFileSync('gas/Review.js', 'utf8');
+  + '\n' + fs.readFileSync('gas/ExportEntrypoints.js', 'utf8');
 
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
