@@ -1,4 +1,5 @@
-﻿# CLEANUP_TODO_fallback_v0
+> HISTORICAL: Do not use this document as current spec.
+# CLEANUP_TODO_fallback_v0
 
 ## 目的 / 運用ルール
 - ここに列挙した項目は「将来の負債になり得るが、今すぐ削除するとリスクがある要素」。

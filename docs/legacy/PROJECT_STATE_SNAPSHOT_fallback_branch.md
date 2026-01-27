@@ -1,3 +1,4 @@
+> HISTORICAL: Do not use this document as current spec.
 # PROJECT_STATE_SNAPSHOT_fallback_branch
 
 ## 1. Overview (pipeline stages)

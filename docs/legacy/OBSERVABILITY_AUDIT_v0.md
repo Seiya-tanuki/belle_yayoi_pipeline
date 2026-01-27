@@ -1,3 +1,4 @@
+> HISTORICAL: Do not use this document as current spec.
 # OBSERVABILITY_AUDIT_v0
 
 1. System-level logging map

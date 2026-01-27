@@ -1,3 +1,4 @@
+> HISTORICAL: Do not use this document as current spec.
 # PLAN_FALLBACK_EXPORT_v0
 
 ## 1. 閭梧勹縺ｨ逶ｮ逧・- 繧ｴ繝ｼ繝ｫ: 荳肴・轤ｹ縺後≠縺｣縺ｦ繧ょｿ・★CSV蛹悶＠縲∽ｿｮ豁｣縺ｯ蠑･逕溷・縺ｧ陦後≧縲・- 逶｣譟ｻ諤ｧ: file_id / drive_url / 逅・罰繧ｳ繝ｼ繝峨ｒ蠑･逕溷・縺ｧ隕九∴繧句ｽ｢縺ｧ谿九☆縲・

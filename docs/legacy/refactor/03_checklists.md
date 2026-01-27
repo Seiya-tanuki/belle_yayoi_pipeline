@@ -1,3 +1,4 @@
+> HISTORICAL: Do not use this document as current spec.
 
 # Checklists
 

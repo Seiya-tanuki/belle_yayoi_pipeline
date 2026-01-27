@@ -1,3 +1,4 @@
+> HISTORICAL: Do not use this document as current spec.
 # Phase 5 Retrospective: Why the Refactor Worked (Reproducible Playbook)
 
 > Purpose: Capture the *reproducible* reasons Phase 5 succeeded with near‑zero manual testing, and codify a playbook to repeat the result for future refactors and doc_type additions.
