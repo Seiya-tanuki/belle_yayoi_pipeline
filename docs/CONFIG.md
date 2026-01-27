@@ -10,18 +10,17 @@
 - BELLE_GEMINI_MODEL
 
 ## Script Properties (optional)
-- BELLE_QUEUE_SHEET_NAME (preferred queue sheet for receipt)
-- BELLE_SHEET_NAME (legacy fallback for receipt queue sheet)
-  - resolve order: BELLE_QUEUE_SHEET_NAME -> BELLE_SHEET_NAME -> OCR_RECEIPT
-  - using BELLE_SHEET_NAME logs CONFIG_WARN (BELLE_SHEET_NAME_DEPRECATED)
+- BELLE_QUEUE_SHEET_NAME (receipt queue sheet override; default OCR_RECEIPT)
+  - cc_statement and bank_statement use OCR_CC / OCR_BANK (no override).
 - BELLE_ACTIVE_DOC_TYPES (comma-separated; default: receipt)
   - Allowed values: receipt, cc_statement, bank_statement
   - Include cc_statement to enable OCR_CC queue + OCR processing.
-- BELLE_CC_STAGE1_GENCFG_JSON (optional; JSON string for generationConfig overrides)
-- BELLE_CC_STAGE2_GENCFG_JSON (optional; JSON string for generationConfig overrides)
-- BELLE_BANK_STAGE2_GENCFG_JSON (optional; JSON string for generationConfig overrides for bank_statement OCR)
-  - Example: {"temperature":0,"topP":0.1,"maxOutputTokens":512}
-  - Applied last; overrides defaults and the temperature policy for bank_statement only.
+- BELLE_OCR_GENCFG_JSON__receipt__stage1 (optional; JSON string for generationConfig overrides)
+- BELLE_OCR_GENCFG_JSON__bank_statement__stage1 (optional; JSON string for generationConfig overrides)
+- BELLE_OCR_GENCFG_JSON__cc_statement__stage1 (optional; JSON string for generationConfig overrides)
+- BELLE_OCR_GENCFG_JSON__cc_statement__stage2 (optional; JSON string for generationConfig overrides)
+  - Example: {"temperature":0.2,"topP":0.5,"maxOutputTokens":512}
+  - If temperature is omitted, default is 0.0.
 - BELLE_CC_ENABLE_RESPONSE_JSON_SCHEMA (default: false)
 - BELLE_CC_ENABLE_RESPONSE_MIME_TYPE (default: false)
   - Enable only if the model accepts responseMimeType/responseJsonSchema; invalid argument may return 400.
@@ -57,7 +56,7 @@
 - BELLE_CHATWORK_WEBHOOK_TOKEN (URL token for webhook; set same value as ?token=...)
 - BELLE_CHATWORK_WEBHOOK_ROUTE (default: chatwork)
 
-### Parallel OCR (v0)
+### Parallel OCR
 - BELLE_OCR_PARALLEL_ENABLED (boolean, default: false): enables parallel tick execution.
 - BELLE_OCR_PARALLEL_WORKERS (number string, default: "1"): number of triggers to create (1-20).
 - BELLE_OCR_PARALLEL_TRIGGER_TAG (string, default: "BELLE_OCR_PARALLEL_V0"): log tag for trigger management.
@@ -67,7 +66,6 @@
 - BELLE_OCR_WORKER_MAX_ITEMS (number string, default: 1): max items per worker loop.
 - BELLE_OCR_CLAIM_SCAN_MAX_ROWS (number string; unset = scan all rows).
 - BELLE_OCR_CLAIM_CURSOR__<doc_type> (internal): auto-managed scan cursor; do not edit.
-- BELLE_OCR_CLAIM_CURSOR (legacy internal, receipt only).
 - BELLE_INTEGRATIONS_SHEET_ID (optional): required to write PERF_LOG (also used by webhook logs).
 Notes:
 - PERF_LOG v2 columns: logged_at_iso, phase, ok, doc_type, queue_sheet_name, last_reason, lock_busy_skipped, http_status, cc_error_code, cc_stage, cc_cache_hit, processing_count, detail_json.
@@ -77,14 +75,12 @@ Notes:
 
 ## Notes
 - cc_statement uses ocr_json as stage1 cache or stage2 final JSON.
-- Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used in fallback-v0.
+- Review sheets (REVIEW_STATE/REVIEW_UI/REVIEW_LOG) are not used by the current pipeline.
 - Queue sheets are split by doc_type: OCR_RECEIPT (receipt), OCR_CC (cc_statement), OCR_BANK (bank_statement).
 - Queue sheet columns are extended (append-only): ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail.
 - Export log sheet name is fixed: EXPORT_LOG (legacy IMPORT_LOG must be renamed manually).
 
 ## References
-- docs/PROJECT_STATE_SNAPSHOT_fallback_branch.md
-- docs/SYSTEM_OVERVIEW_FALLBACK_V0.md
-- docs/PLAN_FALLBACK_EXPORT_v0.md
-
-
+- docs/WORKFLOW.md
+- docs/04_Yayoi_CSV_Spec_25cols.md
+- docs/03_Tax_Determination_Spec.md

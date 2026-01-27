@@ -8,12 +8,12 @@ This file tracks known drifts between docs and current implementation.
 - Skip log header includes phase, doc_type, source_subfolder.
 - Parallel OCR worker count supports 1-20; stagger window uses BELLE_OCR_PARALLEL_STAGGER_WINDOW_MS (default 50000, clamp 0-59000).
 - INVALID_SCHEMA logging stores OCR JSON in ocr_error_detail (truncated to 45000); ocr_json remains empty on error.
-- Claim cursor is per doc_type: BELLE_OCR_CLAIM_CURSOR__<doc_type> (legacy BELLE_OCR_CLAIM_CURSOR for receipt).
+- Claim cursor is per doc_type: BELLE_OCR_CLAIM_CURSOR__<doc_type>.
 - CC uses 2-stage OCR (Stage1 classification -> Stage2 extraction) and does not extract description.
-- CC allows PDF input; current flow assumes one page per PDF (multi-page PDF may need future handling).
+- Receipt/cc/bank allow single-page PDF input; multi-page/unknown pagecount PDFs are skipped at queue time.
 - CC now caches Stage1 JSON in ocr_json and runs Stage2 in a later worker (ocr_json may hold stage1 cache or stage2 final JSON).
 - CC can send responseMimeType/responseJsonSchema only when enabled via BELLE_CC_* properties.
-- Bank OCR can override generationConfig via BELLE_BANK_STAGE2_GENCFG_JSON (applied last).
+- Bank OCR can override generationConfig via BELLE_OCR_GENCFG_JSON__bank_statement__stage1.
 - Export writes CSVs under doc_type subfolders (receipt/, cc_statement/, bank_statement/). CC and bank export use Stage2 transactions (1 file -> multiple rows).
 - Bank export skips rows with amount_sign=unknown or missing/non-positive amount_yen (EXPORT_SKIP_LOG reasons: BANK_AMOUNT_SIGN_UNKNOWN, BANK_AMOUNT_MISSING).
 - Export resolves output subfolders strictly; duplicate subfolder names stop export for that doc_type.

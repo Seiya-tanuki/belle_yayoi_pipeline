@@ -1,5 +1,7 @@
 # SYSTEM_OVERVIEW_FALLBACK_V0
 
+NOTE: This document is historical; see WORKFLOW.md for current behavior.
+
 ## Goal
 - Always produce 1 CSV row per file (fallback export).
 - Prevent export when OCR is not finished (guards in export).

@@ -1,5 +1,7 @@
 # RESET_GUIDE_fallback_v0
 
+NOTE: This document is historical; see WORKFLOW.md for current behavior.
+
 ## Purpose
 This reset is destructive. It deletes and recreates OCR/queue and EXPORT_LOG sheets.
 Use only when headers/sheet names are corrupted.
