@@ -24,6 +24,7 @@ expect(receiptSpec.ocr_sheet_name_default === 'OCR_RECEIPT', 'receipt default sh
 expect(typeof receiptSpec.ocr_sheet_name_getter === 'function', 'receipt sheet getter missing');
 expect(receiptSpec.ocr_sheet_name_getter({ getProperty: () => '' }) === 'OCR_RECEIPT', 'receipt sheet getter default mismatch');
 expect(receiptSpec.pipeline_kind === 'single_stage', 'receipt pipeline_kind mismatch');
+expect(receiptSpec.ocr_run_once_fn === 'belle_ocr_receipt_runOnce_', 'receipt runOnce mismatch');
 expect(receiptSpec.export_handler_key === 'receipt', 'receipt export handler key mismatch');
 expect(receiptSpec.stage1_prompt_getter === null, 'receipt stage1 prompt getter should be null');
 
@@ -35,6 +36,7 @@ expect(ccSpec.ocr_sheet_name_default === 'OCR_CC', 'cc default sheet mismatch');
 expect(typeof ccSpec.ocr_sheet_name_getter === 'function', 'cc sheet getter missing');
 expect(ccSpec.ocr_sheet_name_getter({ getProperty: () => '' }) === 'OCR_CC', 'cc sheet getter default mismatch');
 expect(ccSpec.pipeline_kind === 'two_stage', 'cc pipeline_kind mismatch');
+expect(ccSpec.ocr_run_once_fn === 'belle_ocr_cc_runOnce_', 'cc runOnce mismatch');
 expect(ccSpec.export_handler_key === 'cc_statement', 'cc export handler key mismatch');
 expect(typeof ccSpec.stage1_prompt_getter === 'function', 'cc stage1 prompt getter missing');
 expect(typeof ccSpec.stage2_prompt_getter === 'function', 'cc stage2 prompt getter missing');
@@ -47,6 +49,7 @@ expect(bankSpec.ocr_sheet_name_default === 'OCR_BANK', 'bank default sheet misma
 expect(typeof bankSpec.ocr_sheet_name_getter === 'function', 'bank sheet getter missing');
 expect(bankSpec.ocr_sheet_name_getter({ getProperty: () => '' }) === 'OCR_BANK', 'bank sheet getter default mismatch');
 expect(bankSpec.pipeline_kind === 'single_stage', 'bank pipeline_kind mismatch');
+expect(bankSpec.ocr_run_once_fn === 'belle_ocr_bank_runOnce_', 'bank runOnce mismatch');
 expect(bankSpec.export_handler_key === 'bank_statement', 'bank export handler key mismatch');
 expect(typeof bankSpec.stage2_prompt_getter === 'function', 'bank stage2 prompt getter missing');
 

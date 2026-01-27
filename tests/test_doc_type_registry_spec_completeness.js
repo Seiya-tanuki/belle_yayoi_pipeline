@@ -16,6 +16,7 @@ const requiredKeys = [
   'queue_sheet_name',
   'export_subfolder_name',
   'pipeline_kind',
+  'ocr_run_once_fn',
   'export_handler_key',
   'allow_pdf',
   'stop_after_item'
@@ -38,6 +39,7 @@ for (const docType of supported) {
   expect(typeof spec.queue_sheet_name === 'string', 'queue_sheet_name not string for ' + docType);
   expect(typeof spec.export_subfolder_name === 'string', 'export_subfolder_name not string for ' + docType);
   expect(pipelineAllow.indexOf(spec.pipeline_kind) >= 0, 'pipeline_kind not allowed for ' + docType);
+  expect(typeof spec.ocr_run_once_fn === 'string', 'ocr_run_once_fn not string for ' + docType);
   expect(exportHandlerAllow.indexOf(spec.export_handler_key) >= 0, 'export_handler_key not allowed for ' + docType);
   expect(typeof spec.allow_pdf === 'boolean', 'allow_pdf not boolean for ' + docType);
   expect(typeof spec.stop_after_item === 'boolean', 'stop_after_item not boolean for ' + docType);

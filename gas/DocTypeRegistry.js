@@ -50,6 +50,7 @@ function belle_docType_buildReceiptSpec_() {
       return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_RECEIPT);
     },
     pipeline_kind: BELLE_DOC_PIPELINE_SINGLE_STAGE,
+    ocr_run_once_fn: "belle_ocr_receipt_runOnce_",
     stage1_prompt_getter: null,
     stage2_prompt_getter: null,
     export_subfolder_name: "receipt",
@@ -73,6 +74,7 @@ function belle_docType_buildCcSpec_() {
       return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_CC_STATEMENT);
     },
     pipeline_kind: BELLE_DOC_PIPELINE_TWO_STAGE,
+    ocr_run_once_fn: "belle_ocr_cc_runOnce_",
     stage1_prompt_getter: function () {
       return belle_ocr_getCcStage1Prompt_();
     },
@@ -100,6 +102,7 @@ function belle_docType_buildBankSpec_() {
       return belle_cfg_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_BANK_STATEMENT);
     },
     pipeline_kind: BELLE_DOC_PIPELINE_SINGLE_STAGE,
+    ocr_run_once_fn: "belle_ocr_bank_runOnce_",
     stage1_prompt_getter: null,
     stage2_prompt_getter: function () {
       return belle_ocr_getBankStatementPrompt_v0_();
@@ -183,6 +186,11 @@ function belle_ocr_getQueueSheetNameForDocType_(props, docType) {
 function belle_ocr_allowPdfForDocType_(docType) {
   var spec = belle_docType_getSpec_(docType);
   return !!(spec && spec.allow_pdf === true);
+}
+
+function belle_ocr_getRunOnceFnNameForDocType_(docType) {
+  var spec = belle_docType_getSpec_(docType);
+  return spec && spec.ocr_run_once_fn ? String(spec.ocr_run_once_fn) : "";
 }
 
 function belle_ocr_shouldStopAfterItem_(docType) {

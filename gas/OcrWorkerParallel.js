@@ -194,101 +194,68 @@ function belle_ocr_workerOnce_fallback_v0_(opts) {
   let keepOcrJsonOnError = false;
 
   try {
+    const runOnceFnName = belle_ocr_getRunOnceFnNameForDocType_(docType);
+    const g = (typeof globalThis !== "undefined") ? globalThis : this;
+    function setErrorFinal_(code, message) {
+      statusOut = "ERROR_FINAL";
+      outcome = "ERROR_FINAL";
+      errorCode = code;
+      errorMessage = message;
+      errorDetail = message;
+    }
+    function applyRunOnceResult_(result) {
+      if (!result) return;
+      geminiElapsedMs = result.geminiElapsedMs;
+      httpStatus = result.httpStatus;
+      jsonStr = result.jsonStr;
+      statusOut = result.statusOut;
+      outcome = result.outcome;
+      errorCode = result.errorCode;
+      errorMessage = result.errorMessage;
+      errorDetail = result.errorDetail;
+      nextRetryIso = result.nextRetryIso;
+      keepOcrJsonOnError = result.keepOcrJsonOnError === true;
+      if (typeof result.ccStage === "string") ccStage = result.ccStage;
+      if (result.ccCacheHit !== undefined) ccCacheHit = result.ccCacheHit;
+      if (result.ccStage2Attempted !== undefined) ccStage2Attempted = result.ccStage2Attempted;
+      if (result.ccGeminiMs !== undefined) ccGeminiMs = result.ccGeminiMs;
+      if (result.throwError) {
+        throw new Error(result.throwError);
+      }
+    }
+    function callRunOnce_() {
+      if (!docSpec) {
+        setErrorFinal_("UNSUPPORTED_SINGLE_STAGE_DOC_TYPE", "Unsupported single stage docType: " + docType);
+        return;
+      }
+      if (!runOnceFnName) {
+        setErrorFinal_("MISSING_OCR_RUN_ONCE_FN", "Missing ocr_run_once_fn for docType: " + docType);
+        return;
+      }
+      const runOnce = g[runOnceFnName];
+      if (typeof runOnce !== "function") {
+        setErrorFinal_("OCR_RUN_ONCE_NOT_FOUND", "ocr_run_once_fn not found: " + runOnceFnName);
+        return;
+      }
+      const result = runOnce({
+        props: props,
+        fileId: fileId,
+        mimeType: mimeType,
+        docType: docType,
+        attempt: attempt,
+        maxAttempts: maxAttempts,
+        statusBefore: statusBefore,
+        prevErrorCode: ocrErrorCode,
+        prevError: ocrError,
+        prevErrorDetail: ocrErrorDetail,
+        ocrJsonBefore: ocrJsonBefore,
+        backoffSeconds: backoffSeconds
+      });
+      applyRunOnceResult_(result);
+    }
     belle_ocr_worker_dispatchByPipelineKind_(pipelineKind, {
-      two_stage: function () {
-        const ccResult = belle_ocr_cc_runOnce_({
-          props: props,
-          fileId: fileId,
-          attempt: attempt,
-          maxAttempts: maxAttempts,
-          statusBefore: statusBefore,
-          prevErrorCode: ocrErrorCode,
-          prevError: ocrError,
-          prevErrorDetail: ocrErrorDetail,
-          ocrJsonBefore: ocrJsonBefore,
-          backoffSeconds: backoffSeconds
-        });
-        ccStage = ccResult.ccStage;
-        ccCacheHit = ccResult.ccCacheHit;
-        ccStage2Attempted = ccResult.ccStage2Attempted;
-        geminiElapsedMs = ccResult.geminiElapsedMs;
-        ccGeminiMs = ccResult.ccGeminiMs;
-        httpStatus = ccResult.httpStatus;
-        jsonStr = ccResult.jsonStr;
-        statusOut = ccResult.statusOut;
-        outcome = ccResult.outcome;
-        errorCode = ccResult.errorCode;
-        errorMessage = ccResult.errorMessage;
-        errorDetail = ccResult.errorDetail;
-        nextRetryIso = ccResult.nextRetryIso;
-        keepOcrJsonOnError = ccResult.keepOcrJsonOnError === true;
-        if (ccResult.throwError) {
-          throw new Error(ccResult.throwError);
-        }
-      },
-      single_stage: function () {
-        if (docType === BELLE_DOC_TYPE_RECEIPT) {
-          const receiptResult = belle_ocr_receipt_runOnce_({
-            props: props,
-            fileId: fileId,
-            mimeType: mimeType,
-            docType: docType,
-            attempt: attempt,
-            maxAttempts: maxAttempts,
-            statusBefore: statusBefore,
-            prevErrorCode: ocrErrorCode,
-            prevError: ocrError,
-            prevErrorDetail: ocrErrorDetail
-          });
-          geminiElapsedMs = receiptResult.geminiElapsedMs;
-          httpStatus = receiptResult.httpStatus;
-          jsonStr = receiptResult.jsonStr;
-          statusOut = receiptResult.statusOut;
-          outcome = receiptResult.outcome;
-          errorCode = receiptResult.errorCode;
-          errorMessage = receiptResult.errorMessage;
-          errorDetail = receiptResult.errorDetail;
-          nextRetryIso = receiptResult.nextRetryIso;
-          keepOcrJsonOnError = receiptResult.keepOcrJsonOnError === true;
-          if (receiptResult.throwError) {
-            throw new Error(receiptResult.throwError);
-          }
-          return;
-        }
-        if (docType === BELLE_DOC_TYPE_BANK_STATEMENT) {
-          const bankResult = belle_ocr_bank_runOnce_({
-            props: props,
-            fileId: fileId,
-            mimeType: mimeType,
-            docType: docType,
-            attempt: attempt,
-            maxAttempts: maxAttempts,
-            statusBefore: statusBefore,
-            prevErrorCode: ocrErrorCode,
-            prevError: ocrError,
-            prevErrorDetail: ocrErrorDetail
-          });
-          geminiElapsedMs = bankResult.geminiElapsedMs;
-          httpStatus = bankResult.httpStatus;
-          jsonStr = bankResult.jsonStr;
-          statusOut = bankResult.statusOut;
-          outcome = bankResult.outcome;
-          errorCode = bankResult.errorCode;
-          errorMessage = bankResult.errorMessage;
-          errorDetail = bankResult.errorDetail;
-          nextRetryIso = bankResult.nextRetryIso;
-          keepOcrJsonOnError = bankResult.keepOcrJsonOnError === true;
-          if (bankResult.throwError) {
-            throw new Error(bankResult.throwError);
-          }
-          return;
-        }
-        statusOut = "ERROR_FINAL";
-        outcome = "ERROR_FINAL";
-        errorCode = "UNSUPPORTED_SINGLE_STAGE_DOC_TYPE";
-        errorMessage = "Unsupported single stage docType: " + docType;
-        errorDetail = "Unsupported single stage docType: " + docType;
-      },
+      two_stage: function () { callRunOnce_(); },
+      single_stage: function () { callRunOnce_(); },
       inactive: function () {
         statusOut = "ERROR_FINAL";
         outcome = "ERROR_FINAL";

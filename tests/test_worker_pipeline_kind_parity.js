@@ -19,6 +19,9 @@ const bankSpec = sandbox.belle_docType_getSpec_('bank_statement');
 expect(ccSpec.pipeline_kind === 'two_stage', 'cc pipeline_kind should be two_stage');
 expect(receiptSpec.pipeline_kind === 'single_stage', 'receipt pipeline_kind should be single_stage');
 expect(bankSpec.pipeline_kind === 'single_stage', 'bank pipeline_kind should be single_stage');
+expect(ccSpec.ocr_run_once_fn === 'belle_ocr_cc_runOnce_', 'cc runOnce mismatch');
+expect(receiptSpec.ocr_run_once_fn === 'belle_ocr_receipt_runOnce_', 'receipt runOnce mismatch');
+expect(bankSpec.ocr_run_once_fn === 'belle_ocr_bank_runOnce_', 'bank runOnce mismatch');
 
 expect(sandbox.belle_ocr_shouldStopAfterItem_('cc_statement') === true, 'cc should stop after item');
 expect(sandbox.belle_ocr_shouldStopAfterItem_('receipt') === false, 'receipt should not stop after item');
