@@ -514,7 +514,7 @@
         $("last-refresh").textContent = "Last refresh: " + now.toISOString();
       }
 
-      function refreshOverview() {
+      function refreshOverview(options) {
         setStatus("overview-status", "Loading overview...");
         return callApi("belle_dashboard_getOverview")
           .then(function (res) {
@@ -528,6 +528,9 @@
             }
             renderOverview(res.data);
             setStatus("overview-status", "Overview updated");
+            if (options && options.toastOnSuccess === true) {
+              showToast("Overview updated.", "success");
+            }
             updateLastRefresh();
           })
           .catch(function () {
@@ -536,7 +539,7 @@
           });
       }
 
-      function refreshLogs() {
+      function refreshLogs(options) {
         setStatus("logs-status", "Loading logs...");
         return callApi("belle_dashboard_getLogs")
           .then(function (res) {
@@ -550,6 +553,9 @@
             }
             renderLogs(res.data);
             setStatus("logs-status", "Logs updated");
+            if (options && options.toastOnSuccess === true) {
+              showToast("Logs updated.", "success");
+            }
             updateLastRefresh();
           })
           .catch(function () {
@@ -572,8 +578,8 @@
             } else {
               showToast(res.message || "Action completed.", "success");
               if (!options || options.skipRefresh !== true) {
-                refreshOverview();
-                refreshLogs();
+                refreshOverview({ toastOnSuccess: false });
+                refreshLogs({ toastOnSuccess: false });
               }
             }
           })
@@ -616,15 +622,19 @@
               showToast(msg, "error");
               return;
             }
-            refreshOverview();
-            refreshLogs();
+            refreshOverview({ toastOnSuccess: false });
+            refreshLogs({ toastOnSuccess: false });
           })
           .catch(function () {
             showToast("Bootstrap failed.", "error");
           });
 
-        $("refresh-overview").addEventListener("click", refreshOverview);
-        $("refresh-logs").addEventListener("click", refreshLogs);
+        $("refresh-overview").addEventListener("click", function () {
+          refreshOverview({ toastOnSuccess: true });
+        });
+        $("refresh-logs").addEventListener("click", function () {
+          refreshLogs({ toastOnSuccess: true });
+        });
 
         $("btn-queue").addEventListener("click", function () {
           runAction("btn-queue", "belle_dashboard_actionQueue");

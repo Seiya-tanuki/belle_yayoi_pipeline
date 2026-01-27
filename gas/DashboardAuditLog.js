@@ -54,13 +54,11 @@ function belle_dashboard_audit_append_(entry) {
     var props = typeof belle_cfg_getProps_ === "function"
       ? belle_cfg_getProps_()
       : PropertiesService.getScriptProperties();
-    var sheetId = typeof belle_cfg_getSheetIdOrEmpty_ === "function"
-      ? belle_cfg_getSheetIdOrEmpty_(props)
-      : String(props.getProperty("BELLE_SHEET_ID") || "");
-    if (!sheetId) {
-      return { ok: false, reason: "MISSING_SHEET_ID", message: "Missing sheet id." };
+    var integrationsSheetId = String(props.getProperty("BELLE_INTEGRATIONS_SHEET_ID") || "");
+    if (!integrationsSheetId) {
+      return { ok: false, reason: "INTEGRATIONS_SHEET_ID_MISSING", message: "Missing integrations sheet id." };
     }
-    var ss = SpreadsheetApp.openById(sheetId);
+    var ss = SpreadsheetApp.openById(integrationsSheetId);
     var sh = ss.getSheetByName(BELLE_DASHBOARD_AUDIT_SHEET_NAME);
     if (!sh) {
       sh = ss.insertSheet(BELLE_DASHBOARD_AUDIT_SHEET_NAME);

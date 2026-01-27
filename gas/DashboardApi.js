@@ -150,10 +150,10 @@ function belle_dashboard_handleRequest_(action, requiredRole, handler) {
     reason: finalRes.reason,
     message: finalRes.message
   });
-  if (finalRes.ok && audit && audit.ok === false) {
+  if (audit && audit.ok === false) {
     finalRes.ok = false;
-    finalRes.reason = "AUDIT_FAILED";
-    finalRes.message = "Action completed but audit log failed.";
+    finalRes.reason = String(audit.reason || "AUDIT_FAILED");
+    finalRes.message = String(audit.message || "Audit log failed.");
     finalRes.data = finalRes.data || {};
     finalRes.data.audit = audit;
   } else {
@@ -427,11 +427,29 @@ function belle_dashboard_actionExport() {
   return belle_dashboard_handleRequest_("export", BELLE_DASHBOARD_ROLE_ADMIN, function () {
     try {
       var res = belle_exportYayoiCsv();
+      var reason = String(res && res.reason ? res.reason : "OK");
+      var resOk = res ? res.ok : undefined;
+      if (resOk === true && reason !== "OK") resOk = undefined;
+      var ok;
+      if (resOk === true) ok = true;
+      else if (resOk === false) ok = false;
+      else if (reason && reason !== "OK") ok = false;
+      else ok = true;
+      var message = "Export completed.";
+      if (!ok) {
+        if (reason === "OCR_PENDING") {
+          message = "Export blocked: OCR pending items remain.";
+        } else if (reason === "OCR_RETRYABLE_REMAINING") {
+          message = "Export blocked: retryable OCR errors remain.";
+        } else {
+          message = "Export blocked.";
+        }
+      }
       var data = belle_dashboard_sanitizeExportResult_(res);
       return {
-        ok: res && res.ok !== false,
-        reason: res && res.ok === false ? "EXPORT_FAILED" : String(res && res.reason ? res.reason : "OK"),
-        message: res && res.ok === false ? "Export failed." : "Export completed.",
+        ok: ok,
+        reason: reason,
+        message: message,
         data: data,
         requestRedacted: "{\"action\":\"export\"}"
       };
