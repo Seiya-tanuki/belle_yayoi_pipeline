@@ -92,6 +92,8 @@ function belle_ocr_receipt_runOnce_(ctx) {
     const promptText = resolvePromptText_();
     const geminiOptions = {};
     if (promptText) geminiOptions.promptText = promptText;
+    const receiptGenCfg = belle_cfg_getOcrGenCfgOverride_(props, "receipt", "stage1");
+    if (receiptGenCfg) geminiOptions.generationConfig = receiptGenCfg;
     jsonStr = belle_callGeminiOcr(blob, geminiOptions);
   } catch (e) {
     geminiElapsedMs = Date.now() - geminiStartMs;

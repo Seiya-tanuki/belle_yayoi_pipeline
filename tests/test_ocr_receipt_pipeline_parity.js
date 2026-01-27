@@ -68,8 +68,8 @@ expect(invalidMax.statusOut === 'ERROR_FINAL', 'invalid schema at max attempts s
 expect(invalidMax.errorCode === 'MAX_ATTEMPTS_EXCEEDED', 'invalid schema at max attempts should set MAX_ATTEMPTS_EXCEEDED');
 
 const pdfRes = runWithResponse(receiptJson, { mimeType: 'application/pdf' });
-expect(pdfRes.statusOut === 'ERROR_FINAL', 'receipt pdf should be ERROR_FINAL');
-expect(pdfRes.errorCode === 'UNSUPPORTED_PDF', 'receipt pdf errorCode mismatch');
-expect(pdfRes.jsonStr === '', 'receipt pdf should not return json');
+expect(pdfRes.statusOut === 'DONE', 'receipt pdf should be allowed');
+expect(pdfRes.errorCode === '', 'receipt pdf should not set errorCode');
+expect(pdfRes.jsonStr === receiptJson, 'receipt pdf should return json');
 
 console.log('OK: test_ocr_receipt_pipeline_parity');

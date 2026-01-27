@@ -25,7 +25,7 @@ expect(sandbox.belle_ocr_shouldStopAfterItem_('receipt') === false, 'receipt sho
 expect(sandbox.belle_ocr_shouldStopAfterItem_('bank_statement') === true, 'bank should stop after item');
 
 expect(sandbox.belle_ocr_allowPdfForDocType_('cc_statement') === true, 'cc should allow pdf');
-expect(sandbox.belle_ocr_allowPdfForDocType_('receipt') === false, 'receipt should not allow pdf');
+expect(sandbox.belle_ocr_allowPdfForDocType_('receipt') === true, 'receipt should allow pdf');
 expect(sandbox.belle_ocr_allowPdfForDocType_('bank_statement') === true, 'bank should allow pdf');
 
 console.log('OK: test_worker_pipeline_kind_parity');

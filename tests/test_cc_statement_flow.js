@@ -85,7 +85,7 @@ expect(noRows.errorCode === 'CC_NO_ROWS_EXTRACTED', 'no rows errorCode mismatch'
 expect(noRows.keepCache === true, 'no rows should keep cache');
 
 expect(allowPdf('cc_statement') === true, 'cc_statement should allow PDF');
-expect(allowPdf('receipt') === false, 'receipt should not allow PDF');
+expect(allowPdf('receipt') === true, 'receipt should allow PDF');
 expect(shouldStop('cc_statement') === true, 'cc_statement should stop after item');
 expect(shouldStop('receipt') === false, 'receipt should not stop after item');
 

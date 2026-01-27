@@ -54,7 +54,7 @@ function belle_docType_buildReceiptSpec_() {
     stage2_prompt_getter: null,
     export_subfolder_name: "receipt",
     export_handler_key: BELLE_DOC_TYPE_RECEIPT,
-    allow_pdf: false,
+    allow_pdf: true,
     stop_after_item: false,
     export_order: 2
   };
