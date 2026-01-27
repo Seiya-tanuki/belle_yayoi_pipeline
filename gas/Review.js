@@ -17,3 +17,7 @@ function belle_exportYayoiCsvReceipt(options) {
 function belle_exportYayoiCsvCcStatement(options) {
   return belle_exportYayoiCsvCcStatementInternal_(options);
 }
+
+function belle_exportYayoiCsvBankStatement(options) {
+  return belle_exportYayoiCsvBankStatementInternal_(options);
+}

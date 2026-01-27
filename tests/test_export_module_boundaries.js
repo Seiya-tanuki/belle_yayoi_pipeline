@@ -22,7 +22,8 @@ const reviewAllowed = [
   'belle_export_runDocTypes',
   'belle_exportYayoiCsv',
   'belle_exportYayoiCsvReceipt',
-  'belle_exportYayoiCsvCcStatement'
+  'belle_exportYayoiCsvCcStatement',
+  'belle_exportYayoiCsvBankStatement'
 ];
 
 const unexpectedReview = reviewDefs.filter((n) => !reviewAllowed.includes(n));
@@ -39,6 +40,7 @@ const requiredExport = [
   'belle_exportYayoiCsvInternal_',
   'belle_exportYayoiCsvReceiptInternal_',
   'belle_exportYayoiCsvCcStatementInternal_',
+  'belle_exportYayoiCsvBankStatementInternal_',
   'belle_exportYayoiCsvInternalFromReview_'
 ];
 
