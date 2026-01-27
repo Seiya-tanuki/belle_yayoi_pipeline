@@ -338,6 +338,17 @@
         }, 2600);
       }
 
+      function authErrorMessage(res) {
+        if (!res || !res.reason) return "";
+        if (res.reason === "ACTOR_EMAIL_UNAVAILABLE") {
+          return "Access denied: unable to determine your email. Use a domain account or adjust Web App access.";
+        }
+        if (res.reason === "UNAUTHORIZED") {
+          return "Access denied: your email is not allowlisted for this dashboard.";
+        }
+        return "";
+      }
+
       function callApi(name) {
         var args = Array.prototype.slice.call(arguments, 1);
         return new Promise(function (resolve, reject) {
@@ -509,8 +520,10 @@
           .then(function (res) {
             applyActor(res);
             if (!res || res.ok !== true) {
-              showToast(res && res.message ? res.message : "Overview failed.", "error");
-              setStatus("overview-status", "Failed to load overview");
+              var authMsg = authErrorMessage(res);
+              var msg = authMsg || (res && res.message ? res.message : "Overview failed.");
+              showToast(msg, "error");
+              setStatus("overview-status", authMsg ? "Access denied" : "Failed to load overview");
               return;
             }
             renderOverview(res.data);
@@ -529,8 +542,10 @@
           .then(function (res) {
             applyActor(res);
             if (!res || res.ok !== true) {
-              showToast(res && res.message ? res.message : "Logs failed.", "error");
-              setStatus("logs-status", "Failed to load logs");
+              var authMsg = authErrorMessage(res);
+              var msg = authMsg || (res && res.message ? res.message : "Logs failed.");
+              showToast(msg, "error");
+              setStatus("logs-status", authMsg ? "Access denied" : "Failed to load logs");
               return;
             }
             renderLogs(res.data);
@@ -552,7 +567,8 @@
           .then(function (res) {
             applyActor(res);
             if (!res || res.ok !== true) {
-              showToast(res && res.message ? res.message : "Action failed.", "error");
+              var msg = authErrorMessage(res) || (res && res.message ? res.message : "Action failed.");
+              showToast(msg, "error");
             } else {
               showToast(res.message || "Action completed.", "success");
               if (!options || options.skipRefresh !== true) {
@@ -596,7 +612,8 @@
           .then(function (res) {
             applyActor(res);
             if (!res || res.ok !== true) {
-              showToast(res && res.message ? res.message : "Not authorized.", "error");
+              var msg = authErrorMessage(res) || (res && res.message ? res.message : "Not authorized.");
+              showToast(msg, "error");
               return;
             }
             refreshOverview();

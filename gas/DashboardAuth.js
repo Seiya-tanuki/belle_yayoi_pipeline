@@ -6,23 +6,37 @@ var BELLE_DASHBOARD_ROLE_ADMIN = "admin";
 var BELLE_DASHBOARD_ROLE_USER = "user";
 var BELLE_DASHBOARD_ROLE_NONE = "none";
 
-function belle_dashboard_getActor_() {
-  var email = "";
+function belle_dashboard_getIdentity_() {
+  var actorEmail = "";
+  var effectiveEmail = "";
   try {
-    email = Session.getActiveUser().getEmail();
+    actorEmail = Session.getActiveUser().getEmail();
   } catch (e) {
-    email = "";
+    actorEmail = "";
   }
-  if (!email) {
-    try {
-      email = Session.getEffectiveUser().getEmail();
-    } catch (e) {
-      email = "";
-    }
+  try {
+    effectiveEmail = Session.getEffectiveUser().getEmail();
+  } catch (e) {
+    effectiveEmail = "";
   }
-  email = String(email || "").trim();
-  var role = belle_dashboard_resolveRole_(email);
-  return { email: email || "", role: role };
+  actorEmail = String(actorEmail || "").trim();
+  effectiveEmail = String(effectiveEmail || "").trim();
+  if (!actorEmail) {
+    return {
+      actor_email: null,
+      effective_email: effectiveEmail || null,
+      role: BELLE_DASHBOARD_ROLE_NONE,
+      reason: "ACTOR_EMAIL_UNAVAILABLE"
+    };
+  }
+  var role = belle_dashboard_resolveRole_(actorEmail);
+  var reason = role === BELLE_DASHBOARD_ROLE_NONE ? "NOT_ALLOWLISTED" : "OK";
+  return {
+    actor_email: actorEmail,
+    effective_email: effectiveEmail || null,
+    role: role,
+    reason: reason
+  };
 }
 
 function belle_dashboard_getAllowlist_(props, key) {

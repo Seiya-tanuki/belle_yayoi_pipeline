@@ -12,7 +12,8 @@ var BELLE_DASHBOARD_AUDIT_HEADER = [
   "request_redacted",
   "ok",
   "reason",
-  "message"
+  "message",
+  "effective_email"
 ];
 
 function belle_dashboard_audit_buildRow_(entry) {
@@ -28,6 +29,7 @@ function belle_dashboard_audit_buildRow_(entry) {
   row[6] = e.ok === true;
   row[7] = String(e.reason || "");
   row[8] = String(e.message || "");
+  row[9] = String(e.effectiveEmail || "");
   return row;
 }
 

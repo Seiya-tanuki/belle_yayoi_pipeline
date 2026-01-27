@@ -103,15 +103,21 @@ function belle_dashboard_parseCountsJson_(raw) {
 
 function belle_dashboard_handleRequest_(action, requiredRole, handler) {
   var rid = belle_dashboard_buildRid_();
-  var actor = belle_dashboard_getActor_();
-  var role = actor && actor.role ? actor.role : BELLE_DASHBOARD_ROLE_NONE;
-  var actorEmail = actor && actor.email ? actor.email : "";
+  var identity = belle_dashboard_getIdentity_();
+  var role = identity && identity.role ? identity.role : BELLE_DASHBOARD_ROLE_NONE;
+  var actorEmail = identity && identity.actor_email ? identity.actor_email : "";
+  var effectiveEmail = identity && identity.effective_email ? identity.effective_email : "";
+  var identityReason = identity && identity.reason ? identity.reason : "";
   var nowIso = new Date().toISOString();
   var response;
   var requestRedacted = "";
   try {
     if (!belle_dashboard_isAuthorized_(role, requiredRole)) {
-      response = { ok: false, reason: "UNAUTHORIZED", message: "Access denied.", data: null };
+      var denyReason = identityReason === "ACTOR_EMAIL_UNAVAILABLE" ? "ACTOR_EMAIL_UNAVAILABLE" : "UNAUTHORIZED";
+      var denyMessage = identityReason === "ACTOR_EMAIL_UNAVAILABLE"
+        ? "Actor email unavailable."
+        : "Access denied.";
+      response = { ok: false, reason: denyReason, message: denyMessage, data: null };
       requestRedacted = "{\"action\":\"" + action + "\"}";
     } else {
       response = handler({ rid: rid, role: role, actorEmail: actorEmail }) || null;
@@ -136,6 +142,7 @@ function belle_dashboard_handleRequest_(action, requiredRole, handler) {
     tsIso: nowIso,
     rid: rid,
     actorEmail: actorEmail,
+    effectiveEmail: effectiveEmail,
     role: role || BELLE_DASHBOARD_ROLE_NONE,
     action: action,
     requestRedacted: belle_dashboard_truncate_(requestRedacted, 500),
