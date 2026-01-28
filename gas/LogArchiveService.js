@@ -83,9 +83,7 @@ function belle_logArchive_archiveLogs_() {
     return { ok: false, reason: folderRes.reason, message: folderRes.message || "Archive folder error.", data: null };
   }
 
-  var tz = Session.getScriptTimeZone();
-  var ts = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HHmmss");
-  var name = "Logs Archive " + ts;
+  var name = belle_archive_buildName_("logs_archive");
   var archiveSs = SpreadsheetApp.create(name);
   var archiveFile = DriveApp.getFileById(archiveSs.getId());
   archiveFile.moveTo(folderRes.folder);

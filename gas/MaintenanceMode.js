@@ -139,6 +139,18 @@ function belle_maint_checkNoLiveProcessing_() {
   return { ok: true, reason: "OK", message: "No live processing.", data: null };
 }
 
+function belle_maint_hasOcrTriggers_() {
+  if (typeof belle_ocr_parallel_getTriggersByHandler_ === "function") {
+    var triggers = belle_ocr_parallel_getTriggersByHandler_("belle_ocr_workerTick");
+    return triggers && triggers.length > 0;
+  }
+  var all = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < all.length; i++) {
+    if (all[i].getHandlerFunction && all[i].getHandlerFunction() === "belle_ocr_workerTick") return true;
+  }
+  return false;
+}
+
 function belle_maint_quiesceAndEnter_() {
   var state = belle_maint_getState_();
   if (state.mode === "MAINTENANCE") {
@@ -149,7 +161,6 @@ function belle_maint_quiesceAndEnter_() {
       data: { mode: state.mode, until_iso: state.untilIso }
     };
   }
-  var disableRes = belle_ocr_parallel_disable();
   var lock;
   try {
     lock = LockService.getScriptLock();
@@ -158,6 +169,14 @@ function belle_maint_quiesceAndEnter_() {
     return { ok: false, reason: "LOCK_BUSY", message: "Script lock busy.", data: null };
   }
   try {
+    if (belle_maint_hasOcrTriggers_()) {
+      return {
+        ok: false,
+        reason: "TRIGGERS_ACTIVE",
+        message: "Disable OCR triggers before entering maintenance.",
+        data: { mode: state.mode, until_iso: state.untilIso }
+      };
+    }
     var liveCheck = belle_maint_checkNoLiveProcessing_();
     if (!liveCheck.ok) return liveCheck;
     var ttlMinutes = belle_maint_getTtlMinutes_();
@@ -170,8 +189,7 @@ function belle_maint_quiesceAndEnter_() {
       data: {
         mode: "MAINTENANCE",
         until_iso: untilIso,
-        ttl_minutes: ttlMinutes,
-        ocr_disable: disableRes || null
+        ttl_minutes: ttlMinutes
       }
     };
   } finally {

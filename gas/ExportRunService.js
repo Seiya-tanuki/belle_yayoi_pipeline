@@ -90,9 +90,7 @@ function belle_export_run_createReport_(sheetId, runId) {
   if (!folderRes.ok) {
     return { ok: false, reason: folderRes.reason, message: folderRes.message || "Archive folder error." };
   }
-  var tz = Session.getScriptTimeZone();
-  var ts = Utilities.formatDate(new Date(), tz, "yyyy-MM-dd HHmmss");
-  var name = "Export Run Report " + ts;
+  var name = belle_archive_buildName_("export_run_report");
   var file;
   try {
     file = DriveApp.getFileById(sheetId).makeCopy(name, folderRes.folder);

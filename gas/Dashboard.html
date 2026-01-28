@@ -781,6 +781,7 @@
         function runOp(button, fnName, confirmText, successText, options) {
           var opts = options || {};
           var onSuccess = typeof opts.onSuccess === "function" ? opts.onSuccess : null;
+          var onError = typeof opts.onError === "function" ? opts.onError : null;
           if (confirmText && !window.confirm(confirmText)) return;
           setLoading(button, true);
           setStatus("Running " + fnName + "...");
@@ -792,6 +793,10 @@
               return;
             }
             if (!res.ok) {
+              if (onError) {
+                onError(res);
+                return;
+              }
               setStatus(res.message || "Action failed.", true);
               showToast(res.message || "Action failed.", "error");
               return;
@@ -873,7 +878,16 @@
             runOp(btnOcrDisable, "belle_dash_opOcrDisable", "Disable OCR workers?", "OCR disabled.");
           });
           btnEnterMaintenance.addEventListener("click", function () {
-            runOp(btnEnterMaintenance, "belle_dash_enterMaintenance", "Enter maintenance mode and stop OCR triggers?", "Maintenance mode enabled.", {
+            runOp(btnEnterMaintenance, "belle_dash_enterMaintenance", "Enter maintenance mode?", "Maintenance mode enabled.", {
+              onError: function (res) {
+                if (res && res.reason === "TRIGGERS_ACTIVE") {
+                  setStatus("Disable OCR triggers before entering maintenance.", true);
+                  showToast("Disable OCR triggers before entering maintenance.", "error");
+                  return;
+                }
+                setStatus(res && res.message ? res.message : "Action failed.", true);
+                showToast(res && res.message ? res.message : "Action failed.", "error");
+              },
               onSuccess: function (res) {
                 if (res && res.data) applyModeState(res.data);
                 else refreshMode();
