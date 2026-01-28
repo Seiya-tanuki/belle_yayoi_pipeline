@@ -285,6 +285,8 @@ function belle_dash_getLogs() {
 
 function belle_dash_opQueue() {
   return belle_dash_wrap_("op_queue", function () {
+    var gate = belle_maint_requireMode_("OCR");
+    if (!gate.ok) return gate;
     var res = belle_queueFolderFilesToSheet();
     var queued = res && res.queued ? Number(res.queued) : 0;
     var skipped = res && res.skipped ? Number(res.skipped) : 0;
@@ -300,6 +302,8 @@ function belle_dash_opQueue() {
 
 function belle_dash_opOcrEnable() {
   return belle_dash_wrap_("op_ocr_enable", function () {
+    var gate = belle_maint_requireMode_("OCR");
+    if (!gate.ok) return gate;
     var res = belle_ocr_parallel_enable();
     if (res && res.reason) {
       return belle_dash_result_(false, "OCR_ENABLE_BLOCKED", "OCR enable blocked: " + res.reason, {
@@ -316,6 +320,8 @@ function belle_dash_opOcrEnable() {
 
 function belle_dash_opOcrDisable() {
   return belle_dash_wrap_("op_ocr_disable", function () {
+    var gate = belle_maint_requireMode_("OCR");
+    if (!gate.ok) return gate;
     var res = belle_ocr_parallel_disable();
     return belle_dash_result_(true, "OK", "OCR parallel disabled.", {
       deleted: res && res.deleted ? res.deleted : 0,
@@ -326,31 +332,46 @@ function belle_dash_opOcrDisable() {
 
 function belle_dash_opExport() {
   return belle_dash_wrap_("op_export", function () {
-    var res = belle_exportYayoiCsv();
-    if (res && res.phase === "EXPORT_GUARD") {
-      var reason = res.reason ? String(res.reason) : "UNKNOWN_GUARD";
-      var totals = {
-        totalCount: typeof res.totalCount === "number" ? res.totalCount : null,
-        doneCount: typeof res.doneCount === "number" ? res.doneCount : null,
-        queuedRemaining: typeof res.queuedRemaining === "number" ? res.queuedRemaining : null,
-        errorRetryableCount: typeof res.errorRetryableCount === "number" ? res.errorRetryableCount : null,
-        errorFinalCount: typeof res.errorFinalCount === "number" ? res.errorFinalCount : null
-      };
-      return belle_dash_result_(false, "EXPORT_BLOCKED", "Export blocked: " + reason, {
-        guardReason: reason,
-        totals: totals
-      });
-    }
-    if (!res || res.ok === false || res.phase === "EXPORT_ERROR") {
-      return belle_dash_result_(false, "EXPORT_FAILED", "Export failed.", null);
-    }
-    return belle_dash_result_(true, "OK", "Export completed.", {
-      phase: res.phase || "",
-      reason: res.reason || "",
-      exportedRows: res.exportedRows || 0,
-      exportedFiles: res.exportedFiles || 0,
-      skipped: res.skipped || 0,
-      errors: res.errors || 0
-    });
+    var gate = belle_maint_requireMode_("MAINTENANCE");
+    if (!gate.ok) return gate;
+    return belle_export_run_maintenance_();
+  });
+}
+
+function belle_dash_getMode() {
+  return belle_dash_wrap_("mode_get", function () {
+    return belle_dash_maint_getState_();
+  });
+}
+
+function belle_dash_enterMaintenance() {
+  return belle_dash_wrap_("maint_enter", function () {
+    var gate = belle_maint_requireMode_("OCR");
+    if (!gate.ok) return gate;
+    return belle_dash_maint_enter_();
+  });
+}
+
+function belle_dash_exitMaintenance() {
+  return belle_dash_wrap_("maint_exit", function () {
+    var gate = belle_maint_requireMode_("MAINTENANCE");
+    if (!gate.ok) return gate;
+    return belle_dash_maint_exit_();
+  });
+}
+
+function belle_dash_archiveLogs() {
+  return belle_dash_wrap_("maint_archive_logs", function () {
+    var gate = belle_maint_requireMode_("MAINTENANCE");
+    if (!gate.ok) return gate;
+    return belle_dash_maint_archiveLogs_();
+  });
+}
+
+function belle_dash_exportRun() {
+  return belle_dash_wrap_("maint_export_run", function () {
+    var gate = belle_maint_requireMode_("MAINTENANCE");
+    if (!gate.ok) return gate;
+    return belle_dash_maint_exportRun_();
   });
 }
