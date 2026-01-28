@@ -213,6 +213,26 @@ function belle_export_run_maintenance_() {
     };
   }
 
+  var imagesRootId = String(props.getProperty("BELLE_IMAGES_ARCHIVE_FOLDER_ID") || "").trim();
+  if (!imagesRootId) {
+    return {
+      ok: false,
+      reason: "IMAGES_ARCHIVE_FOLDER_ID_MISSING",
+      message: "Missing BELLE_IMAGES_ARCHIVE_FOLDER_ID.",
+      data: { run_id: runId, export: exportRes || null }
+    };
+  }
+  try {
+    DriveApp.getFolderById(imagesRootId);
+  } catch (e) {
+    return {
+      ok: false,
+      reason: "IMAGES_ARCHIVE_FOLDER_OPEN_FAILED",
+      message: "Archive folder open failed.",
+      data: { run_id: runId, export: exportRes || null }
+    };
+  }
+
   var ss = SpreadsheetApp.openById(sheetId);
   var counts = belle_export_run_collectCounts_(ss, props);
   var csvFiles = belle_export_run_extractCsvFiles_(exportRes);

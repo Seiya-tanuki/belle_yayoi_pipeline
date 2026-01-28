@@ -354,8 +354,6 @@ function belle_dash_enterMaintenance() {
 
 function belle_dash_exitMaintenance() {
   return belle_dash_wrap_("maint_exit", function () {
-    var gate = belle_maint_requireMode_("MAINTENANCE");
-    if (!gate.ok) return gate;
     return belle_dash_maint_exit_();
   });
 }

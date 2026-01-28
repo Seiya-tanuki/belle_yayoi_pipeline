@@ -29,7 +29,10 @@ function belle_image_archive_collectDoneFileIds_(ss, sheetName) {
   var seen = {};
   for (var i = 0; i < rowCount; i++) {
     var status = String(statusVals[i][0] || "");
-    if (status !== "DONE") continue;
+    var normalized = status.trim().toUpperCase();
+    if (normalized === "QUEUED" || normalized === "PROCESSING" || normalized === "ERROR_RETRYABLE" || normalized === "ERROR") {
+      continue;
+    }
     var fileId = String(fileVals[i][0] || "");
     if (!fileId || seen[fileId]) continue;
     seen[fileId] = true;
