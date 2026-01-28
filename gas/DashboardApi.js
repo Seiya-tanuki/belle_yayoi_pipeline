@@ -121,15 +121,25 @@ function belle_dash_getOverview() {
       return {
         queued: 0,
         processing: 0,
-        done: 0,
-        error: 0,
         error_retryable: 0,
-        unknown: 0,
+        error_final: 0,
+        done: 0,
         total: 0
       };
     }
 
+    function normalizeStatus(raw) {
+      var upper = String(raw || "").trim().toUpperCase();
+      if (!upper) return { value: "QUEUED", unknown: false };
+      if (upper === "ERROR") return { value: "ERROR_RETRYABLE", unknown: false };
+      if (upper === "QUEUED" || upper === "PROCESSING" || upper === "ERROR_RETRYABLE" || upper === "ERROR_FINAL" || upper === "DONE") {
+        return { value: upper, unknown: false };
+      }
+      return { value: "QUEUED", unknown: true };
+    }
+
     var totals = emptyCounts();
+    var totalsUnknown = 0;
     var out = [];
 
     for (var i = 0; i < activeDocTypes.length; i++) {
@@ -142,7 +152,8 @@ function belle_dash_getOverview() {
         queueSheetName: sheetName,
         missing: false,
         invalidHeader: false,
-        counts: emptyCounts()
+        counts: emptyCounts(),
+        unknownCount: 0
       };
       var sh = ss.getSheetByName(sheetName);
       if (!sh) {
@@ -172,29 +183,30 @@ function belle_dash_getOverview() {
       for (var r = 0; r < rowCount; r++) {
         var fileId = String(fileIds[r][0] || "");
         if (!fileId) continue;
-        var raw = String(statuses[r][0] || "").trim().toUpperCase();
+        var normalized = normalizeStatus(statuses[r][0]);
         entry.counts.total++;
-        if (raw === "QUEUED") entry.counts.queued++;
-        else if (raw === "PROCESSING") entry.counts.processing++;
-        else if (raw === "DONE") entry.counts.done++;
-        else if (raw === "ERROR") entry.counts.error++;
-        else if (raw === "ERROR_RETRYABLE") entry.counts.error_retryable++;
-        else entry.counts.unknown++;
+        if (normalized.value === "QUEUED") entry.counts.queued++;
+        else if (normalized.value === "PROCESSING") entry.counts.processing++;
+        else if (normalized.value === "ERROR_RETRYABLE") entry.counts.error_retryable++;
+        else if (normalized.value === "ERROR_FINAL") entry.counts.error_final++;
+        else if (normalized.value === "DONE") entry.counts.done++;
+        if (normalized.unknown) entry.unknownCount++;
       }
 
       totals.queued += entry.counts.queued;
       totals.processing += entry.counts.processing;
-      totals.done += entry.counts.done;
-      totals.error += entry.counts.error;
       totals.error_retryable += entry.counts.error_retryable;
-      totals.unknown += entry.counts.unknown;
+      totals.error_final += entry.counts.error_final;
+      totals.done += entry.counts.done;
       totals.total += entry.counts.total;
+      totalsUnknown += entry.unknownCount;
       out.push(entry);
     }
 
     return belle_dash_result_(true, "OK", "Overview ready.", {
       docTypes: out,
-      totals: totals
+      totals: totals,
+      unknownCount: totalsUnknown
     });
   });
 }

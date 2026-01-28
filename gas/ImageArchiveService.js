@@ -30,9 +30,8 @@ function belle_image_archive_collectDoneFileIds_(ss, sheetName) {
   for (var i = 0; i < rowCount; i++) {
     var status = String(statusVals[i][0] || "");
     var normalized = status.trim().toUpperCase();
-    if (normalized === "QUEUED" || normalized === "PROCESSING" || normalized === "ERROR_RETRYABLE" || normalized === "ERROR") {
-      continue;
-    }
+    if (normalized === "ERROR") normalized = "ERROR_RETRYABLE";
+    if (normalized !== "DONE" && normalized !== "ERROR_FINAL") continue;
     var fileId = String(fileVals[i][0] || "");
     if (!fileId || seen[fileId]) continue;
     seen[fileId] = true;

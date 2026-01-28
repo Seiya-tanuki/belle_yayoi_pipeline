@@ -398,11 +398,9 @@
                 <th>Queue Sheet</th>
                 <th>Queued</th>
                 <th>Processing</th>
-                <th>Done</th>
-                <th>Error</th>
                 <th>Error Retryable</th>
-                <th>Unknown</th>
-                <th>Total</th>
+                <th>Error Final</th>
+                <th>Done</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -623,7 +621,7 @@
           if (!rows || rows.length === 0) {
             var empty = document.createElement("tr");
             var td = document.createElement("td");
-            td.colSpan = 9;
+            td.colSpan = 7;
             td.textContent = "No overview data.";
             empty.appendChild(td);
             tbody.appendChild(empty);
@@ -638,11 +636,9 @@
               row.queueSheetName || "",
               row.counts ? row.counts.queued : 0,
               row.counts ? row.counts.processing : 0,
-              row.counts ? row.counts.done : 0,
-              row.counts ? row.counts.error : 0,
               row.counts ? row.counts.error_retryable : 0,
-              row.counts ? row.counts.unknown : 0,
-              row.counts ? row.counts.total : 0
+              row.counts ? row.counts.error_final : 0,
+              row.counts ? row.counts.done : 0
             ];
             cells.forEach(function (value) {
               var td = document.createElement("td");
@@ -660,11 +656,9 @@
               "",
               totals.queued || 0,
               totals.processing || 0,
-              totals.done || 0,
-              totals.error || 0,
               totals.error_retryable || 0,
-              totals.unknown || 0,
-              totals.total || 0
+              totals.error_final || 0,
+              totals.done || 0
             ];
             totalCells.forEach(function (value) {
               var td = document.createElement("td");
