@@ -1,532 +1,360 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <base target="_top">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-      :root {
-        --ink: #0c0d10;
-        --muted: #4a5461;
-        --panel: #ffffff;
-        --shadow: rgba(12, 13, 16, 0.08);
-        --accent: #f97316;
-        --accent-dark: #c2410c;
-        --accent-soft: #fff7ed;
-        --line: #e5e7eb;
-        --success: #16a34a;
-        --danger: #dc2626;
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        font-family: "Trebuchet MS", "Lucida Sans Unicode", "Lucida Grande", sans-serif;
-        color: var(--ink);
-        background:
-          radial-gradient(circle at 15% 10%, rgba(249, 115, 22, 0.18), transparent 35%),
-          radial-gradient(circle at 85% 20%, rgba(14, 116, 144, 0.18), transparent 40%),
-          linear-gradient(135deg, #fef3c7 0%, #f8fafc 45%, #e0f2fe 100%);
-        min-height: 100vh;
-      }
-
-      .noise {
-        position: fixed;
-        inset: 0;
-        background-image: linear-gradient(120deg, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 60%);
-        opacity: 0.4;
-        pointer-events: none;
-        mix-blend-mode: screen;
-      }
-
-      .app {
-        max-width: 1120px;
-        margin: 0 auto;
-        padding: 32px 20px 48px;
-      }
-
-      .hero {
-        display: grid;
-        grid-template-columns: minmax(320px, 1.3fr) minmax(220px, 0.8fr) minmax(200px, 0.6fr);
-        gap: 20px;
-        align-items: flex-start;
-        margin-bottom: 24px;
-        animation: riseIn 0.6s ease both;
-      }
-
-      .hero-controls {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        align-items: stretch;
-      }
-
-      .hero-left {
-        max-width: 560px;
-      }
-
-      .hero-center {
-        display: flex;
-        justify-content: center;
-      }
-
-      h1 {
-        font-family: "Georgia", "Times New Roman", serif;
-        font-size: 2.1rem;
-        margin: 0 0 6px;
-        letter-spacing: 0.5px;
-      }
-
-      .rx {
-        margin: 10px 0 8px;
-        padding: 12px 14px;
-        border-radius: 12px;
-        background: rgba(255, 255, 255, 0.9);
-        border: 1px solid var(--line);
-        box-shadow: 0 10px 24px var(--shadow);
-      }
-
-      .rx-current {
-        display: flex;
-        gap: 10px;
-        align-items: baseline;
-        font-weight: 600;
-        font-size: 0.95rem;
-        margin-bottom: 8px;
-        white-space: nowrap;
-      }
-
-      .rx-current .rx-text {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .rx-label {
-        font-size: 0.7rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        padding: 3px 8px;
-        border-radius: 999px;
-        background: #e2e8f0;
-        color: var(--ink);
-      }
-
-      .rx-text {
-        flex: 1;
-      }
-
-      .rx-current.rx-info .rx-label {
-        background: #bae6fd;
-        color: #0c4a6e;
-      }
-
-      .rx-current.rx-ok .rx-label {
-        background: #bbf7d0;
-        color: #14532d;
-      }
-
-      .rx-current.rx-warn .rx-label {
-        background: #fde68a;
-        color: #92400e;
-      }
-
-      .rx-current.rx-error .rx-label {
-        background: #fecaca;
-        color: #7f1d1d;
-      }
-
-      .rx-history {
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        height: 110px;
-        overflow: hidden;
-      }
-
-      .rx-entry {
-        display: flex;
-        gap: 8px;
-        align-items: baseline;
-        font-size: 0.85rem;
-        color: var(--muted);
-        line-height: 1.1;
-      }
-
-      .rx-entry .rx-label {
-        padding: 2px 6px;
-      }
-
-      .rx-entry .rx-text {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
-
-      .rx-time {
-        font-variant-numeric: tabular-nums;
-        color: var(--muted);
-      }
-
-      .card {
-        background: var(--panel);
-        border-radius: 16px;
-        padding: 20px;
-        box-shadow: 0 16px 40px var(--shadow);
-        margin-bottom: 18px;
-        border: 1px solid rgba(12, 13, 16, 0.06);
-        animation: riseIn 0.6s ease both;
-      }
-
-      .hidden {
-        display: none;
-      }
-
-      .delay-1 { animation-delay: 0.06s; }
-      .delay-2 { animation-delay: 0.12s; }
-      .delay-3 { animation-delay: 0.18s; }
-
-      .card-header {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 12px;
-      }
-
-      .card-header h2 {
-        margin: 0;
-        font-size: 1.2rem;
-      }
-
-      .muted {
-        color: var(--muted);
-        font-size: 0.9rem;
-      }
-
-      .action-stack {
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        align-items: stretch;
-      }
-
-      .mode-panel {
-        background: rgba(255, 255, 255, 0.85);
-        border: 1px solid rgba(12, 13, 16, 0.08);
-        border-radius: 14px;
-        padding: 12px 14px;
-        min-width: 200px;
-        box-shadow: 0 12px 24px var(--shadow);
-      }
-
-      .mode-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }
-
-      .mode-stack {
-        display: flex;
-        flex-direction: column;
-      }
-
-      .badge {
-        display: inline-flex;
-        align-items: center;
-        padding: 6px 10px;
-        border-radius: 999px;
-        font-size: 0.75rem;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-      }
-
-      .badge-running {
-        background: var(--success);
-        color: #fff;
-      }
-
-      .badge-stopped {
-        background: var(--danger);
-        color: #fff;
-      }
-
-      .mode-label {
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.08em;
-        color: var(--muted);
-      }
-
-      .mode-value {
-        font-weight: 700;
-        font-size: 1.05rem;
-        margin-top: 4px;
-      }
-
-      .mode-value.maintenance {
-        color: var(--danger);
-      }
-
-      .mode-value.ocr {
-        color: var(--success);
-      }
-
-      .mode-expiry {
-        font-size: 0.8rem;
-        color: var(--muted);
-        margin-top: 4px;
-      }
-
-      .btn {
-        border: none;
-        border-radius: 10px;
-        padding: 10px 14px;
-        font-weight: 600;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        background: var(--accent);
-        color: #fff;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
-        box-shadow: 0 10px 18px rgba(249, 115, 22, 0.2);
-      }
-
-      .btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 12px 24px rgba(249, 115, 22, 0.3);
-      }
-
-      .btn:disabled {
-        cursor: not-allowed;
-        opacity: 0.6;
-        transform: none;
-        box-shadow: none;
-      }
-
-      .btn-secondary {
-        background: #0ea5e9;
-        box-shadow: 0 10px 18px rgba(14, 165, 233, 0.2);
-      }
-
-      .btn-secondary:hover {
-        box-shadow: 0 12px 24px rgba(14, 165, 233, 0.3);
-      }
-
-      .btn-ghost {
-        background: #f3f4f6;
-        color: var(--ink);
-        box-shadow: none;
-      }
-
-      .btn-ghost:hover {
-        box-shadow: 0 8px 16px rgba(12, 13, 16, 0.08);
-      }
-
-      .spinner {
-        width: 14px;
-        height: 14px;
-        border: 2px solid rgba(255, 255, 255, 0.4);
-        border-top-color: #fff;
-        border-radius: 50%;
-        display: none;
-        animation: spin 0.8s linear infinite;
-      }
-
-      .btn.is-loading .spinner {
-        display: inline-block;
-      }
-
-      .btn.is-loading .label {
-        opacity: 0.7;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.95rem;
-      }
-
-      th, td {
-        text-align: left;
-        padding: 10px 8px;
-        border-bottom: 1px solid var(--line);
-      }
-
-      th {
-        color: var(--muted);
-        font-weight: 600;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-      }
-
-      tr.total-row {
-        font-weight: 700;
-        background: var(--accent-soft);
-      }
-
-      .ops-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-        gap: 12px;
-      }
-
-      .ops-columns {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-        gap: 16px;
-      }
-
-      .ops-block {
-        background: #f8fafc;
-        border-radius: 14px;
-        padding: 14px;
-        border: 1px solid var(--line);
-      }
-
-      .setup-actions {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        margin: 12px 0 18px;
-      }
-
-      .setup-note {
-        margin: 0 0 10px;
-      }
-
-      .ops-title {
-        font-weight: 700;
-        margin-bottom: 10px;
-      }
-
-      .tabs {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-
-      .tab-btn {
-        border: 1px solid var(--line);
-        background: #fff;
-        border-radius: 999px;
-        padding: 6px 12px;
-        cursor: pointer;
-        font-weight: 600;
-      }
-
-      .tab-btn[aria-selected="true"] {
-        background: var(--accent-soft);
-        border-color: var(--accent);
-        color: var(--accent-dark);
-      }
-
-      .tab-panel {
-        display: none;
-      }
-
-      .tab-panel.active {
-        display: block;
-      }
-
-      @keyframes riseIn {
-        from { opacity: 0; transform: translateY(12px); }
-        to { opacity: 1; transform: translateY(0); }
-      }
-
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
 
-      @media (max-width: 900px) {
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Belle Yayoi Dashboard</title>
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              400: '#38bdf8',
+              500: '#0ea5e9', // Sky Blue
+              600: '#0284c7',
+              700: '#0369a1',
+              900: '#0c4a6e',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['Fira Code', 'Consolas', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Fira+Code:wght@400&display=swap"
+    rel="stylesheet">
+
+  <style type="text/tailwindcss">
+    @layer components {
+        /* Base Page */
+        body {
+          @apply font-sans text-slate-300 bg-slate-900 min-h-screen selection:bg-brand-900 selection:text-brand-100;
+        }
+        
+        /* Layout Containers */
+        .app {
+          @apply max-w-[1280px] mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6;
+        }
+        
+        /* Card Styles */
+        .card {
+          @apply bg-slate-800 rounded-xl border border-slate-700 shadow-xl overflow-hidden transition-all duration-300;
+        }
+        .card-header {
+          @apply px-6 py-4 flex items-center justify-between border-b border-slate-700 bg-slate-800/50;
+        }
+        .card-header h2 {
+          @apply text-base font-bold text-slate-100 flex items-center gap-2;
+        }
+        .card-header .muted {
+          @apply text-xs text-slate-500 font-normal;
+        }
+
+        /* Hero / Header Structure */
         .hero {
-          grid-template-columns: 1fr;
-          align-items: flex-start;
+          @apply bg-slate-800 rounded-2xl border border-slate-700 shadow-lg p-1 grid grid-cols-1 lg:grid-cols-12 gap-0 overflow-hidden relative h-[230px];
+        }
+        .hero-left {
+          @apply lg:col-span-6 p-5 flex flex-col justify-start border-b lg:border-b-0 lg:border-r border-slate-700 h-full;
         }
         .hero-center {
-          justify-content: flex-start;
+          @apply lg:col-span-3 p-5 flex items-center justify-center bg-slate-800/50 border-b lg:border-b-0 lg:border-r border-slate-700 h-full;
         }
         .hero-controls {
-          align-items: flex-start;
-          width: 100%;
+            @apply lg:col-span-3 p-5 flex flex-col justify-center bg-slate-800 h-full;
         }
+
+        /* Reaction Window (Dynamic Classes) */
+        .rx {
+          @apply flex flex-col gap-3 w-full;
+        }
+        /* .rx-current is the top status line */
+        .rx-current {
+          @apply flex items-center gap-3 p-3 rounded-lg border text-sm font-semibold transition-colors duration-200;
+        }
+        .rx-current.rx-info { @apply bg-slate-900 border-slate-700 text-sky-400; }
+        .rx-current.rx-ok   { @apply bg-slate-900 border-emerald-900/50 text-emerald-400; }
+        .rx-current.rx-warn { @apply bg-slate-900 border-amber-900/50 text-amber-400; }
+        .rx-current.rx-error{ @apply bg-slate-900 border-rose-900/50 text-rose-400; }
+
+        .rx-label {
+          @apply px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-slate-800 border border-slate-600 text-slate-400;
+        }
+        .rx-text {
+            @apply truncate flex-1;
+        }
+        
+        .rx-history {
+            @apply space-y-1 pl-1 text-center lg:text-left overflow-y-auto max-h-[100px];
+        }
+        .rx-entry {
+            @apply text-xs flex items-center gap-2 text-slate-400 font-mono transition-all;
+        }
+        .rx-entry .rx-text { @apply truncate; }
+        .rx-time { @apply opacity-50 text-[10px]; }
+        .rx-entry.rx-error { @apply text-rose-500; }
+        .rx-entry.rx-warn { @apply text-amber-500; }
+
+        /* Mode Panel (Dynamic Classes) */
+        .mode-panel {
+          @apply flex flex-col items-center gap-6 w-full;
+        }
+        .mode-row {
+            @apply flex flex-col items-center gap-2;
+        }
+        /* Badge: Running vs Stopped */
+        .badge {
+            @apply inline-flex items-center px-5 py-2 rounded-full text-base font-medium border shadow-sm transition-colors;
+        }
+        .badge-running { @apply bg-emerald-900/30 text-emerald-400 border-emerald-800; }
+        .badge-stopped { @apply bg-slate-700 text-slate-400 border-slate-600; }
+        
+        .mode-stack { @apply text-center; }
+        .mode-label { @apply text-xs uppercase tracking-widest text-slate-500 font-semibold mb-1; }
+        
+        .mode-value { @apply text-6xl font-black tracking-tight transition-colors; }
+        .mode-value.ocr { @apply text-emerald-400 drop-shadow-md; }
+        .mode-value.maintenance { @apply text-rose-400 drop-shadow-md; }
+        
+        .mode-expiry { @apply text-sm font-medium text-slate-400 bg-slate-900 px-3 py-1 rounded-md mt-2 empty:hidden border border-slate-700; }
+
+        /* Buttons & Actions */
         .action-stack {
-          width: 100%;
+            @apply space-y-2 w-full;
+        }
+        /* Base Button */
+        .btn {
+            @apply w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-1 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 gap-2;
+            @apply bg-brand-600 text-white hover:bg-brand-500 hover:shadow-lg hover:shadow-brand-900/50 hover:-translate-y-px active:translate-y-0;
+        }
+        /* Secondary variant */
+        .btn-secondary {
+            @apply bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600 hover:border-slate-500 hover:text-white !important;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+        }
+        /* Ghost variant */
+        .btn-ghost {
+            @apply bg-slate-800 text-slate-400 border-slate-700 shadow-sm hover:bg-slate-700 hover:border-slate-600 hover:text-brand-400 hover:shadow-md !important;
+        }
+        
+        /* Spinner */
+        .spinner {
+            @apply animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full opacity-60;
+            display: none; /* JS toggles display via inline style or class, original code toggles display:block */
+        }
+        /* Original JS adds .is-loading class. */
+        .btn.is-loading .spinner { display: inline-block; }
+        .btn.is-loading .label { @apply opacity-70; }
+
+        /* Ops Grid System */
+        .ops-columns {
+            @apply grid grid-cols-1 md:grid-cols-2 gap-6 p-6;
+        }
+        .ops-block {
+            @apply bg-slate-800 rounded-xl border border-slate-700 p-5 flex flex-col gap-4;
+        }
+        .ops-title {
+            @apply text-sm font-bold text-slate-400 uppercase tracking-wide mb-1 border-b border-slate-700 pb-2;
+        }
+        .ops-grid {
+            @apply flex flex-col gap-3; /* Stack buttons vertically for better mobile/touch target size */
+        }
+
+        /* Tables */
+        .table-wrap {
+            @apply overflow-x-auto min-w-full;
         }
         table {
-          font-size: 0.85rem;
+            @apply min-w-full divide-y divide-slate-700;
         }
-      }
-    </style>
-  </head>
-  <body>
-    <div class="noise" aria-hidden="true"></div>
-    <main class="app">
-      <header class="hero">
-        <div class="hero-left">
-          <h1>Belle Yayoi Pipeline Dashboard</h1>
-          <div class="rx">
-            <div class="rx-current rx-info" id="rx-current" aria-live="polite">
-              <span class="rx-label">INFO</span>
-              <span class="rx-text">Ready.</span>
-            </div>
-            <div class="rx-history" id="rx-history" aria-live="polite"></div>
-          </div>
-        </div>
-        <div class="hero-center" id="header-center">
-          <div class="mode-panel" id="mode-panel" aria-live="polite">
-            <div class="mode-row">
-              <span id="ocr-run-badge" class="badge badge-stopped">OCR is stopped</span>
-              <div class="mode-stack">
-                <div class="mode-label">Mode</div>
-                <div class="mode-value ocr" id="mode-value">OCR</div>
-              </div>
-            </div>
-            <div class="mode-expiry" id="mode-expiry"></div>
-          </div>
-        </div>
-        <div class="hero-controls" id="header-controls">
-          <div class="action-stack">
-            <button class="btn btn-ghost" id="btn-refresh-overview">
-              <span class="spinner" aria-hidden="true"></span>
-              <span class="label">Refresh Overview</span>
-            </button>
-            <button class="btn btn-ghost" id="btn-refresh-logs">
-              <span class="spinner" aria-hidden="true"></span>
-              <span class="label">Refresh Logs</span>
-            </button>
-            <button class="btn btn-secondary" id="btn-change-mode">
-              <span class="spinner" aria-hidden="true"></span>
-              <span class="label">Change mode</span>
-            </button>
-          </div>
-        </div>
-      </header>
+        thead {
+            @apply bg-slate-800;
+        }
+        th {
+            @apply px-6 py-3 text-left text-xs font-medium text-slate-400 uppercase tracking-wider whitespace-nowrap;
+        }
+        tbody {
+            @apply bg-slate-800 divide-y divide-slate-700;
+        }
+        td {
+            @apply px-6 py-4 whitespace-nowrap text-sm text-slate-300;
+        }
+        tr:hover td {
+            @apply bg-slate-700/50 text-slate-100;
+        }
+        .total-row td {
+            @apply bg-slate-700 font-bold text-white border-t-2 border-slate-600;
+        }
+        
+        /* Fixed Equal Columns used in Overview */
+        .table-fixed-equal {
+            @apply table-fixed w-full;
+        }
+        .table-fixed-equal th, .table-fixed-equal td {
+            @apply w-auto; /* Layout engine handles distribution, or set w-1/N in HTML */
+        }
+        
+        /* Tabs */
+        .tabs {
+            @apply flex space-x-1 bg-slate-900/50 p-1 rounded-lg border border-slate-700;
+        }
+        .tab-btn {
+            @apply flex-1 px-3 py-1.5 text-xs font-medium rounded-md text-slate-500 hover:text-slate-300 focus:outline-none transition-all;
+            background: transparent;
+            border: none;
+        }
+        .tab-btn[aria-selected="true"] {
+            @apply bg-slate-700 text-brand-400 shadow-sm ring-1 ring-white/5;
+        }
 
-      <section class="card hidden" id="setup-view" aria-live="polite">
-        <div class="card-header">
-          <h2>Setup Required</h2>
-          <div class="muted" id="setup-summary">Environment not ready.</div>
+        /* Setup View */
+        .setup-actions {
+             @apply p-6 bg-rose-900/10 border-b border-rose-900/20 flex items-center gap-4;
+        }
+        .setup-note {
+             @apply text-rose-400 font-medium text-sm;
+        }
+        
+        /* Utility */
+        .hidden { display: none; }
+        .muted { @apply opacity-50; }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Noise overlay removed for cleaner look or kept? User said "Modern Clean". Noise is okay if subtle, but I'll remove for pure clean look. -->
+
+  <main class="app">
+    <!-- Header / Hero Section -->
+    <header class="hero">
+
+      <!-- Left: Reaction Window (No Title) -->
+      <div class="hero-left">
+
+        <div class="rx">
+          <!-- Current Status Line -->
+          <div class="rx-current rx-info" id="rx-current" aria-live="polite">
+            <span class="rx-label">INFO</span>
+            <span class="rx-text">Initializing...</span>
+          </div>
+          <!-- History Log -->
+          <div class="rx-history" id="rx-history" aria-live="polite">
+            <!-- JS populates this -->
+          </div>
         </div>
-        <p class="muted setup-note">Fix the issues below and click Re-check.</p>
-        <div class="setup-actions">
-          <button class="btn" id="btn-health-recheck">
+      </div>
+
+      <!-- Center: Mode Panel -->
+      <div class="hero-center" id="header-center">
+        <div class="mode-panel" id="mode-panel" aria-live="polite">
+          <span id="ocr-run-badge" class="badge badge-stopped">OCR Stopped</span>
+
+          <div class="mode-stack">
+            <div class="mode-label">System Mode</div>
+            <div class="mode-value ocr" id="mode-value">OCR</div>
+          </div>
+
+          <div class="mode-expiry" id="mode-expiry"></div>
+        </div>
+      </div>
+
+      <!-- Right: Global Actions -->
+      <div class="hero-controls" id="header-controls">
+        <div class="action-stack">
+          <button class="btn btn-ghost justify-between" id="btn-refresh-overview">
+            <span class="label">Refresh Overview</span>
             <span class="spinner" aria-hidden="true"></span>
-            <span class="label">Re-check</span>
+            <!-- Icon -->
+            <svg class="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+          <button class="btn btn-ghost justify-between" id="btn-refresh-logs">
+            <span class="label">Refresh Logs</span>
+            <span class="spinner" aria-hidden="true"></span>
+            <svg class="h-4 w-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </button>
+          <button class="btn btn-secondary justify-center mt-2 group" id="btn-change-mode">
+            <span class="spinner" aria-hidden="true"></span>
+            <span class="label text-brand-600 font-bold group-hover:text-brand-700">Change Mode</span>
           </button>
         </div>
+      </div>
+    </header>
+
+    <!-- Setup View (Diagnostic) - hidden by default -->
+    <section class="card hidden border-rose-200 shadow-rose-100" id="setup-view" aria-live="polite">
+      <div class="card-header bg-rose-50 border-rose-100">
+        <h2 class="text-rose-800">Setup Required</h2>
+        <div class="muted text-rose-500" id="setup-summary">Environment not ready.</div>
+      </div>
+
+      <div class="setup-actions">
+        <p class="setup-note">Fix the issues below and click Re-check.</p>
+        <button class="btn bg-white text-rose-600 border-rose-200 hover:bg-rose-50" id="btn-health-recheck">
+          <span class="spinner" aria-hidden="true"></span>
+          <span class="label">Re-check</span>
+        </button>
+      </div>
+
+      <div class="table-wrap">
+        <table id="setup-table">
+          <thead>
+            <tr>
+              <th>Item</th>
+              <th>Code</th>
+              <th>Detail</th>
+              <th>Hint</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Dashboard View -->
+    <div id="dashboard-view" class="hidden space-y-6">
+
+      <!-- Overview -->
+      <section class="card delay-1" id="overview-section">
+        <div class="card-header">
+          <h2>
+            <svg class="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Overview
+          </h2>
+          <div class="muted">Active documents</div>
+        </div>
         <div class="table-wrap">
-          <table id="setup-table">
+          <table id="overview-table" class="table-fixed w-full">
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Code</th>
-                <th>Detail</th>
-                <th>Hint</th>
+                <th>Doc Type</th>
+                <th>Queue Sheet</th>
+                <th>QUEUED</th>
+                <th>PROCESSING</th>
+                <th>RETRYABLE</th>
+                <th>FATAL</th>
+                <th>DONE</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -534,78 +362,79 @@
         </div>
       </section>
 
-      <div id="dashboard-view" class="hidden">
-        <section class="card delay-1" id="overview-section">
-          <div class="card-header">
-            <h2>Overview</h2>
-            <div class="muted">Active doc types only</div>
-          </div>
-          <div class="table-wrap">
-            <table id="overview-table">
-              <thead>
-                <tr>
-                  <th>Doc Type</th>
-                  <th>Queue Sheet</th>
-                  <th>QUEUED</th>
-                  <th>PROCESSING</th>
-                  <th>ERROR_RETRYABLE</th>
-                  <th>ERROR_FINAL</th>
-                  <th>DONE</th>
-                </tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </section>
+      <!-- Operations -->
+      <section class="card delay-2" id="ops-section">
+        <div class="card-header">
+          <h2>
+            <svg class="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+            </svg>
+            Operations
+          </h2>
+          <div class="muted">Execution Controls</div>
+        </div>
 
-        <section class="card delay-2" id="ops-section">
-          <div class="card-header">
-            <h2>Ops</h2>
-            <div class="muted">Single-user execution</div>
-          </div>
-          <div class="ops-columns">
-            <div class="ops-block">
-              <div class="ops-title">OCR Ops</div>
-              <div class="ops-grid">
-                <button class="btn" id="btn-queue">
-                  <span class="spinner" aria-hidden="true"></span>
-                  <span class="label">Queue Files</span>
-                </button>
+        <div class="ops-columns">
+          <!-- OCR Block -->
+          <div class="ops-block">
+            <div class="ops-title">OCR Processing</div>
+            <div class="ops-grid">
+              <button class="btn" id="btn-queue">
+                <span class="spinner" aria-hidden="true"></span>
+                <span class="label">Queue Files</span>
+              </button>
+              <div class="grid grid-cols-2 gap-3">
                 <button class="btn btn-secondary" id="btn-ocr-enable">
                   <span class="spinner" aria-hidden="true"></span>
-                  <span class="label">OCR Enable</span>
+                  <span class="label">Enable</span>
                 </button>
-                <button class="btn btn-secondary" id="btn-ocr-disable">
+                <button class="btn btn-secondary text-rose-600 hover:bg-rose-50" id="btn-ocr-disable">
                   <span class="spinner" aria-hidden="true"></span>
-                  <span class="label">OCR Disable</span>
-                </button>
-              </div>
-            </div>
-            <div class="ops-block">
-              <div class="ops-title">Maintenance Ops</div>
-              <div class="ops-grid">
-                <button class="btn" id="btn-export-run">
-                  <span class="spinner" aria-hidden="true"></span>
-                  <span class="label">Export Run</span>
-                </button>
-                <button class="btn btn-ghost" id="btn-archive-logs">
-                  <span class="spinner" aria-hidden="true"></span>
-                  <span class="label">Archive + Clear Logs</span>
+                  <span class="label">Disable</span>
                 </button>
               </div>
             </div>
           </div>
-        </section>
 
-        <section class="card delay-3" id="logs-section">
-          <div class="card-header">
-            <h2>Logs</h2>
-            <div class="tabs" role="tablist">
-              <button class="tab-btn" role="tab" aria-selected="true" aria-controls="log-guard" id="tab-guard-btn">Export Guard</button>
-              <button class="tab-btn" role="tab" aria-selected="false" aria-controls="log-export-skip" id="tab-export-btn">Export Skip</button>
-              <button class="tab-btn" role="tab" aria-selected="false" aria-controls="log-queue-skip" id="tab-queue-btn">Queue Skip</button>
+          <!-- Maintenance Block -->
+          <div class="ops-block">
+            <div class="ops-title">Maintenance</div>
+            <div class="ops-grid">
+              <button class="btn" id="btn-export-run">
+                <span class="spinner" aria-hidden="true"></span>
+                <span class="label">Export Run</span>
+              </button>
+              <button class="btn btn-secondary text-rose-600 hover:bg-rose-50" id="btn-archive-logs">
+                <span class="spinner" aria-hidden="true"></span>
+                <span class="label">Archive + Clear Logs</span>
+              </button>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Logs -->
+      <section class="card delay-3" id="logs-section">
+        <div class="card-header">
+          <h2>
+            <svg class="w-5 h-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Logs
+          </h2>
+          <div class="tabs" role="tablist">
+            <button class="tab-btn" role="tab" aria-selected="true" aria-controls="log-guard" id="tab-guard-btn">Export
+              Guard</button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="log-export-skip"
+              id="tab-export-btn">Export Skip</button>
+            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="log-queue-skip"
+              id="tab-queue-btn">Queue Skip</button>
+          </div>
+        </div>
+
+        <div class="p-0">
           <div class="tab-panel active" id="log-guard" role="tabpanel" aria-labelledby="tab-guard-btn">
             <table>
               <thead>
@@ -644,603 +473,608 @@
               <tbody></tbody>
             </table>
           </div>
-        </section>
-      </div>
-    </main>
+        </div>
+      </section>
+    </div>
+  </main>
 
-    <script>
-      window.__BOOT_HEALTH__ = <?!= JSON.stringify(bootHealth || null) ?>;
-    </script>
-    <script>
-      (function () {
-        var ocrStatusErrorShown = false;
-        var dashboardStarted = false;
-        var rxMax = 5;
-        var appState = {
-          mode: "OCR",
-          untilIso: ""
+  <!-- SERVER SIDE INJECTION MOCK (Preserved) -->
+  <script>
+    window.__BOOT_HEALTH__ = <?!= JSON.stringify(bootHealth || null) ?>;
+  </script>
+
+  <!-- ORIGINAL LOGIC (Minimally compatible) -->
+  <script>
+    (function () {
+      var ocrStatusErrorShown = false;
+      var dashboardStarted = false;
+      var rxMax = 5;
+      var appState = {
+        mode: "OCR",
+        untilIso: ""
+      };
+
+      function rxNormalizeLevel(level) {
+        var upper = String(level || "INFO").toUpperCase();
+        if (upper === "OK" || upper === "INFO" || upper === "WARN" || upper === "ERROR") return upper;
+        return "INFO";
+      }
+
+      function rxSetCurrent(level, msg) {
+        var el = document.getElementById("rx-current");
+        if (!el) return;
+        var lvl = rxNormalizeLevel(level);
+        el.className = "rx-current rx-" + lvl.toLowerCase();
+        while (el.firstChild) el.removeChild(el.firstChild);
+        var label = document.createElement("span");
+        label.className = "rx-label";
+        label.textContent = lvl;
+        var text = document.createElement("span");
+        text.className = "rx-text";
+        text.textContent = msg ? String(msg) : "";
+        el.appendChild(label);
+        el.appendChild(text);
+      }
+
+      function rxBuildTimestamp_() {
+        return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      }
+
+      function rxPush(level, msg) {
+        var history = document.getElementById("rx-history");
+        if (!history) return;
+        var lvl = rxNormalizeLevel(level);
+        if (lvl === "INFO") {
+          rxSetCurrent(lvl, msg);
+          return;
+        }
+        var entry = document.createElement("div");
+        entry.className = "rx-entry rx-" + lvl.toLowerCase();
+        var time = document.createElement("span");
+        time.className = "rx-time";
+        time.textContent = "[" + rxBuildTimestamp_() + "]";
+        var label = document.createElement("span");
+        label.className = "rx-label";
+        label.textContent = lvl;
+        var text = document.createElement("span");
+        text.className = "rx-text";
+        text.textContent = msg ? String(msg) : "";
+        entry.appendChild(time);
+        entry.appendChild(label);
+        entry.appendChild(text);
+        history.insertBefore(entry, history.firstChild);
+        while (history.childNodes.length > rxMax) {
+          history.removeChild(history.lastChild);
+        }
+        rxSetCurrent(lvl, msg);
+      }
+
+      function setEnabled(btn, enabled) {
+        if (!btn) return;
+        if (btn.classList.contains("is-loading")) return;
+        btn.disabled = !enabled;
+      }
+
+      function setLoading(btn, isLoading) {
+        if (!btn) return;
+        btn.disabled = isLoading;
+        if (isLoading) btn.classList.add("is-loading");
+        else btn.classList.remove("is-loading");
+      }
+
+      function setHeaderControlsVisible(visible) {
+        ["header-controls", "header-center"].forEach(function (id) {
+          var el = document.getElementById(id);
+          if (!el) return;
+          if (visible) el.classList.remove("hidden");
+          else el.classList.add("hidden");
+        });
+      }
+
+      function applyModeState(state) {
+        var mode = state && state.mode ? String(state.mode).toUpperCase() : "OCR";
+        if (mode !== "MAINTENANCE") mode = "OCR";
+        var untilIso = state && state.until_iso ? String(state.until_iso) : "";
+        appState.mode = mode;
+        appState.untilIso = untilIso;
+
+        var modeValue = document.getElementById("mode-value");
+        var modeExpiry = document.getElementById("mode-expiry");
+        if (modeValue) {
+          modeValue.textContent = mode;
+          modeValue.classList.remove("maintenance", "ocr");
+          modeValue.classList.add(mode === "MAINTENANCE" ? "maintenance" : "ocr");
+        }
+        if (modeExpiry) {
+          modeExpiry.textContent = mode === "MAINTENANCE" && untilIso ? ("Until " + untilIso) : "";
+        }
+
+        var controls = appState.controls || {};
+        var isMaintenance = mode === "MAINTENANCE";
+        setEnabled(controls.btnQueue, !isMaintenance);
+        setEnabled(controls.btnOcrEnable, !isMaintenance);
+        setEnabled(controls.btnOcrDisable, !isMaintenance);
+        setEnabled(controls.btnExportRun, isMaintenance);
+        setEnabled(controls.btnArchiveLogs, isMaintenance);
+        setEnabled(controls.btnChangeMode, true);
+      }
+
+      function refreshMode(options) {
+        var opts = options || {};
+        var button = opts.button;
+        setLoading(button, true);
+        callServer("belle_dash_getMode", undefined, function (err, res) {
+          setLoading(button, false);
+          if (err) {
+            rxSetCurrent("ERROR", "Mode refresh failed.");
+            return;
+          }
+          if (!res.ok) {
+            rxSetCurrent("ERROR", res.message || "Mode refresh failed.");
+            return;
+          }
+          applyModeState(res.data || {});
+        });
+      }
+
+      function refreshOcrRunStatus() {
+        callServer("belle_dash_getOcrRunStatus", undefined, function (err, res) {
+          if (err || !res || !res.ok) {
+            if (!ocrStatusErrorShown) {
+              rxSetCurrent("WARN", "Could not refresh OCR status.");
+              ocrStatusErrorShown = true;
+            }
+            return;
+          }
+          ocrStatusErrorShown = false;
+          var running = res.data && res.data.running === true;
+          var badge = document.getElementById("ocr-run-badge");
+          if (!badge) return;
+          badge.className = "badge " + (running ? "badge-running" : "badge-stopped");
+          badge.textContent = running ? "OCR is running" : "OCR is stopped";
+        });
+      }
+
+      function callServer(fnName, payload, callback) {
+        var runner = google.script.run
+          .withSuccessHandler(function (res) {
+            callback(null, res);
+          })
+          .withFailureHandler(function (err) {
+            callback(err, null);
+          });
+        if (payload !== undefined) runner[fnName](payload);
+        else runner[fnName]();
+      }
+
+      function renderSetupDiagnostics(diags) {
+        var tbody = document.querySelector("#setup-table tbody");
+        tbody.innerHTML = "";
+        if (!diags || diags.length === 0) {
+          var empty = document.createElement("tr");
+          var td = document.createElement("td");
+          td.colSpan = 4;
+          td.textContent = "No diagnostics available.";
+          empty.appendChild(td);
+          tbody.appendChild(empty);
+          return;
+        }
+        diags.forEach(function (entry) {
+          var tr = document.createElement("tr");
+          var cells = [entry.item, entry.code, entry.detail, entry.hint];
+          cells.forEach(function (value) {
+            var td = document.createElement("td");
+            td.textContent = value === undefined || value === null ? "" : String(value);
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+      }
+
+      function showSetupView(res) {
+        var setup = document.getElementById("setup-view");
+        var dashboard = document.getElementById("dashboard-view");
+        if (dashboard) dashboard.classList.add("hidden");
+        if (setup) setup.classList.remove("hidden");
+        setHeaderControlsVisible(false);
+        var summary = document.getElementById("setup-summary");
+        var message = res && res.message ? String(res.message) : "Environment not ready.";
+        if (summary) summary.textContent = message;
+        var diags = res && res.data && res.data.diagnostics ? res.data.diagnostics : [];
+        renderSetupDiagnostics(diags);
+      }
+
+      function showDashboardView() {
+        var setup = document.getElementById("setup-view");
+        var dashboard = document.getElementById("dashboard-view");
+        if (setup) setup.classList.add("hidden");
+        if (dashboard) dashboard.classList.remove("hidden");
+        setHeaderControlsVisible(true);
+        if (!dashboardStarted) {
+          dashboardStarted = true;
+          initDashboard();
+        }
+      }
+
+      function applyHealthResult(res) {
+        var data = res && res.data ? res.data : null;
+        var ready = data && data.ready === true;
+        if (ready) {
+          rxSetCurrent("OK", "Environment ready.");
+          showDashboardView();
+        } else {
+          rxSetCurrent("WARN", "Environment not ready.");
+          showSetupView(res);
+        }
+      }
+
+      function renderOverview(res) {
+        var tbody = document.querySelector("#overview-table tbody");
+        tbody.innerHTML = "";
+        var data = res && res.data ? res.data : null;
+        var rows = data && data.docTypes ? data.docTypes : [];
+        var totals = data && data.totals ? data.totals : null;
+        if (!rows || rows.length === 0) {
+          var empty = document.createElement("tr");
+          var td = document.createElement("td");
+          td.colSpan = 7;
+          td.textContent = "No overview data.";
+          empty.appendChild(td);
+          tbody.appendChild(empty);
+          return;
+        }
+
+        rows.forEach(function (row) {
+          var tr = document.createElement("tr");
+          if (row.missing) tr.classList.add("muted");
+          var cells = [
+            row.docType || "",
+            row.queueSheetName || "",
+            row.counts ? row.counts.queued : 0,
+            row.counts ? row.counts.processing : 0,
+            row.counts ? row.counts.error_retryable : 0,
+            row.counts ? row.counts.error_final : 0,
+            row.counts ? row.counts.done : 0
+          ];
+          cells.forEach(function (value) {
+            var td = document.createElement("td");
+            td.textContent = String(value);
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+
+        if (totals) {
+          var totalRow = document.createElement("tr");
+          totalRow.className = "total-row";
+          var totalCells = [
+            "Totals",
+            "",
+            totals.queued || 0,
+            totals.processing || 0,
+            totals.error_retryable || 0,
+            totals.error_final || 0,
+            totals.done || 0
+          ];
+          totalCells.forEach(function (value) {
+            var td = document.createElement("td");
+            td.textContent = String(value);
+            totalRow.appendChild(td);
+          });
+          tbody.appendChild(totalRow);
+        }
+      }
+
+      function countsToText(counts) {
+        if (!counts) return "-";
+        var parts = [];
+        if (counts.total !== null && counts.total !== undefined) parts.push("total " + counts.total);
+        if (counts.done !== null && counts.done !== undefined) parts.push("done " + counts.done);
+        if (counts.queued !== null && counts.queued !== undefined) parts.push("queued " + counts.queued);
+        if (counts.retryable !== null && counts.retryable !== undefined) parts.push("retryable " + counts.retryable);
+        if (counts.error_final !== null && counts.error_final !== undefined) parts.push("error_final " + counts.error_final);
+        return parts.length > 0 ? parts.join(", ") : "-";
+      }
+
+      function renderLogTable(tableId, rows, columns, emptyText) {
+        var tbody = document.querySelector(tableId + " tbody");
+        tbody.innerHTML = "";
+        if (!rows || rows.length === 0) {
+          var empty = document.createElement("tr");
+          var td = document.createElement("td");
+          td.colSpan = columns.length;
+          td.textContent = emptyText;
+          empty.appendChild(td);
+          tbody.appendChild(empty);
+          return;
+        }
+        rows.forEach(function (row) {
+          var tr = document.createElement("tr");
+          columns.forEach(function (col) {
+            var td = document.createElement("td");
+            var value = row[col];
+            if (col === "counts") value = countsToText(row.counts);
+            if (col === "seen_count") value = row.seen_count !== null && row.seen_count !== undefined ? row.seen_count : "-";
+            td.textContent = value === undefined || value === null ? "-" : String(value);
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+      }
+
+      function renderLogs(res) {
+        var data = res && res.data ? res.data : null;
+        var sheets = data && data.sheets ? data.sheets : {};
+        var guard = sheets.exportGuard || {};
+        var exportSkip = sheets.exportSkip || {};
+        var queueSkip = sheets.queueSkip || {};
+        var guardEmpty = guard.missing ? "Sheet not found." : "No guard logs.";
+        var exportEmpty = exportSkip.missing ? "Sheet not found." : "No export skip logs.";
+        var queueEmpty = queueSkip.missing ? "Sheet not found." : "No queue skip logs.";
+
+        renderLogTable("#log-guard", guard.rows, ["ts_iso", "reason", "doc_type", "counts"], guardEmpty);
+        renderLogTable("#log-export-skip", exportSkip.rows, ["ts_iso", "reason", "doc_type"], exportEmpty);
+        renderLogTable("#log-queue-skip", queueSkip.rows, ["ts_iso", "reason", "doc_type", "seen_count"], queueEmpty);
+      }
+
+      function refreshOverview(options) {
+        var opts = options || {};
+        var button = opts.button;
+        var history = opts.history === true;
+        var onError = typeof opts.onError === "function" ? opts.onError : null;
+        setLoading(button, true);
+        rxSetCurrent("INFO", "Refreshing overview...");
+        callServer("belle_dash_getOverview", undefined, function (err, res) {
+          setLoading(button, false);
+          if (err) {
+            if (onError) {
+              onError();
+              return;
+            }
+            if (history) rxPush("ERROR", "Overview failed to load.");
+            else rxSetCurrent("ERROR", "Overview failed to load.");
+            return;
+          }
+          if (!res.ok) {
+            if (onError) {
+              onError();
+              return;
+            }
+            var msg = res.message || "Overview failed.";
+            if (history) rxPush("ERROR", msg);
+            else rxSetCurrent("ERROR", msg);
+            return;
+          }
+          renderOverview(res);
+          if (history) rxPush("OK", "Overview updated.");
+          else rxSetCurrent("OK", "Overview updated.");
+        });
+      }
+
+      function refreshLogs(options) {
+        var opts = options || {};
+        var button = opts.button;
+        var history = opts.history === true;
+        setLoading(button, true);
+        rxSetCurrent("INFO", "Refreshing logs...");
+        callServer("belle_dash_getLogs", undefined, function (err, res) {
+          setLoading(button, false);
+          if (err) {
+            if (history) rxPush("ERROR", "Logs failed to load.");
+            else rxSetCurrent("ERROR", "Logs failed to load.");
+            return;
+          }
+          if (!res.ok) {
+            var msg = res.message || "Logs failed.";
+            if (history) rxPush("ERROR", msg);
+            else rxSetCurrent("ERROR", msg);
+            return;
+          }
+          renderLogs(res);
+          if (history) rxPush("OK", "Logs updated.");
+          else rxSetCurrent("OK", "Logs updated.");
+        });
+      }
+
+      function runOp(button, fnName, confirmText, successText, options) {
+        var opts = options || {};
+        var onSuccess = typeof opts.onSuccess === "function" ? opts.onSuccess : null;
+        var onError = typeof opts.onError === "function" ? opts.onError : null;
+        var actionLabel = opts.actionLabel || successText || fnName;
+        if (confirmText && !window.confirm(confirmText)) return;
+        setLoading(button, true);
+        rxSetCurrent("INFO", "Running " + actionLabel + "...");
+        callServer(fnName, undefined, function (err, res) {
+          setLoading(button, false);
+          if (err) {
+            rxPush("ERROR", actionLabel + " failed.");
+            return;
+          }
+          if (!res.ok) {
+            if (onError) {
+              onError(res);
+              return;
+            }
+            var reason = res && res.reason ? String(res.reason) : "";
+            var msg = res && res.message ? String(res.message) : "Action failed.";
+            var upper = reason.toUpperCase();
+            var level = (upper.indexOf("BLOCK") >= 0 || upper.indexOf("GUARD") >= 0 || upper.indexOf("MODE_NOT") === 0 || upper === "ENV_NOT_READY" || upper === "TRIGGERS_ACTIVE" || upper === "OCR_ENABLE_BLOCKED")
+              ? "WARN"
+              : "ERROR";
+            if (level === "WARN") {
+              rxPush("WARN", actionLabel + " blocked: " + msg);
+            } else {
+              rxPush("ERROR", actionLabel + " failed: " + msg);
+            }
+            return;
+          }
+          rxPush("OK", successText || (actionLabel + " completed."));
+          if (onSuccess) {
+            try {
+              onSuccess(res);
+            } catch (e) {
+              // ignore post-success errors
+            }
+          }
+        });
+      }
+
+      function initTabs() {
+        var buttons = document.querySelectorAll(".tab-btn");
+        buttons.forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            buttons.forEach(function (b) {
+              b.setAttribute("aria-selected", "false");
+            });
+            btn.setAttribute("aria-selected", "true");
+            var panels = document.querySelectorAll(".tab-panel");
+            panels.forEach(function (panel) {
+              panel.classList.remove("active");
+            });
+            var target = document.getElementById(btn.getAttribute("aria-controls"));
+            if (target) target.classList.add("active");
+          });
+        });
+      }
+
+      function initDashboard() {
+        var btnRefreshOverview = document.getElementById("btn-refresh-overview");
+        var btnRefreshLogs = document.getElementById("btn-refresh-logs");
+        var btnChangeMode = document.getElementById("btn-change-mode");
+        var btnQueue = document.getElementById("btn-queue");
+        var btnOcrEnable = document.getElementById("btn-ocr-enable");
+        var btnOcrDisable = document.getElementById("btn-ocr-disable");
+        var btnExportRun = document.getElementById("btn-export-run");
+        var btnArchiveLogs = document.getElementById("btn-archive-logs");
+
+        appState.controls = {
+          btnQueue: btnQueue,
+          btnOcrEnable: btnOcrEnable,
+          btnOcrDisable: btnOcrDisable,
+          btnExportRun: btnExportRun,
+          btnArchiveLogs: btnArchiveLogs,
+          btnChangeMode: btnChangeMode
         };
 
-        function rxNormalizeLevel(level) {
-          var upper = String(level || "INFO").toUpperCase();
-          if (upper === "OK" || upper === "INFO" || upper === "WARN" || upper === "ERROR") return upper;
-          return "INFO";
-        }
-
-        function rxSetCurrent(level, msg) {
-          var el = document.getElementById("rx-current");
-          if (!el) return;
-          var lvl = rxNormalizeLevel(level);
-          el.className = "rx-current rx-" + lvl.toLowerCase();
-          while (el.firstChild) el.removeChild(el.firstChild);
-          var label = document.createElement("span");
-          label.className = "rx-label";
-          label.textContent = lvl;
-          var text = document.createElement("span");
-          text.className = "rx-text";
-          text.textContent = msg ? String(msg) : "";
-          el.appendChild(label);
-          el.appendChild(text);
-        }
-
-        function rxBuildTimestamp_() {
-          return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-        }
-
-        function rxPush(level, msg) {
-          var history = document.getElementById("rx-history");
-          if (!history) return;
-          var lvl = rxNormalizeLevel(level);
-          if (lvl === "INFO") {
-            rxSetCurrent(lvl, msg);
-            return;
-          }
-          var entry = document.createElement("div");
-          entry.className = "rx-entry rx-" + lvl.toLowerCase();
-          var time = document.createElement("span");
-          time.className = "rx-time";
-          time.textContent = "[" + rxBuildTimestamp_() + "]";
-          var label = document.createElement("span");
-          label.className = "rx-label";
-          label.textContent = lvl;
-          var text = document.createElement("span");
-          text.className = "rx-text";
-          text.textContent = msg ? String(msg) : "";
-          entry.appendChild(time);
-          entry.appendChild(label);
-          entry.appendChild(text);
-          history.insertBefore(entry, history.firstChild);
-          while (history.childNodes.length > rxMax) {
-            history.removeChild(history.lastChild);
-          }
-          rxSetCurrent(lvl, msg);
-        }
-
-        function setEnabled(btn, enabled) {
-          if (!btn) return;
-          if (btn.classList.contains("is-loading")) return;
-          btn.disabled = !enabled;
-        }
-
-        function setLoading(btn, isLoading) {
-          if (!btn) return;
-          btn.disabled = isLoading;
-          if (isLoading) btn.classList.add("is-loading");
-          else btn.classList.remove("is-loading");
-        }
-
-        function setHeaderControlsVisible(visible) {
-          ["header-controls", "header-center"].forEach(function (id) {
-            var el = document.getElementById(id);
-            if (!el) return;
-            if (visible) el.classList.remove("hidden");
-            else el.classList.add("hidden");
-          });
-        }
-
-        function applyModeState(state) {
-          var mode = state && state.mode ? String(state.mode).toUpperCase() : "OCR";
-          if (mode !== "MAINTENANCE") mode = "OCR";
-          var untilIso = state && state.until_iso ? String(state.until_iso) : "";
-          appState.mode = mode;
-          appState.untilIso = untilIso;
-
-          var modeValue = document.getElementById("mode-value");
-          var modeExpiry = document.getElementById("mode-expiry");
-          if (modeValue) {
-            modeValue.textContent = mode;
-            modeValue.classList.remove("maintenance", "ocr");
-            modeValue.classList.add(mode === "MAINTENANCE" ? "maintenance" : "ocr");
-          }
-          if (modeExpiry) {
-            modeExpiry.textContent = mode === "MAINTENANCE" && untilIso ? ("Until " + untilIso) : "";
-          }
-
-          var controls = appState.controls || {};
-          var isMaintenance = mode === "MAINTENANCE";
-          setEnabled(controls.btnQueue, !isMaintenance);
-          setEnabled(controls.btnOcrEnable, !isMaintenance);
-          setEnabled(controls.btnOcrDisable, !isMaintenance);
-          setEnabled(controls.btnExportRun, isMaintenance);
-          setEnabled(controls.btnArchiveLogs, isMaintenance);
-          setEnabled(controls.btnChangeMode, true);
-        }
-
-        function refreshMode(options) {
-          var opts = options || {};
-          var button = opts.button;
-          setLoading(button, true);
-          callServer("belle_dash_getMode", undefined, function (err, res) {
-            setLoading(button, false);
-            if (err) {
-              rxSetCurrent("ERROR", "Mode refresh failed.");
-              return;
-            }
-            if (!res.ok) {
-              rxSetCurrent("ERROR", res.message || "Mode refresh failed.");
-              return;
-            }
-            applyModeState(res.data || {});
-          });
-        }
-
-        function refreshOcrRunStatus() {
-          callServer("belle_dash_getOcrRunStatus", undefined, function (err, res) {
-            if (err || !res || !res.ok) {
-              if (!ocrStatusErrorShown) {
-                rxSetCurrent("WARN", "Could not refresh OCR status.");
-                ocrStatusErrorShown = true;
-              }
-              return;
-            }
-            ocrStatusErrorShown = false;
-            var running = res.data && res.data.running === true;
-            var badge = document.getElementById("ocr-run-badge");
-            if (!badge) return;
-            badge.className = "badge " + (running ? "badge-running" : "badge-stopped");
-            badge.textContent = running ? "OCR is running" : "OCR is stopped";
-          });
-        }
-
-        function callServer(fnName, payload, callback) {
-          var runner = google.script.run
-            .withSuccessHandler(function (res) {
-              callback(null, res);
-            })
-            .withFailureHandler(function (err) {
-              callback(err, null);
-            });
-          if (payload !== undefined) runner[fnName](payload);
-          else runner[fnName]();
-        }
-
-        function renderSetupDiagnostics(diags) {
-          var tbody = document.querySelector("#setup-table tbody");
-          tbody.innerHTML = "";
-          if (!diags || diags.length === 0) {
-            var empty = document.createElement("tr");
-            var td = document.createElement("td");
-            td.colSpan = 4;
-            td.textContent = "No diagnostics available.";
-            empty.appendChild(td);
-            tbody.appendChild(empty);
-            return;
-          }
-          diags.forEach(function (entry) {
-            var tr = document.createElement("tr");
-            var cells = [entry.item, entry.code, entry.detail, entry.hint];
-            cells.forEach(function (value) {
-              var td = document.createElement("td");
-              td.textContent = value === undefined || value === null ? "" : String(value);
-              tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-          });
-        }
-
-        function showSetupView(res) {
-          var setup = document.getElementById("setup-view");
-          var dashboard = document.getElementById("dashboard-view");
-          if (dashboard) dashboard.classList.add("hidden");
-          if (setup) setup.classList.remove("hidden");
-          setHeaderControlsVisible(false);
-          var summary = document.getElementById("setup-summary");
-          var message = res && res.message ? String(res.message) : "Environment not ready.";
-          if (summary) summary.textContent = message;
-          var diags = res && res.data && res.data.diagnostics ? res.data.diagnostics : [];
-          renderSetupDiagnostics(diags);
-        }
-
-        function showDashboardView() {
-          var setup = document.getElementById("setup-view");
-          var dashboard = document.getElementById("dashboard-view");
-          if (setup) setup.classList.add("hidden");
-          if (dashboard) dashboard.classList.remove("hidden");
-          setHeaderControlsVisible(true);
-          if (!dashboardStarted) {
-            dashboardStarted = true;
-            initDashboard();
-          }
-        }
-
-        function applyHealthResult(res) {
-          var data = res && res.data ? res.data : null;
-          var ready = data && data.ready === true;
-          if (ready) {
-            rxSetCurrent("OK", "Environment ready.");
-            showDashboardView();
-          } else {
-            rxSetCurrent("WARN", "Environment not ready.");
-            showSetupView(res);
-          }
-        }
-
-        function renderOverview(res) {
-          var tbody = document.querySelector("#overview-table tbody");
-          tbody.innerHTML = "";
-          var data = res && res.data ? res.data : null;
-          var rows = data && data.docTypes ? data.docTypes : [];
-          var totals = data && data.totals ? data.totals : null;
-          if (!rows || rows.length === 0) {
-            var empty = document.createElement("tr");
-            var td = document.createElement("td");
-            td.colSpan = 7;
-            td.textContent = "No overview data.";
-            empty.appendChild(td);
-            tbody.appendChild(empty);
-            return;
-          }
-
-          rows.forEach(function (row) {
-            var tr = document.createElement("tr");
-            if (row.missing) tr.classList.add("muted");
-            var cells = [
-              row.docType || "",
-              row.queueSheetName || "",
-              row.counts ? row.counts.queued : 0,
-              row.counts ? row.counts.processing : 0,
-              row.counts ? row.counts.error_retryable : 0,
-              row.counts ? row.counts.error_final : 0,
-              row.counts ? row.counts.done : 0
-            ];
-            cells.forEach(function (value) {
-              var td = document.createElement("td");
-              td.textContent = String(value);
-              tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-          });
-
-          if (totals) {
-            var totalRow = document.createElement("tr");
-            totalRow.className = "total-row";
-            var totalCells = [
-              "Totals",
-              "",
-              totals.queued || 0,
-              totals.processing || 0,
-              totals.error_retryable || 0,
-              totals.error_final || 0,
-              totals.done || 0
-            ];
-            totalCells.forEach(function (value) {
-              var td = document.createElement("td");
-              td.textContent = String(value);
-              totalRow.appendChild(td);
-            });
-            tbody.appendChild(totalRow);
-          }
-        }
-
-        function countsToText(counts) {
-          if (!counts) return "-";
-          var parts = [];
-          if (counts.total !== null && counts.total !== undefined) parts.push("total " + counts.total);
-          if (counts.done !== null && counts.done !== undefined) parts.push("done " + counts.done);
-          if (counts.queued !== null && counts.queued !== undefined) parts.push("queued " + counts.queued);
-          if (counts.retryable !== null && counts.retryable !== undefined) parts.push("retryable " + counts.retryable);
-          if (counts.error_final !== null && counts.error_final !== undefined) parts.push("error_final " + counts.error_final);
-          return parts.length > 0 ? parts.join(", ") : "-";
-        }
-
-        function renderLogTable(tableId, rows, columns, emptyText) {
-          var tbody = document.querySelector(tableId + " tbody");
-          tbody.innerHTML = "";
-          if (!rows || rows.length === 0) {
-            var empty = document.createElement("tr");
-            var td = document.createElement("td");
-            td.colSpan = columns.length;
-            td.textContent = emptyText;
-            empty.appendChild(td);
-            tbody.appendChild(empty);
-            return;
-          }
-          rows.forEach(function (row) {
-            var tr = document.createElement("tr");
-            columns.forEach(function (col) {
-              var td = document.createElement("td");
-              var value = row[col];
-              if (col === "counts") value = countsToText(row.counts);
-              if (col === "seen_count") value = row.seen_count !== null && row.seen_count !== undefined ? row.seen_count : "-";
-              td.textContent = value === undefined || value === null ? "-" : String(value);
-              tr.appendChild(td);
-            });
-            tbody.appendChild(tr);
-          });
-        }
-
-        function renderLogs(res) {
-          var data = res && res.data ? res.data : null;
-          var sheets = data && data.sheets ? data.sheets : {};
-          var guard = sheets.exportGuard || {};
-          var exportSkip = sheets.exportSkip || {};
-          var queueSkip = sheets.queueSkip || {};
-          var guardEmpty = guard.missing ? "Sheet not found." : "No guard logs.";
-          var exportEmpty = exportSkip.missing ? "Sheet not found." : "No export skip logs.";
-          var queueEmpty = queueSkip.missing ? "Sheet not found." : "No queue skip logs.";
-
-          renderLogTable("#log-guard", guard.rows, ["ts_iso", "reason", "doc_type", "counts"], guardEmpty);
-          renderLogTable("#log-export-skip", exportSkip.rows, ["ts_iso", "reason", "doc_type"], exportEmpty);
-          renderLogTable("#log-queue-skip", queueSkip.rows, ["ts_iso", "reason", "doc_type", "seen_count"], queueEmpty);
-        }
-
-        function refreshOverview(options) {
-          var opts = options || {};
-          var button = opts.button;
-          var history = opts.history === true;
-          var onError = typeof opts.onError === "function" ? opts.onError : null;
-          setLoading(button, true);
-          rxSetCurrent("INFO", "Refreshing overview...");
-          callServer("belle_dash_getOverview", undefined, function (err, res) {
-            setLoading(button, false);
-            if (err) {
-              if (onError) {
-                onError();
-                return;
-              }
-              if (history) rxPush("ERROR", "Overview failed to load.");
-              else rxSetCurrent("ERROR", "Overview failed to load.");
-              return;
-            }
-            if (!res.ok) {
-              if (onError) {
-                onError();
-                return;
-              }
-              var msg = res.message || "Overview failed.";
-              if (history) rxPush("ERROR", msg);
-              else rxSetCurrent("ERROR", msg);
-              return;
-            }
-            renderOverview(res);
-            if (history) rxPush("OK", "Overview updated.");
-            else rxSetCurrent("OK", "Overview updated.");
-          });
-        }
-
-        function refreshLogs(options) {
-          var opts = options || {};
-          var button = opts.button;
-          var history = opts.history === true;
-          setLoading(button, true);
-          rxSetCurrent("INFO", "Refreshing logs...");
-          callServer("belle_dash_getLogs", undefined, function (err, res) {
-            setLoading(button, false);
-            if (err) {
-              if (history) rxPush("ERROR", "Logs failed to load.");
-              else rxSetCurrent("ERROR", "Logs failed to load.");
-              return;
-            }
-            if (!res.ok) {
-              var msg = res.message || "Logs failed.";
-              if (history) rxPush("ERROR", msg);
-              else rxSetCurrent("ERROR", msg);
-              return;
-            }
-            renderLogs(res);
-            if (history) rxPush("OK", "Logs updated.");
-            else rxSetCurrent("OK", "Logs updated.");
-          });
-        }
-
-        function runOp(button, fnName, confirmText, successText, options) {
-          var opts = options || {};
-          var onSuccess = typeof opts.onSuccess === "function" ? opts.onSuccess : null;
-          var onError = typeof opts.onError === "function" ? opts.onError : null;
-          var actionLabel = opts.actionLabel || successText || fnName;
-          if (confirmText && !window.confirm(confirmText)) return;
-          setLoading(button, true);
-          rxSetCurrent("INFO", "Running " + actionLabel + "...");
-          callServer(fnName, undefined, function (err, res) {
-            setLoading(button, false);
-            if (err) {
-              rxPush("ERROR", actionLabel + " failed.");
-              return;
-            }
-            if (!res.ok) {
-              if (onError) {
-                onError(res);
-                return;
-              }
-              var reason = res && res.reason ? String(res.reason) : "";
-              var msg = res && res.message ? String(res.message) : "Action failed.";
-              var upper = reason.toUpperCase();
-              var level = (upper.indexOf("BLOCK") >= 0 || upper.indexOf("GUARD") >= 0 || upper.indexOf("MODE_NOT") === 0 || upper === "ENV_NOT_READY" || upper === "TRIGGERS_ACTIVE" || upper === "OCR_ENABLE_BLOCKED")
-                ? "WARN"
-                : "ERROR";
-              if (level === "WARN") {
-                rxPush("WARN", actionLabel + " blocked: " + msg);
-              } else {
-                rxPush("ERROR", actionLabel + " failed: " + msg);
-              }
-              return;
-            }
-            rxPush("OK", successText || (actionLabel + " completed."));
-            if (onSuccess) {
-              try {
-                onSuccess(res);
-              } catch (e) {
-                // ignore post-success errors
-              }
-            }
-          });
-        }
-
-        function initTabs() {
-          var buttons = document.querySelectorAll(".tab-btn");
-          buttons.forEach(function (btn) {
-            btn.addEventListener("click", function () {
-              buttons.forEach(function (b) {
-                b.setAttribute("aria-selected", "false");
-              });
-              btn.setAttribute("aria-selected", "true");
-              var panels = document.querySelectorAll(".tab-panel");
-              panels.forEach(function (panel) {
-                panel.classList.remove("active");
-              });
-              var target = document.getElementById(btn.getAttribute("aria-controls"));
-              if (target) target.classList.add("active");
-            });
-          });
-        }
-
-        function initDashboard() {
-          var btnRefreshOverview = document.getElementById("btn-refresh-overview");
-          var btnRefreshLogs = document.getElementById("btn-refresh-logs");
-          var btnChangeMode = document.getElementById("btn-change-mode");
-          var btnQueue = document.getElementById("btn-queue");
-          var btnOcrEnable = document.getElementById("btn-ocr-enable");
-          var btnOcrDisable = document.getElementById("btn-ocr-disable");
-          var btnExportRun = document.getElementById("btn-export-run");
-          var btnArchiveLogs = document.getElementById("btn-archive-logs");
-
-          appState.controls = {
-            btnQueue: btnQueue,
-            btnOcrEnable: btnOcrEnable,
-            btnOcrDisable: btnOcrDisable,
-            btnExportRun: btnExportRun,
-            btnArchiveLogs: btnArchiveLogs,
-            btnChangeMode: btnChangeMode
-          };
-
-          btnRefreshOverview.addEventListener("click", function () {
-            refreshOverview({ history: true, button: btnRefreshOverview });
-          });
-          btnRefreshLogs.addEventListener("click", function () {
-            refreshLogs({ history: true, button: btnRefreshLogs });
-          });
-          btnQueue.addEventListener("click", function () {
-            runOp(btnQueue, "belle_dash_opQueue", null, "Queue completed.", {
-              actionLabel: "Queue files",
-              onSuccess: function () {
-                refreshOverview({
-                  button: btnRefreshOverview,
-                  onError: function () {
-                    rxSetCurrent("ERROR", "Queue completed, but overview refresh failed.");
-                  }
-                });
-              }
-            });
-          });
-          btnOcrEnable.addEventListener("click", function () {
-            runOp(btnOcrEnable, "belle_dash_opOcrEnable", null, "OCR enabled.", {
-              actionLabel: "OCR enable",
-              onSuccess: function () {
-                refreshOcrRunStatus();
-              }
-            });
-          });
-          btnOcrDisable.addEventListener("click", function () {
-            runOp(btnOcrDisable, "belle_dash_opOcrDisable", "Disable OCR workers?", "OCR disabled.", {
-              actionLabel: "OCR disable",
-              onSuccess: function () {
-                refreshOcrRunStatus();
-              }
-            });
-          });
-          btnChangeMode.addEventListener("click", function () {
-            if (appState.mode === "MAINTENANCE") {
-              runOp(btnChangeMode, "belle_dash_exitMaintenance", null, "Returned to OCR mode.", {
-                actionLabel: "Exit maintenance",
-                onSuccess: function (res) {
-                  if (res && res.data) applyModeState(res.data);
-                  else refreshMode();
+        btnRefreshOverview.addEventListener("click", function () {
+          refreshOverview({ history: true, button: btnRefreshOverview });
+        });
+        btnRefreshLogs.addEventListener("click", function () {
+          refreshLogs({ history: true, button: btnRefreshLogs });
+        });
+        btnQueue.addEventListener("click", function () {
+          runOp(btnQueue, "belle_dash_opQueue", null, "Queue completed.", {
+            actionLabel: "Queue files",
+            onSuccess: function () {
+              refreshOverview({
+                button: btnRefreshOverview,
+                onError: function () {
+                  rxSetCurrent("ERROR", "Queue completed, but overview refresh failed.");
                 }
               });
-              return;
             }
-            runOp(btnChangeMode, "belle_dash_enterMaintenance", "Enter maintenance mode?", "Maintenance mode enabled.", {
-              actionLabel: "Enter maintenance",
-              onError: function (res) {
-                var reason = res && res.reason ? String(res.reason) : "";
-                if (reason === "TRIGGERS_ACTIVE") {
-                  rxPush("WARN", "Disable OCR triggers before entering maintenance.");
-                  return;
-                }
-                if (reason === "LIVE_PROCESSING") {
-                  rxPush("WARN", "Processing still active.");
-                  return;
-                }
-                var msg = res && res.message ? String(res.message) : "Maintenance entry failed.";
-                rxPush("ERROR", "Enter maintenance failed: " + msg);
-              },
+          });
+        });
+        btnOcrEnable.addEventListener("click", function () {
+          runOp(btnOcrEnable, "belle_dash_opOcrEnable", null, "OCR enabled.", {
+            actionLabel: "OCR enable",
+            onSuccess: function () {
+              refreshOcrRunStatus();
+            }
+          });
+        });
+        btnOcrDisable.addEventListener("click", function () {
+          runOp(btnOcrDisable, "belle_dash_opOcrDisable", "Disable OCR workers?", "OCR disabled.", {
+            actionLabel: "OCR disable",
+            onSuccess: function () {
+              refreshOcrRunStatus();
+            }
+          });
+        });
+        btnChangeMode.addEventListener("click", function () {
+          if (appState.mode === "MAINTENANCE") {
+            runOp(btnChangeMode, "belle_dash_exitMaintenance", null, "Returned to OCR mode.", {
+              actionLabel: "Exit maintenance",
               onSuccess: function (res) {
                 if (res && res.data) applyModeState(res.data);
                 else refreshMode();
               }
             });
-          });
-          btnExportRun.addEventListener("click", function () {
-            runOp(btnExportRun, "belle_dash_exportRun", "Run export and clear operational sheets?", "Export run completed.", {
-              actionLabel: "Export run"
-            });
-          });
-          btnArchiveLogs.addEventListener("click", function () {
-            runOp(btnArchiveLogs, "belle_dash_archiveLogs", "Archive and clear logs?", "Logs archived and cleared.", {
-              actionLabel: "Archive logs"
-            });
-          });
-
-          initTabs();
-          refreshMode();
-          refreshOcrRunStatus();
-          refreshOverview({ button: btnRefreshOverview });
-          refreshLogs({ button: btnRefreshLogs });
-        }
-
-        function initSetup() {
-          var btnRecheck = document.getElementById("btn-health-recheck");
-          if (!btnRecheck) return;
-          btnRecheck.addEventListener("click", function () {
-            setLoading(btnRecheck, true);
-            rxSetCurrent("INFO", "Re-checking environment...");
-            callServer("belle_dashboard_healthCheck", undefined, function (err, res) {
-              setLoading(btnRecheck, false);
-              if (err) {
-                rxSetCurrent("ERROR", "Health check failed.");
-                return;
-              }
-              applyHealthResult(res || {});
-            });
-          });
-        }
-
-        function boot() {
-          initSetup();
-          var bootHealth = window.__BOOT_HEALTH__ || null;
-          if (!bootHealth) {
-            rxSetCurrent("WARN", "Environment not ready.");
-            showSetupView({
-              message: "Environment not ready.",
-              data: { diagnostics: [{ item: "ENV_HEALTHCHECK", code: "MISSING", detail: "No boot data.", hint: "Re-check to load diagnostics." }] }
-            });
             return;
           }
-          applyHealthResult(bootHealth);
-        }
+          runOp(btnChangeMode, "belle_dash_enterMaintenance", "Enter maintenance mode?", "Maintenance mode enabled.", {
+            actionLabel: "Enter maintenance",
+            onError: function (res) {
+              var reason = res && res.reason ? String(res.reason) : "";
+              if (reason === "TRIGGERS_ACTIVE") {
+                rxPush("WARN", "Disable OCR triggers before entering maintenance.");
+                return;
+              }
+              if (reason === "LIVE_PROCESSING") {
+                rxPush("WARN", "Processing still active.");
+                return;
+              }
+              var msg = res && res.message ? String(res.message) : "Maintenance entry failed.";
+              rxPush("ERROR", "Enter maintenance failed: " + msg);
+            },
+            onSuccess: function (res) {
+              if (res && res.data) applyModeState(res.data);
+              else refreshMode();
+            }
+          });
+        });
+        btnExportRun.addEventListener("click", function () {
+          runOp(btnExportRun, "belle_dash_exportRun", "Run export and clear operational sheets?", "Export run completed.", {
+            actionLabel: "Export run"
+          });
+        });
+        btnArchiveLogs.addEventListener("click", function () {
+          runOp(btnArchiveLogs, "belle_dash_archiveLogs", "Archive and clear logs?", "Logs archived and cleared.", {
+            actionLabel: "Archive logs"
+          });
+        });
 
-        document.addEventListener("DOMContentLoaded", boot);
-      })();
-    </script>
-  </body>
+        initTabs();
+        refreshMode();
+        refreshOcrRunStatus();
+        refreshOverview({ button: btnRefreshOverview });
+        refreshLogs({ button: btnRefreshLogs });
+      }
+
+      function initSetup() {
+        var btnRecheck = document.getElementById("btn-health-recheck");
+        if (!btnRecheck) return;
+        btnRecheck.addEventListener("click", function () {
+          setLoading(btnRecheck, true);
+          rxSetCurrent("INFO", "Re-checking environment...");
+          callServer("belle_dashboard_healthCheck", undefined, function (err, res) {
+            setLoading(btnRecheck, false);
+            if (err) {
+              rxSetCurrent("ERROR", "Health check failed.");
+              return;
+            }
+            applyHealthResult(res || {});
+          });
+        });
+      }
+
+      function boot() {
+        initSetup();
+        var bootHealth = window.__BOOT_HEALTH__ || null;
+        if (!bootHealth) {
+          rxSetCurrent("WARN", "Environment not ready.");
+          showSetupView({
+            message: "Environment not ready.",
+            data: { diagnostics: [{ item: "ENV_HEALTHCHECK", code: "MISSING", detail: "No boot data.", hint: "Re-check to load diagnostics." }] }
+          });
+          return;
+        }
+        applyHealthResult(bootHealth);
+      }
+
+      document.addEventListener("DOMContentLoaded", boot);
+    })();
+  </script>
+</body>
+
 </html>
