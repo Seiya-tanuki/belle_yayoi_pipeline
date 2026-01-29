@@ -385,3 +385,24 @@ function belle_dash_exportRun() {
     return belle_dash_maint_exportRun_();
   });
 }
+
+function belle_dash_getOcrRunStatus() {
+  return belle_dash_wrap_("ocr_status", function () {
+    var running = false;
+    if (typeof belle_maint_hasOcrTriggers_ === "function") {
+      running = belle_maint_hasOcrTriggers_() === true;
+    } else if (typeof belle_ocr_parallel_getTriggersByHandler_ === "function") {
+      var triggers = belle_ocr_parallel_getTriggersByHandler_("belle_ocr_workerTick");
+      running = triggers && triggers.length > 0;
+    } else {
+      var all = ScriptApp.getProjectTriggers();
+      for (var i = 0; i < all.length; i++) {
+        if (all[i].getHandlerFunction && all[i].getHandlerFunction() === "belle_ocr_workerTick") {
+          running = true;
+          break;
+        }
+      }
+    }
+    return belle_dash_result_(true, "OK", "", { running: running });
+  });
+}

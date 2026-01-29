@@ -122,6 +122,37 @@
         box-shadow: 0 12px 24px var(--shadow);
       }
 
+      .mode-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .mode-stack {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+
+      .badge-running {
+        background: var(--success);
+        color: #fff;
+      }
+
+      .badge-stopped {
+        background: var(--danger);
+        color: #fff;
+      }
+
       .mode-label {
         text-transform: uppercase;
         font-size: 0.75rem;
@@ -378,8 +409,13 @@
             </button>
           </div>
           <div class="mode-panel" id="mode-panel" aria-live="polite">
-            <div class="mode-label">Mode</div>
-            <div class="mode-value ocr" id="mode-value">OCR</div>
+            <div class="mode-row">
+              <span id="ocr-run-badge" class="badge badge-stopped">OCR is stopped</span>
+              <div class="mode-stack">
+                <div class="mode-label">Mode</div>
+                <div class="mode-value ocr" id="mode-value">OCR</div>
+              </div>
+            </div>
             <div class="mode-expiry" id="mode-expiry"></div>
           </div>
         </div>
@@ -511,6 +547,7 @@
     <script>
       (function () {
         var toastTimer = null;
+        var ocrStatusErrorShown = false;
         var appState = {
           mode: "OCR",
           untilIso: ""
@@ -597,6 +634,24 @@
               return;
             }
             applyModeState(res.data || {});
+          });
+        }
+
+        function refreshOcrRunStatus() {
+          callServer("belle_dash_getOcrRunStatus", undefined, function (err, res) {
+            if (err || !res || !res.ok) {
+              if (!ocrStatusErrorShown) {
+                showToast("Could not refresh OCR status.", "error");
+                ocrStatusErrorShown = true;
+              }
+              return;
+            }
+            ocrStatusErrorShown = false;
+            var running = res.data && res.data.running === true;
+            var badge = document.getElementById("ocr-run-badge");
+            if (!badge) return;
+            badge.className = "badge " + (running ? "badge-running" : "badge-stopped");
+            badge.textContent = running ? "OCR is running" : "OCR is stopped";
           });
         }
 
@@ -872,10 +927,18 @@
             });
           });
           btnOcrEnable.addEventListener("click", function () {
-            runOp(btnOcrEnable, "belle_dash_opOcrEnable", null, "OCR enabled.");
+            runOp(btnOcrEnable, "belle_dash_opOcrEnable", null, "OCR enabled.", {
+              onSuccess: function () {
+                refreshOcrRunStatus();
+              }
+            });
           });
           btnOcrDisable.addEventListener("click", function () {
-            runOp(btnOcrDisable, "belle_dash_opOcrDisable", "Disable OCR workers?", "OCR disabled.");
+            runOp(btnOcrDisable, "belle_dash_opOcrDisable", "Disable OCR workers?", "OCR disabled.", {
+              onSuccess: function () {
+                refreshOcrRunStatus();
+              }
+            });
           });
           btnEnterMaintenance.addEventListener("click", function () {
             runOp(btnEnterMaintenance, "belle_dash_enterMaintenance", "Enter maintenance mode?", "Maintenance mode enabled.", {
@@ -911,6 +974,7 @@
 
           initTabs();
           refreshMode();
+          refreshOcrRunStatus();
           refreshOverview({ button: btnRefreshOverview });
           refreshLogs({ button: btnRefreshLogs });
         }
