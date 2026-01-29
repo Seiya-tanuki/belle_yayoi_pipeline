@@ -109,7 +109,7 @@
 
         /* Mode Panel (Dynamic Classes) */
         .mode-panel {
-          @apply flex flex-col items-center gap-6 w-full;
+          @apply flex flex-col items-center gap-4 w-full;
         }
         .mode-row {
             @apply flex flex-col items-center gap-2;
@@ -399,7 +399,7 @@
 
           <!-- Maintenance Block -->
           <div class="ops-block">
-            <div class="ops-title">Maintenance</div>
+            <div class="ops-title">EXPORT</div>
             <div class="ops-grid">
               <button class="btn" id="btn-export-run">
                 <span class="spinner" aria-hidden="true"></span>
@@ -581,7 +581,7 @@
         var modeValue = document.getElementById("mode-value");
         var modeExpiry = document.getElementById("mode-expiry");
         if (modeValue) {
-          modeValue.textContent = mode;
+          modeValue.textContent = mode == "MAINTENANCE" ? "EXPORT" : "OCR";
           modeValue.classList.remove("maintenance", "ocr");
           modeValue.classList.add(mode === "MAINTENANCE" ? "maintenance" : "ocr");
         }
