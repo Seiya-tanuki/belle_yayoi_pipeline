@@ -65,6 +65,21 @@ function belle_dash_attachAudit_(result) {
   return result;
 }
 
+function belle_dash_requireEnvReady_() {
+  if (typeof belle_env_healthCheck_ !== "function") {
+    return belle_dash_result_(false, "ENV_CHECK_MISSING", "Environment check unavailable.", null);
+  }
+  var res = belle_env_healthCheck_({ ensure: false });
+  if (!res || res.ok !== true) {
+    return belle_dash_result_(false, "ENV_CHECK_FAILED", "Environment check failed.", res && res.data ? res.data : null);
+  }
+  var data = res && res.data ? res.data : null;
+  if (!data || data.ready !== true) {
+    return belle_dash_result_(false, "ENV_NOT_READY", "Environment not ready.", data);
+  }
+  return belle_dash_result_(true, "OK", "Environment ready.", data);
+}
+
 function belle_dash_buildHeaderMap_(headerRow) {
   var map = {};
   var row = Array.isArray(headerRow) ? headerRow : [];
@@ -106,6 +121,8 @@ function belle_dash_parseCountsJson_(raw) {
 
 function belle_dash_getOverview() {
   return belle_dash_wrap_("overview", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     var props = belle_cfg_getProps_();
     var sheetId = belle_cfg_getSheetIdOrEmpty_(props);
     if (!sheetId) {
@@ -271,6 +288,8 @@ function belle_dash_mapQueueSkipRow_(row, map) {
 
 function belle_dash_getLogs() {
   return belle_dash_wrap_("logs", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     var props = belle_cfg_getProps_();
     var sheetId = belle_cfg_getSheetIdOrEmpty_(props);
     if (!sheetId) {
@@ -297,6 +316,8 @@ function belle_dash_getLogs() {
 
 function belle_dash_opQueue() {
   return belle_dash_wrap_("op_queue", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     var gate = belle_maint_requireMode_("OCR");
     if (!gate.ok) return gate;
     var res = belle_queueFolderFilesToSheet();
@@ -314,6 +335,8 @@ function belle_dash_opQueue() {
 
 function belle_dash_opOcrEnable() {
   return belle_dash_wrap_("op_ocr_enable", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     var gate = belle_maint_requireMode_("OCR");
     if (!gate.ok) return gate;
     var res = belle_ocr_parallel_enable();
@@ -332,6 +355,8 @@ function belle_dash_opOcrEnable() {
 
 function belle_dash_opOcrDisable() {
   return belle_dash_wrap_("op_ocr_disable", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     var gate = belle_maint_requireMode_("OCR");
     if (!gate.ok) return gate;
     var res = belle_ocr_parallel_disable();
@@ -344,6 +369,8 @@ function belle_dash_opOcrDisable() {
 
 function belle_dash_opExport() {
   return belle_dash_wrap_("op_export", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     var gate = belle_maint_requireMode_("MAINTENANCE");
     if (!gate.ok) return gate;
     return belle_export_run_maintenance_();
@@ -352,12 +379,16 @@ function belle_dash_opExport() {
 
 function belle_dash_getMode() {
   return belle_dash_wrap_("mode_get", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     return belle_dash_maint_getState_();
   });
 }
 
 function belle_dash_enterMaintenance() {
   return belle_dash_wrap_("maint_enter", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     var gate = belle_maint_requireMode_("OCR");
     if (!gate.ok) return gate;
     return belle_dash_maint_enter_();
@@ -366,12 +397,16 @@ function belle_dash_enterMaintenance() {
 
 function belle_dash_exitMaintenance() {
   return belle_dash_wrap_("maint_exit", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     return belle_dash_maint_exit_();
   });
 }
 
 function belle_dash_archiveLogs() {
   return belle_dash_wrap_("maint_archive_logs", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     var gate = belle_maint_requireMode_("MAINTENANCE");
     if (!gate.ok) return gate;
     return belle_dash_maint_archiveLogs_();
@@ -380,6 +415,8 @@ function belle_dash_archiveLogs() {
 
 function belle_dash_exportRun() {
   return belle_dash_wrap_("maint_export_run", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     var gate = belle_maint_requireMode_("MAINTENANCE");
     if (!gate.ok) return gate;
     return belle_dash_maint_exportRun_();
@@ -388,6 +425,8 @@ function belle_dash_exportRun() {
 
 function belle_dash_getOcrRunStatus() {
   return belle_dash_wrap_("ocr_status", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
     var running = false;
     if (typeof belle_maint_hasOcrTriggers_ === "function") {
       running = belle_maint_hasOcrTriggers_() === true;
@@ -404,5 +443,14 @@ function belle_dash_getOcrRunStatus() {
       }
     }
     return belle_dash_result_(true, "OK", "", { running: running });
+  });
+}
+
+function belle_dashboard_healthCheck() {
+  return belle_dash_wrap_("health_check", function () {
+    if (typeof belle_env_healthCheck_ !== "function") {
+      return belle_dash_result_(false, "ENV_CHECK_MISSING", "Environment check unavailable.", null);
+    }
+    return belle_env_healthCheck_({ ensure: true });
   });
 }

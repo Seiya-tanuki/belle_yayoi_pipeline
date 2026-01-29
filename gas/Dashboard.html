@@ -85,6 +85,10 @@
         animation: riseIn 0.6s ease both;
       }
 
+      .hidden {
+        display: none;
+      }
+
       .delay-1 { animation-delay: 0.06s; }
       .delay-2 { animation-delay: 0.12s; }
       .delay-3 { animation-delay: 0.18s; }
@@ -288,6 +292,17 @@
         border: 1px solid var(--line);
       }
 
+      .setup-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin: 12px 0 18px;
+      }
+
+      .setup-note {
+        margin: 0 0 10px;
+      }
+
       .ops-title {
         font-weight: 700;
         margin-bottom: 10px;
@@ -392,51 +407,26 @@
   <body>
     <div class="noise" aria-hidden="true"></div>
     <main class="app">
-      <header class="hero">
-        <div>
-          <h1>Belle Yayoi Pipeline Dashboard</h1>
-          <div class="build">Build: dashboard phase1</div>
-        </div>
-        <div class="hero-controls">
-          <div class="actions">
-            <button class="btn btn-ghost" id="btn-refresh-overview">
-              <span class="spinner" aria-hidden="true"></span>
-              <span class="label">Refresh Overview</span>
-            </button>
-            <button class="btn btn-ghost" id="btn-refresh-logs">
-              <span class="spinner" aria-hidden="true"></span>
-              <span class="label">Refresh Logs</span>
-            </button>
-          </div>
-          <div class="mode-panel" id="mode-panel" aria-live="polite">
-            <div class="mode-row">
-              <span id="ocr-run-badge" class="badge badge-stopped">OCR is stopped</span>
-              <div class="mode-stack">
-                <div class="mode-label">Mode</div>
-                <div class="mode-value ocr" id="mode-value">OCR</div>
-              </div>
-            </div>
-            <div class="mode-expiry" id="mode-expiry"></div>
-          </div>
-        </div>
-      </header>
-
-      <section class="card delay-1" id="overview-section">
+      <section class="card hidden" id="setup-view" aria-live="polite">
         <div class="card-header">
-          <h2>Overview</h2>
-          <div class="muted">Active doc types only</div>
+          <h2>Setup Required</h2>
+          <div class="muted" id="setup-summary">Environment not ready.</div>
+        </div>
+        <p class="muted setup-note">Fix the issues below and click Re-check.</p>
+        <div class="setup-actions">
+          <button class="btn" id="btn-health-recheck">
+            <span class="spinner" aria-hidden="true"></span>
+            <span class="label">Re-check</span>
+          </button>
         </div>
         <div class="table-wrap">
-          <table id="overview-table">
+          <table id="setup-table">
             <thead>
               <tr>
-                <th>Doc Type</th>
-                <th>Queue Sheet</th>
-                <th>QUEUED</th>
-                <th>PROCESSING</th>
-                <th>ERROR_RETRYABLE</th>
-                <th>ERROR_FINAL</th>
-                <th>DONE</th>
+                <th>Item</th>
+                <th>Code</th>
+                <th>Detail</th>
+                <th>Hint</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -444,110 +434,168 @@
         </div>
       </section>
 
-      <section class="card delay-2" id="ops-section">
-        <div class="card-header">
-          <h2>Ops</h2>
-          <div class="muted">Single-user execution</div>
-        </div>
-        <div class="ops-columns">
-          <div class="ops-block">
-            <div class="ops-title">OCR Ops</div>
-            <div class="ops-grid">
-              <button class="btn" id="btn-queue">
+      <div id="dashboard-view" class="hidden">
+        <header class="hero">
+          <div>
+            <h1>Belle Yayoi Pipeline Dashboard</h1>
+            <div class="build">Build: dashboard phase1</div>
+          </div>
+          <div class="hero-controls">
+            <div class="actions">
+              <button class="btn btn-ghost" id="btn-refresh-overview">
                 <span class="spinner" aria-hidden="true"></span>
-                <span class="label">Queue Files</span>
+                <span class="label">Refresh Overview</span>
               </button>
-              <button class="btn btn-secondary" id="btn-ocr-enable">
+              <button class="btn btn-ghost" id="btn-refresh-logs">
                 <span class="spinner" aria-hidden="true"></span>
-                <span class="label">OCR Enable</span>
-              </button>
-              <button class="btn btn-secondary" id="btn-ocr-disable">
-                <span class="spinner" aria-hidden="true"></span>
-                <span class="label">OCR Disable</span>
+                <span class="label">Refresh Logs</span>
               </button>
             </div>
-          </div>
-          <div class="ops-block">
-            <div class="ops-title">Maintenance Ops</div>
-            <div class="ops-grid">
-              <button class="btn btn-ghost" id="btn-enter-maintenance">
-                <span class="spinner" aria-hidden="true"></span>
-                <span class="label">Quiesce &amp; Enter</span>
-              </button>
-              <button class="btn" id="btn-export-run">
-                <span class="spinner" aria-hidden="true"></span>
-                <span class="label">Export Run</span>
-              </button>
-              <button class="btn btn-ghost" id="btn-archive-logs">
-                <span class="spinner" aria-hidden="true"></span>
-                <span class="label">Archive + Clear Logs</span>
-              </button>
-              <button class="btn btn-secondary" id="btn-exit-maintenance">
-                <span class="spinner" aria-hidden="true"></span>
-                <span class="label">Exit Maintenance</span>
-              </button>
+            <div class="mode-panel" id="mode-panel" aria-live="polite">
+              <div class="mode-row">
+                <span id="ocr-run-badge" class="badge badge-stopped">OCR is stopped</span>
+                <div class="mode-stack">
+                  <div class="mode-label">Mode</div>
+                  <div class="mode-value ocr" id="mode-value">OCR</div>
+                </div>
+              </div>
+              <div class="mode-expiry" id="mode-expiry"></div>
             </div>
           </div>
-        </div>
-      </section>
+        </header>
 
-      <section class="card delay-3" id="logs-section">
-        <div class="card-header">
-          <h2>Logs</h2>
-          <div class="tabs" role="tablist">
-            <button class="tab-btn" role="tab" aria-selected="true" aria-controls="log-guard" id="tab-guard-btn">Export Guard</button>
-            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="log-export-skip" id="tab-export-btn">Export Skip</button>
-            <button class="tab-btn" role="tab" aria-selected="false" aria-controls="log-queue-skip" id="tab-queue-btn">Queue Skip</button>
+        <section class="card delay-1" id="overview-section">
+          <div class="card-header">
+            <h2>Overview</h2>
+            <div class="muted">Active doc types only</div>
           </div>
-        </div>
-        <div class="tab-panel active" id="log-guard" role="tabpanel" aria-labelledby="tab-guard-btn">
-          <table>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Reason</th>
-                <th>Doc Type</th>
-                <th>Counts</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div class="tab-panel" id="log-export-skip" role="tabpanel" aria-labelledby="tab-export-btn">
-          <table>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Reason</th>
-                <th>Doc Type</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-        <div class="tab-panel" id="log-queue-skip" role="tabpanel" aria-labelledby="tab-queue-btn">
-          <table>
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Reason</th>
-                <th>Doc Type</th>
-                <th>Seen</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-        </div>
-      </section>
+          <div class="table-wrap">
+            <table id="overview-table">
+              <thead>
+                <tr>
+                  <th>Doc Type</th>
+                  <th>Queue Sheet</th>
+                  <th>QUEUED</th>
+                  <th>PROCESSING</th>
+                  <th>ERROR_RETRYABLE</th>
+                  <th>ERROR_FINAL</th>
+                  <th>DONE</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
 
-      <div class="status" id="status" role="status" aria-live="polite">Ready.</div>
+        <section class="card delay-2" id="ops-section">
+          <div class="card-header">
+            <h2>Ops</h2>
+            <div class="muted">Single-user execution</div>
+          </div>
+          <div class="ops-columns">
+            <div class="ops-block">
+              <div class="ops-title">OCR Ops</div>
+              <div class="ops-grid">
+                <button class="btn" id="btn-queue">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span class="label">Queue Files</span>
+                </button>
+                <button class="btn btn-secondary" id="btn-ocr-enable">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span class="label">OCR Enable</span>
+                </button>
+                <button class="btn btn-secondary" id="btn-ocr-disable">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span class="label">OCR Disable</span>
+                </button>
+              </div>
+            </div>
+            <div class="ops-block">
+              <div class="ops-title">Maintenance Ops</div>
+              <div class="ops-grid">
+                <button class="btn btn-ghost" id="btn-enter-maintenance">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span class="label">Quiesce &amp; Enter</span>
+                </button>
+                <button class="btn" id="btn-export-run">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span class="label">Export Run</span>
+                </button>
+                <button class="btn btn-ghost" id="btn-archive-logs">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span class="label">Archive + Clear Logs</span>
+                </button>
+                <button class="btn btn-secondary" id="btn-exit-maintenance">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span class="label">Exit Maintenance</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="card delay-3" id="logs-section">
+          <div class="card-header">
+            <h2>Logs</h2>
+            <div class="tabs" role="tablist">
+              <button class="tab-btn" role="tab" aria-selected="true" aria-controls="log-guard" id="tab-guard-btn">Export Guard</button>
+              <button class="tab-btn" role="tab" aria-selected="false" aria-controls="log-export-skip" id="tab-export-btn">Export Skip</button>
+              <button class="tab-btn" role="tab" aria-selected="false" aria-controls="log-queue-skip" id="tab-queue-btn">Queue Skip</button>
+            </div>
+          </div>
+          <div class="tab-panel active" id="log-guard" role="tabpanel" aria-labelledby="tab-guard-btn">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Reason</th>
+                  <th>Doc Type</th>
+                  <th>Counts</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="tab-panel" id="log-export-skip" role="tabpanel" aria-labelledby="tab-export-btn">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Reason</th>
+                  <th>Doc Type</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div class="tab-panel" id="log-queue-skip" role="tabpanel" aria-labelledby="tab-queue-btn">
+            <table>
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Reason</th>
+                  <th>Doc Type</th>
+                  <th>Seen</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </section>
+
+        <div class="status" id="status" role="status" aria-live="polite">Ready.</div>
+      </div>
     </main>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
+      window.__BOOT_HEALTH__ = <?!= JSON.stringify(bootHealth || null) ?>;
+    </script>
+    <script>
       (function () {
         var toastTimer = null;
         var ocrStatusErrorShown = false;
+        var dashboardStarted = false;
         var appState = {
           mode: "OCR",
           untilIso: ""
@@ -665,6 +713,60 @@
             });
           if (payload !== undefined) runner[fnName](payload);
           else runner[fnName]();
+        }
+
+        function renderSetupDiagnostics(diags) {
+          var tbody = document.querySelector("#setup-table tbody");
+          tbody.innerHTML = "";
+          if (!diags || diags.length === 0) {
+            var empty = document.createElement("tr");
+            var td = document.createElement("td");
+            td.colSpan = 4;
+            td.textContent = "No diagnostics available.";
+            empty.appendChild(td);
+            tbody.appendChild(empty);
+            return;
+          }
+          diags.forEach(function (entry) {
+            var tr = document.createElement("tr");
+            var cells = [entry.item, entry.code, entry.detail, entry.hint];
+            cells.forEach(function (value) {
+              var td = document.createElement("td");
+              td.textContent = value === undefined || value === null ? "" : String(value);
+              tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+          });
+        }
+
+        function showSetupView(res) {
+          var setup = document.getElementById("setup-view");
+          var dashboard = document.getElementById("dashboard-view");
+          if (dashboard) dashboard.classList.add("hidden");
+          if (setup) setup.classList.remove("hidden");
+          var summary = document.getElementById("setup-summary");
+          var message = res && res.message ? String(res.message) : "Environment not ready.";
+          if (summary) summary.textContent = message;
+          var diags = res && res.data && res.data.diagnostics ? res.data.diagnostics : [];
+          renderSetupDiagnostics(diags);
+        }
+
+        function showDashboardView() {
+          var setup = document.getElementById("setup-view");
+          var dashboard = document.getElementById("dashboard-view");
+          if (setup) setup.classList.add("hidden");
+          if (dashboard) dashboard.classList.remove("hidden");
+          if (!dashboardStarted) {
+            dashboardStarted = true;
+            initDashboard();
+          }
+        }
+
+        function applyHealthResult(res) {
+          var data = res && res.data ? res.data : null;
+          var ready = data && data.ready === true;
+          if (ready) showDashboardView();
+          else showSetupView(res);
         }
 
         function renderOverview(res) {
@@ -886,7 +988,7 @@
           });
         }
 
-        function init() {
+        function initDashboard() {
           var btnRefreshOverview = document.getElementById("btn-refresh-overview");
           var btnRefreshLogs = document.getElementById("btn-refresh-logs");
           var btnQueue = document.getElementById("btn-queue");
@@ -979,7 +1081,36 @@
           refreshLogs({ button: btnRefreshLogs });
         }
 
-        document.addEventListener("DOMContentLoaded", init);
+        function initSetup() {
+          var btnRecheck = document.getElementById("btn-health-recheck");
+          if (!btnRecheck) return;
+          btnRecheck.addEventListener("click", function () {
+            setLoading(btnRecheck, true);
+            callServer("belle_dashboard_healthCheck", undefined, function (err, res) {
+              setLoading(btnRecheck, false);
+              if (err) {
+                showToast("Health check failed.", "error");
+                return;
+              }
+              applyHealthResult(res || {});
+            });
+          });
+        }
+
+        function boot() {
+          initSetup();
+          var bootHealth = window.__BOOT_HEALTH__ || null;
+          if (!bootHealth) {
+            showSetupView({
+              message: "Environment not ready.",
+              data: { diagnostics: [{ item: "ENV_HEALTHCHECK", code: "MISSING", detail: "No boot data.", hint: "Re-check to load diagnostics." }] }
+            });
+            return;
+          }
+          applyHealthResult(bootHealth);
+        }
+
+        document.addEventListener("DOMContentLoaded", boot);
       })();
     </script>
   </body>

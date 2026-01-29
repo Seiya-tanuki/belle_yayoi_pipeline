@@ -29,13 +29,34 @@ deployment is "Only myself" and "Execute as me". There is no user auth or RBAC.
 - Logs: Export Guard, Export Skip, Queue Skip (summary only, no PII).
 
 ## Script properties
-- `BELLE_LOG_ARCHIVE_FOLDER_ID`: Root folder for report and log archives.
-- `BELLE_IMAGES_ARCHIVE_FOLDER_ID`: Root folder for archived OCR images (subfolders are created per doc type).
-- `BELLE_MAINTENANCE_TTL_MINUTES`: Optional, default 30. Auto-expires maintenance mode.
+- Required (health check gate):
+  - `BELLE_SHEET_ID`: Main spreadsheet ID (queue + logs + export).
+  - `BELLE_INTEGRATIONS_SHEET_ID`: Integrations spreadsheet ID (perf + audit logs).
+  - `BELLE_DRIVE_FOLDER_ID`: Input root folder (receipt/cc/bank subfolders).
+  - `BELLE_LOG_ARCHIVE_FOLDER_ID`: Root folder for report + log archives.
+  - `BELLE_IMAGES_ARCHIVE_FOLDER_ID`: Root folder for archived OCR images.
+  - `BELLE_GEMINI_API_KEY`: Gemini API key (non-empty).
+  - `BELLE_GEMINI_MODEL`: Gemini model name (non-empty).
+  - `BELLE_OUTPUT_FOLDER_ID`: Export output root folder.
+  - `BELLE_FISCAL_START_DATE`: YYYY-MM-DD (start).
+  - `BELLE_FISCAL_END_DATE`: YYYY-MM-DD (end, >= start).
+  - `BELLE_OCR_MAX_ATTEMPTS`: Integer 1..10.
+  - `BELLE_OCR_RETRY_BACKOFF_SECONDS`: Integer 0..86400.
+  - `BELLE_EXPORT_BATCH_MAX_ROWS`: Integer 1..50000.
+- Optional:
+  - `BELLE_MAINTENANCE_TTL_MINUTES`: Default 30. Auto-expires maintenance mode.
+
+## Environment health check (setup view)
+- On page load, the dashboard runs a health check and provisions missing sheets/folders where safe.
+- If NOT READY, a setup view is shown with diagnostics and a Re-check button.
+- Ensured resources:
+  - Queue and log sheets in `BELLE_SHEET_ID` (OCR_* + EXPORT_* + SKIP + GUARD).
+  - Input subfolders for active doc types under `BELLE_DRIVE_FOLDER_ID`.
+  - Archive subfolders under `BELLE_IMAGES_ARCHIVE_FOLDER_ID` and `export_run_reports/YYYY/MM` under `BELLE_LOG_ARCHIVE_FOLDER_ID`.
 
 ## Maintenance mode
 - Maintenance mode is mutually exclusive with OCR operations.
-- Entering maintenance runs a quiesce check (stop triggers + no live processing + script lock).
+- Entering maintenance requires OCR triggers already disabled, no live processing, and a script lock.
 - Maintenance auto-expires back to OCR mode after the TTL.
 
 ## Runbooks
