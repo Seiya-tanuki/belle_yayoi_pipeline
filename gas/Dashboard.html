@@ -63,6 +63,10 @@
         align-items: flex-end;
       }
 
+      .hero-left {
+        max-width: 560px;
+      }
+
       h1 {
         font-family: "Georgia", "Times New Roman", serif;
         font-size: 2.1rem;
@@ -73,6 +77,84 @@
       .build {
         color: var(--muted);
         font-size: 0.9rem;
+      }
+
+      .rx {
+        margin: 10px 0 8px;
+        padding: 12px 14px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid var(--line);
+        box-shadow: 0 10px 24px var(--shadow);
+      }
+
+      .rx-current {
+        display: flex;
+        gap: 10px;
+        align-items: baseline;
+        font-weight: 600;
+        font-size: 0.95rem;
+        margin-bottom: 8px;
+      }
+
+      .rx-label {
+        font-size: 0.7rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        color: var(--ink);
+      }
+
+      .rx-text {
+        flex: 1;
+      }
+
+      .rx-current.rx-info .rx-label {
+        background: #bae6fd;
+        color: #0c4a6e;
+      }
+
+      .rx-current.rx-ok .rx-label {
+        background: #bbf7d0;
+        color: #14532d;
+      }
+
+      .rx-current.rx-warn .rx-label {
+        background: #fde68a;
+        color: #92400e;
+      }
+
+      .rx-current.rx-error .rx-label {
+        background: #fecaca;
+        color: #7f1d1d;
+      }
+
+      .rx-history {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        max-height: 200px;
+        overflow-y: auto;
+        padding-right: 4px;
+      }
+
+      .rx-entry {
+        display: flex;
+        gap: 8px;
+        align-items: baseline;
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+
+      .rx-entry .rx-label {
+        padding: 2px 6px;
+      }
+
+      .rx-time {
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
       }
 
       .card {
@@ -308,47 +390,6 @@
         margin-bottom: 10px;
       }
 
-      .status {
-        margin-top: 12px;
-        padding: 12px 14px;
-        border-radius: 10px;
-        background: #f1f5f9;
-        color: var(--muted);
-      }
-
-      .status.is-error {
-        background: #fee2e2;
-        color: var(--danger);
-      }
-
-      .toast {
-        position: fixed;
-        right: 20px;
-        bottom: 20px;
-        padding: 12px 16px;
-        border-radius: 12px;
-        background: #111827;
-        color: #fff;
-        opacity: 0;
-        transform: translateY(10px);
-        transition: opacity 0.2s ease, transform 0.2s ease;
-        pointer-events: none;
-        max-width: 320px;
-      }
-
-      .toast.show {
-        opacity: 1;
-        transform: translateY(0);
-      }
-
-      .toast.success {
-        background: var(--success);
-      }
-
-      .toast.error {
-        background: var(--danger);
-      }
-
       .tabs {
         display: flex;
         gap: 8px;
@@ -407,6 +448,42 @@
   <body>
     <div class="noise" aria-hidden="true"></div>
     <main class="app">
+      <header class="hero">
+        <div class="hero-left">
+          <h1>Belle Yayoi Pipeline Dashboard</h1>
+          <div class="rx">
+            <div class="rx-current rx-info" id="rx-current" aria-live="polite">
+              <span class="rx-label">INFO</span>
+              <span class="rx-text">Ready.</span>
+            </div>
+            <div class="rx-history" id="rx-history" aria-live="polite"></div>
+          </div>
+          <div class="build">Build: dashboard phase1</div>
+        </div>
+        <div class="hero-controls" id="header-controls">
+          <div class="actions">
+            <button class="btn btn-ghost" id="btn-refresh-overview">
+              <span class="spinner" aria-hidden="true"></span>
+              <span class="label">Refresh Overview</span>
+            </button>
+            <button class="btn btn-ghost" id="btn-refresh-logs">
+              <span class="spinner" aria-hidden="true"></span>
+              <span class="label">Refresh Logs</span>
+            </button>
+          </div>
+          <div class="mode-panel" id="mode-panel" aria-live="polite">
+            <div class="mode-row">
+              <span id="ocr-run-badge" class="badge badge-stopped">OCR is stopped</span>
+              <div class="mode-stack">
+                <div class="mode-label">Mode</div>
+                <div class="mode-value ocr" id="mode-value">OCR</div>
+              </div>
+            </div>
+            <div class="mode-expiry" id="mode-expiry"></div>
+          </div>
+        </div>
+      </header>
+
       <section class="card hidden" id="setup-view" aria-live="polite">
         <div class="card-header">
           <h2>Setup Required</h2>
@@ -435,35 +512,6 @@
       </section>
 
       <div id="dashboard-view" class="hidden">
-        <header class="hero">
-          <div>
-            <h1>Belle Yayoi Pipeline Dashboard</h1>
-            <div class="build">Build: dashboard phase1</div>
-          </div>
-          <div class="hero-controls">
-            <div class="actions">
-              <button class="btn btn-ghost" id="btn-refresh-overview">
-                <span class="spinner" aria-hidden="true"></span>
-                <span class="label">Refresh Overview</span>
-              </button>
-              <button class="btn btn-ghost" id="btn-refresh-logs">
-                <span class="spinner" aria-hidden="true"></span>
-                <span class="label">Refresh Logs</span>
-              </button>
-            </div>
-            <div class="mode-panel" id="mode-panel" aria-live="polite">
-              <div class="mode-row">
-                <span id="ocr-run-badge" class="badge badge-stopped">OCR is stopped</span>
-                <div class="mode-stack">
-                  <div class="mode-label">Mode</div>
-                  <div class="mode-value ocr" id="mode-value">OCR</div>
-                </div>
-              </div>
-              <div class="mode-expiry" id="mode-expiry"></div>
-            </div>
-          </div>
-        </header>
-
         <section class="card delay-1" id="overview-section">
           <div class="card-header">
             <h2>Overview</h2>
@@ -582,45 +630,71 @@
             </table>
           </div>
         </section>
-
-        <div class="status" id="status" role="status" aria-live="polite">Ready.</div>
       </div>
     </main>
-    <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
     <script>
       window.__BOOT_HEALTH__ = <?!= JSON.stringify(bootHealth || null) ?>;
     </script>
     <script>
       (function () {
-        var toastTimer = null;
         var ocrStatusErrorShown = false;
         var dashboardStarted = false;
+        var rxMax = 30;
         var appState = {
           mode: "OCR",
           untilIso: ""
         };
 
-        function setStatus(text, isError) {
-          var el = document.getElementById("status");
-          el.textContent = text;
-          if (isError) {
-            el.classList.add("is-error");
-          } else {
-            el.classList.remove("is-error");
-          }
+        function rxNormalizeLevel(level) {
+          var upper = String(level || "INFO").toUpperCase();
+          if (upper === "OK" || upper === "INFO" || upper === "WARN" || upper === "ERROR") return upper;
+          return "INFO";
         }
 
-        function showToast(text, type) {
-          var toast = document.getElementById("toast");
-          toast.className = "toast";
-          if (type) toast.classList.add(type);
-          toast.textContent = text;
-          toast.classList.add("show");
-          if (toastTimer) clearTimeout(toastTimer);
-          toastTimer = setTimeout(function () {
-            toast.classList.remove("show");
-          }, 2200);
+        function rxSetCurrent(level, msg) {
+          var el = document.getElementById("rx-current");
+          if (!el) return;
+          var lvl = rxNormalizeLevel(level);
+          el.className = "rx-current rx-" + lvl.toLowerCase();
+          while (el.firstChild) el.removeChild(el.firstChild);
+          var label = document.createElement("span");
+          label.className = "rx-label";
+          label.textContent = lvl;
+          var text = document.createElement("span");
+          text.className = "rx-text";
+          text.textContent = msg ? String(msg) : "";
+          el.appendChild(label);
+          el.appendChild(text);
+        }
+
+        function rxBuildTimestamp_() {
+          return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        }
+
+        function rxPush(level, msg) {
+          var history = document.getElementById("rx-history");
+          if (!history) return;
+          var lvl = rxNormalizeLevel(level);
+          var entry = document.createElement("div");
+          entry.className = "rx-entry rx-" + lvl.toLowerCase();
+          var time = document.createElement("span");
+          time.className = "rx-time";
+          time.textContent = "[" + rxBuildTimestamp_() + "]";
+          var label = document.createElement("span");
+          label.className = "rx-label";
+          label.textContent = lvl;
+          var text = document.createElement("span");
+          text.className = "rx-text";
+          text.textContent = msg ? String(msg) : "";
+          entry.appendChild(time);
+          entry.appendChild(label);
+          entry.appendChild(text);
+          history.insertBefore(entry, history.firstChild);
+          while (history.childNodes.length > rxMax) {
+            history.removeChild(history.lastChild);
+          }
+          rxSetCurrent(lvl, msg);
         }
 
         function setEnabled(btn, enabled) {
@@ -634,6 +708,13 @@
           btn.disabled = isLoading;
           if (isLoading) btn.classList.add("is-loading");
           else btn.classList.remove("is-loading");
+        }
+
+        function setHeaderControlsVisible(visible) {
+          var controls = document.getElementById("header-controls");
+          if (!controls) return;
+          if (visible) controls.classList.remove("hidden");
+          else controls.classList.add("hidden");
         }
 
         function applyModeState(state) {
@@ -672,13 +753,11 @@
           callServer("belle_dash_getMode", undefined, function (err, res) {
             setLoading(button, false);
             if (err) {
-              setStatus("Mode refresh failed.", true);
-              showToast("Mode refresh failed.", "error");
+              rxSetCurrent("ERROR", "Mode refresh failed.");
               return;
             }
             if (!res.ok) {
-              setStatus(res.message || "Mode refresh failed.", true);
-              showToast(res.message || "Mode refresh failed.", "error");
+              rxSetCurrent("ERROR", res.message || "Mode refresh failed.");
               return;
             }
             applyModeState(res.data || {});
@@ -689,7 +768,7 @@
           callServer("belle_dash_getOcrRunStatus", undefined, function (err, res) {
             if (err || !res || !res.ok) {
               if (!ocrStatusErrorShown) {
-                showToast("Could not refresh OCR status.", "error");
+                rxSetCurrent("WARN", "Could not refresh OCR status.");
                 ocrStatusErrorShown = true;
               }
               return;
@@ -744,6 +823,7 @@
           var dashboard = document.getElementById("dashboard-view");
           if (dashboard) dashboard.classList.add("hidden");
           if (setup) setup.classList.remove("hidden");
+          setHeaderControlsVisible(false);
           var summary = document.getElementById("setup-summary");
           var message = res && res.message ? String(res.message) : "Environment not ready.";
           if (summary) summary.textContent = message;
@@ -756,6 +836,7 @@
           var dashboard = document.getElementById("dashboard-view");
           if (setup) setup.classList.add("hidden");
           if (dashboard) dashboard.classList.remove("hidden");
+          setHeaderControlsVisible(true);
           if (!dashboardStarted) {
             dashboardStarted = true;
             initDashboard();
@@ -765,8 +846,13 @@
         function applyHealthResult(res) {
           var data = res && res.data ? res.data : null;
           var ready = data && data.ready === true;
-          if (ready) showDashboardView();
-          else showSetupView(res);
+          if (ready) {
+            rxSetCurrent("OK", "Environment ready.");
+            showDashboardView();
+          } else {
+            rxSetCurrent("WARN", "Environment not ready.");
+            showSetupView(res);
+          }
         }
 
         function renderOverview(res) {
@@ -881,10 +967,11 @@
         function refreshOverview(options) {
           var opts = options || {};
           var button = opts.button;
-          var toastOnSuccess = opts.toastOnSuccess === true;
+          var history = opts.history === true;
           var onError = typeof opts.onError === "function" ? opts.onError : null;
           setLoading(button, true);
-          setStatus("Loading overview...");
+          if (history) rxPush("INFO", "Refreshing overview...");
+          else rxSetCurrent("INFO", "Refreshing overview...");
           callServer("belle_dash_getOverview", undefined, function (err, res) {
             setLoading(button, false);
             if (err) {
@@ -892,8 +979,8 @@
                 onError();
                 return;
               }
-              setStatus("Overview failed to load.", true);
-              showToast("Overview load failed.", "error");
+              if (history) rxPush("ERROR", "Overview failed to load.");
+              else rxSetCurrent("ERROR", "Overview failed to load.");
               return;
             }
             if (!res.ok) {
@@ -901,37 +988,40 @@
                 onError();
                 return;
               }
-              setStatus(res.message || "Overview failed.", true);
-              showToast(res.message || "Overview failed.", "error");
+              var msg = res.message || "Overview failed.";
+              if (history) rxPush("ERROR", msg);
+              else rxSetCurrent("ERROR", msg);
               return;
             }
             renderOverview(res);
-            setStatus("Overview updated.");
-            if (toastOnSuccess) showToast("Overview updated.", "success");
+            if (history) rxPush("OK", "Overview updated.");
+            else rxSetCurrent("OK", "Overview updated.");
           });
         }
 
         function refreshLogs(options) {
           var opts = options || {};
           var button = opts.button;
-          var toastOnSuccess = opts.toastOnSuccess === true;
+          var history = opts.history === true;
           setLoading(button, true);
-          setStatus("Loading logs...");
+          if (history) rxPush("INFO", "Refreshing logs...");
+          else rxSetCurrent("INFO", "Refreshing logs...");
           callServer("belle_dash_getLogs", undefined, function (err, res) {
             setLoading(button, false);
             if (err) {
-              setStatus("Logs failed to load.", true);
-              showToast("Logs load failed.", "error");
+              if (history) rxPush("ERROR", "Logs failed to load.");
+              else rxSetCurrent("ERROR", "Logs failed to load.");
               return;
             }
             if (!res.ok) {
-              setStatus(res.message || "Logs failed.", true);
-              showToast(res.message || "Logs failed.", "error");
+              var msg = res.message || "Logs failed.";
+              if (history) rxPush("ERROR", msg);
+              else rxSetCurrent("ERROR", msg);
               return;
             }
             renderLogs(res);
-            setStatus("Logs updated.");
-            if (toastOnSuccess) showToast("Logs updated.", "success");
+            if (history) rxPush("OK", "Logs updated.");
+            else rxSetCurrent("OK", "Logs updated.");
           });
         }
 
@@ -939,14 +1029,14 @@
           var opts = options || {};
           var onSuccess = typeof opts.onSuccess === "function" ? opts.onSuccess : null;
           var onError = typeof opts.onError === "function" ? opts.onError : null;
+          var actionLabel = opts.actionLabel || successText || fnName;
           if (confirmText && !window.confirm(confirmText)) return;
           setLoading(button, true);
-          setStatus("Running " + fnName + "...");
+          rxSetCurrent("INFO", "Running " + actionLabel + "...");
           callServer(fnName, undefined, function (err, res) {
             setLoading(button, false);
             if (err) {
-              setStatus("Action failed.", true);
-              showToast("Action failed.", "error");
+              rxPush("ERROR", actionLabel + " failed.");
               return;
             }
             if (!res.ok) {
@@ -954,12 +1044,20 @@
                 onError(res);
                 return;
               }
-              setStatus(res.message || "Action failed.", true);
-              showToast(res.message || "Action failed.", "error");
+              var reason = res && res.reason ? String(res.reason) : "";
+              var msg = res && res.message ? String(res.message) : "Action failed.";
+              var upper = reason.toUpperCase();
+              var level = (upper.indexOf("BLOCK") >= 0 || upper.indexOf("GUARD") >= 0 || upper.indexOf("MODE_NOT") === 0 || upper === "ENV_NOT_READY" || upper === "TRIGGERS_ACTIVE" || upper === "OCR_ENABLE_BLOCKED")
+                ? "WARN"
+                : "ERROR";
+              if (level === "WARN") {
+                rxPush("WARN", actionLabel + " blocked: " + msg);
+              } else {
+                rxPush("ERROR", actionLabel + " failed: " + msg);
+              }
               return;
             }
-            setStatus(res.message || successText);
-            showToast(successText, "success");
+            rxPush("OK", successText || (actionLabel + " completed."));
             if (onSuccess) {
               try {
                 onSuccess(res);
@@ -1010,19 +1108,19 @@
           };
 
           btnRefreshOverview.addEventListener("click", function () {
-            refreshOverview({ toastOnSuccess: true, button: btnRefreshOverview });
+            refreshOverview({ history: true, button: btnRefreshOverview });
           });
           btnRefreshLogs.addEventListener("click", function () {
-            refreshLogs({ toastOnSuccess: true, button: btnRefreshLogs });
+            refreshLogs({ history: true, button: btnRefreshLogs });
           });
           btnQueue.addEventListener("click", function () {
-            runOp(btnQueue, "belle_dash_opQueue", null, "Queue complete.", {
+            runOp(btnQueue, "belle_dash_opQueue", null, "Queue completed.", {
+              actionLabel: "Queue files",
               onSuccess: function () {
                 refreshOverview({
                   button: btnRefreshOverview,
                   onError: function () {
-                    setStatus("Queue completed, but overview refresh failed.", true);
-                    showToast("Queue completed, but overview refresh failed.", "error");
+                    rxSetCurrent("ERROR", "Queue completed, but overview refresh failed.");
                   }
                 });
               }
@@ -1030,6 +1128,7 @@
           });
           btnOcrEnable.addEventListener("click", function () {
             runOp(btnOcrEnable, "belle_dash_opOcrEnable", null, "OCR enabled.", {
+              actionLabel: "OCR enable",
               onSuccess: function () {
                 refreshOcrRunStatus();
               }
@@ -1037,6 +1136,7 @@
           });
           btnOcrDisable.addEventListener("click", function () {
             runOp(btnOcrDisable, "belle_dash_opOcrDisable", "Disable OCR workers?", "OCR disabled.", {
+              actionLabel: "OCR disable",
               onSuccess: function () {
                 refreshOcrRunStatus();
               }
@@ -1044,15 +1144,7 @@
           });
           btnEnterMaintenance.addEventListener("click", function () {
             runOp(btnEnterMaintenance, "belle_dash_enterMaintenance", "Enter maintenance mode?", "Maintenance mode enabled.", {
-              onError: function (res) {
-                if (res && res.reason === "TRIGGERS_ACTIVE") {
-                  setStatus("Disable OCR triggers before entering maintenance.", true);
-                  showToast("Disable OCR triggers before entering maintenance.", "error");
-                  return;
-                }
-                setStatus(res && res.message ? res.message : "Action failed.", true);
-                showToast(res && res.message ? res.message : "Action failed.", "error");
-              },
+              actionLabel: "Enter maintenance",
               onSuccess: function (res) {
                 if (res && res.data) applyModeState(res.data);
                 else refreshMode();
@@ -1060,13 +1152,18 @@
             });
           });
           btnExportRun.addEventListener("click", function () {
-            runOp(btnExportRun, "belle_dash_exportRun", "Run export and clear operational sheets?", "Export run completed.");
+            runOp(btnExportRun, "belle_dash_exportRun", "Run export and clear operational sheets?", "Export run completed.", {
+              actionLabel: "Export run"
+            });
           });
           btnArchiveLogs.addEventListener("click", function () {
-            runOp(btnArchiveLogs, "belle_dash_archiveLogs", "Archive and clear logs?", "Logs archived and cleared.");
+            runOp(btnArchiveLogs, "belle_dash_archiveLogs", "Archive and clear logs?", "Logs archived and cleared.", {
+              actionLabel: "Archive logs"
+            });
           });
           btnExitMaintenance.addEventListener("click", function () {
             runOp(btnExitMaintenance, "belle_dash_exitMaintenance", null, "Maintenance mode disabled.", {
+              actionLabel: "Exit maintenance",
               onSuccess: function (res) {
                 if (res && res.data) applyModeState(res.data);
                 else refreshMode();
@@ -1086,13 +1183,20 @@
           if (!btnRecheck) return;
           btnRecheck.addEventListener("click", function () {
             setLoading(btnRecheck, true);
+            rxPush("INFO", "Re-checking environment...");
             callServer("belle_dashboard_healthCheck", undefined, function (err, res) {
               setLoading(btnRecheck, false);
               if (err) {
-                showToast("Health check failed.", "error");
+                rxPush("ERROR", "Health check failed.");
                 return;
               }
               applyHealthResult(res || {});
+              var data = res && res.data ? res.data : null;
+              if (data && data.ready === true) {
+                rxPush("OK", "Environment ready.");
+              } else {
+                rxPush("WARN", "Environment not ready.");
+              }
             });
           });
         }
@@ -1101,6 +1205,7 @@
           initSetup();
           var bootHealth = window.__BOOT_HEALTH__ || null;
           if (!bootHealth) {
+            rxSetCurrent("WARN", "Environment not ready.");
             showSetupView({
               message: "Environment not ready.",
               data: { diagnostics: [{ item: "ENV_HEALTHCHECK", code: "MISSING", detail: "No boot data.", hint: "Re-check to load diagnostics." }] }
