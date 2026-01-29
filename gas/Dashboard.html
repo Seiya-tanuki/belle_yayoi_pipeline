@@ -48,10 +48,10 @@
       }
 
       .hero {
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(320px, 1.3fr) minmax(220px, 0.8fr) minmax(200px, 0.6fr);
         gap: 20px;
         align-items: flex-start;
-        justify-content: space-between;
         margin-bottom: 24px;
         animation: riseIn 0.6s ease both;
       }
@@ -60,11 +60,16 @@
         display: flex;
         flex-direction: column;
         gap: 12px;
-        align-items: flex-end;
+        align-items: stretch;
       }
 
       .hero-left {
         max-width: 560px;
+      }
+
+      .hero-center {
+        display: flex;
+        justify-content: center;
       }
 
       h1 {
@@ -72,11 +77,6 @@
         font-size: 2.1rem;
         margin: 0 0 6px;
         letter-spacing: 0.5px;
-      }
-
-      .build {
-        color: var(--muted);
-        font-size: 0.9rem;
       }
 
       .rx {
@@ -95,6 +95,13 @@
         font-weight: 600;
         font-size: 0.95rem;
         margin-bottom: 8px;
+        white-space: nowrap;
+      }
+
+      .rx-current .rx-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .rx-label {
@@ -135,9 +142,8 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
-        max-height: 200px;
-        overflow-y: auto;
-        padding-right: 4px;
+        height: 110px;
+        overflow: hidden;
       }
 
       .rx-entry {
@@ -146,10 +152,17 @@
         align-items: baseline;
         font-size: 0.85rem;
         color: var(--muted);
+        line-height: 1.1;
       }
 
       .rx-entry .rx-label {
         padding: 2px 6px;
+      }
+
+      .rx-entry .rx-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .rx-time {
@@ -193,10 +206,11 @@
         font-size: 0.9rem;
       }
 
-      .actions {
+      .action-stack {
         display: flex;
+        flex-direction: column;
         gap: 10px;
-        flex-wrap: wrap;
+        align-items: stretch;
       }
 
       .mode-panel {
@@ -430,13 +444,17 @@
 
       @media (max-width: 900px) {
         .hero {
-          flex-direction: column;
+          grid-template-columns: 1fr;
           align-items: flex-start;
+        }
+        .hero-center {
+          justify-content: flex-start;
         }
         .hero-controls {
           align-items: flex-start;
+          width: 100%;
         }
-        .actions {
+        .action-stack {
           width: 100%;
         }
         table {
@@ -458,19 +476,8 @@
             </div>
             <div class="rx-history" id="rx-history" aria-live="polite"></div>
           </div>
-          <div class="build">Build: dashboard phase1</div>
         </div>
-        <div class="hero-controls" id="header-controls">
-          <div class="actions">
-            <button class="btn btn-ghost" id="btn-refresh-overview">
-              <span class="spinner" aria-hidden="true"></span>
-              <span class="label">Refresh Overview</span>
-            </button>
-            <button class="btn btn-ghost" id="btn-refresh-logs">
-              <span class="spinner" aria-hidden="true"></span>
-              <span class="label">Refresh Logs</span>
-            </button>
-          </div>
+        <div class="hero-center" id="header-center">
           <div class="mode-panel" id="mode-panel" aria-live="polite">
             <div class="mode-row">
               <span id="ocr-run-badge" class="badge badge-stopped">OCR is stopped</span>
@@ -480,6 +487,22 @@
               </div>
             </div>
             <div class="mode-expiry" id="mode-expiry"></div>
+          </div>
+        </div>
+        <div class="hero-controls" id="header-controls">
+          <div class="action-stack">
+            <button class="btn btn-ghost" id="btn-refresh-overview">
+              <span class="spinner" aria-hidden="true"></span>
+              <span class="label">Refresh Overview</span>
+            </button>
+            <button class="btn btn-ghost" id="btn-refresh-logs">
+              <span class="spinner" aria-hidden="true"></span>
+              <span class="label">Refresh Logs</span>
+            </button>
+            <button class="btn btn-secondary" id="btn-change-mode">
+              <span class="spinner" aria-hidden="true"></span>
+              <span class="label">Change mode</span>
+            </button>
           </div>
         </div>
       </header>
@@ -561,10 +584,6 @@
             <div class="ops-block">
               <div class="ops-title">Maintenance Ops</div>
               <div class="ops-grid">
-                <button class="btn btn-ghost" id="btn-enter-maintenance">
-                  <span class="spinner" aria-hidden="true"></span>
-                  <span class="label">Quiesce &amp; Enter</span>
-                </button>
                 <button class="btn" id="btn-export-run">
                   <span class="spinner" aria-hidden="true"></span>
                   <span class="label">Export Run</span>
@@ -572,10 +591,6 @@
                 <button class="btn btn-ghost" id="btn-archive-logs">
                   <span class="spinner" aria-hidden="true"></span>
                   <span class="label">Archive + Clear Logs</span>
-                </button>
-                <button class="btn btn-secondary" id="btn-exit-maintenance">
-                  <span class="spinner" aria-hidden="true"></span>
-                  <span class="label">Exit Maintenance</span>
                 </button>
               </div>
             </div>
@@ -640,7 +655,7 @@
       (function () {
         var ocrStatusErrorShown = false;
         var dashboardStarted = false;
-        var rxMax = 30;
+        var rxMax = 5;
         var appState = {
           mode: "OCR",
           untilIso: ""
@@ -676,6 +691,10 @@
           var history = document.getElementById("rx-history");
           if (!history) return;
           var lvl = rxNormalizeLevel(level);
+          if (lvl === "INFO") {
+            rxSetCurrent(lvl, msg);
+            return;
+          }
           var entry = document.createElement("div");
           entry.className = "rx-entry rx-" + lvl.toLowerCase();
           var time = document.createElement("span");
@@ -711,10 +730,12 @@
         }
 
         function setHeaderControlsVisible(visible) {
-          var controls = document.getElementById("header-controls");
-          if (!controls) return;
-          if (visible) controls.classList.remove("hidden");
-          else controls.classList.add("hidden");
+          ["header-controls", "header-center"].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            if (visible) el.classList.remove("hidden");
+            else el.classList.add("hidden");
+          });
         }
 
         function applyModeState(state) {
@@ -740,10 +761,9 @@
           setEnabled(controls.btnQueue, !isMaintenance);
           setEnabled(controls.btnOcrEnable, !isMaintenance);
           setEnabled(controls.btnOcrDisable, !isMaintenance);
-          setEnabled(controls.btnEnterMaintenance, !isMaintenance);
           setEnabled(controls.btnExportRun, isMaintenance);
           setEnabled(controls.btnArchiveLogs, isMaintenance);
-          setEnabled(controls.btnExitMaintenance, isMaintenance);
+          setEnabled(controls.btnChangeMode, true);
         }
 
         function refreshMode(options) {
@@ -970,8 +990,7 @@
           var history = opts.history === true;
           var onError = typeof opts.onError === "function" ? opts.onError : null;
           setLoading(button, true);
-          if (history) rxPush("INFO", "Refreshing overview...");
-          else rxSetCurrent("INFO", "Refreshing overview...");
+          rxSetCurrent("INFO", "Refreshing overview...");
           callServer("belle_dash_getOverview", undefined, function (err, res) {
             setLoading(button, false);
             if (err) {
@@ -1004,8 +1023,7 @@
           var button = opts.button;
           var history = opts.history === true;
           setLoading(button, true);
-          if (history) rxPush("INFO", "Refreshing logs...");
-          else rxSetCurrent("INFO", "Refreshing logs...");
+          rxSetCurrent("INFO", "Refreshing logs...");
           callServer("belle_dash_getLogs", undefined, function (err, res) {
             setLoading(button, false);
             if (err) {
@@ -1089,22 +1107,20 @@
         function initDashboard() {
           var btnRefreshOverview = document.getElementById("btn-refresh-overview");
           var btnRefreshLogs = document.getElementById("btn-refresh-logs");
+          var btnChangeMode = document.getElementById("btn-change-mode");
           var btnQueue = document.getElementById("btn-queue");
           var btnOcrEnable = document.getElementById("btn-ocr-enable");
           var btnOcrDisable = document.getElementById("btn-ocr-disable");
-          var btnEnterMaintenance = document.getElementById("btn-enter-maintenance");
           var btnExportRun = document.getElementById("btn-export-run");
           var btnArchiveLogs = document.getElementById("btn-archive-logs");
-          var btnExitMaintenance = document.getElementById("btn-exit-maintenance");
 
           appState.controls = {
             btnQueue: btnQueue,
             btnOcrEnable: btnOcrEnable,
             btnOcrDisable: btnOcrDisable,
-            btnEnterMaintenance: btnEnterMaintenance,
             btnExportRun: btnExportRun,
             btnArchiveLogs: btnArchiveLogs,
-            btnExitMaintenance: btnExitMaintenance
+            btnChangeMode: btnChangeMode
           };
 
           btnRefreshOverview.addEventListener("click", function () {
@@ -1142,9 +1158,32 @@
               }
             });
           });
-          btnEnterMaintenance.addEventListener("click", function () {
-            runOp(btnEnterMaintenance, "belle_dash_enterMaintenance", "Enter maintenance mode?", "Maintenance mode enabled.", {
+          btnChangeMode.addEventListener("click", function () {
+            if (appState.mode === "MAINTENANCE") {
+              runOp(btnChangeMode, "belle_dash_exitMaintenance", null, "Returned to OCR mode.", {
+                actionLabel: "Exit maintenance",
+                onSuccess: function (res) {
+                  if (res && res.data) applyModeState(res.data);
+                  else refreshMode();
+                }
+              });
+              return;
+            }
+            runOp(btnChangeMode, "belle_dash_enterMaintenance", "Enter maintenance mode?", "Maintenance mode enabled.", {
               actionLabel: "Enter maintenance",
+              onError: function (res) {
+                var reason = res && res.reason ? String(res.reason) : "";
+                if (reason === "TRIGGERS_ACTIVE") {
+                  rxPush("WARN", "Disable OCR triggers before entering maintenance.");
+                  return;
+                }
+                if (reason === "LIVE_PROCESSING") {
+                  rxPush("WARN", "Processing still active.");
+                  return;
+                }
+                var msg = res && res.message ? String(res.message) : "Maintenance entry failed.";
+                rxPush("ERROR", "Enter maintenance failed: " + msg);
+              },
               onSuccess: function (res) {
                 if (res && res.data) applyModeState(res.data);
                 else refreshMode();
@@ -1161,15 +1200,6 @@
               actionLabel: "Archive logs"
             });
           });
-          btnExitMaintenance.addEventListener("click", function () {
-            runOp(btnExitMaintenance, "belle_dash_exitMaintenance", null, "Maintenance mode disabled.", {
-              actionLabel: "Exit maintenance",
-              onSuccess: function (res) {
-                if (res && res.data) applyModeState(res.data);
-                else refreshMode();
-              }
-            });
-          });
 
           initTabs();
           refreshMode();
@@ -1183,20 +1213,14 @@
           if (!btnRecheck) return;
           btnRecheck.addEventListener("click", function () {
             setLoading(btnRecheck, true);
-            rxPush("INFO", "Re-checking environment...");
+            rxSetCurrent("INFO", "Re-checking environment...");
             callServer("belle_dashboard_healthCheck", undefined, function (err, res) {
               setLoading(btnRecheck, false);
               if (err) {
-                rxPush("ERROR", "Health check failed.");
+                rxSetCurrent("ERROR", "Health check failed.");
                 return;
               }
               applyHealthResult(res || {});
-              var data = res && res.data ? res.data : null;
-              if (data && data.ready === true) {
-                rxPush("OK", "Environment ready.");
-              } else {
-                rxPush("WARN", "Environment not ready.");
-              }
             });
           });
         }
