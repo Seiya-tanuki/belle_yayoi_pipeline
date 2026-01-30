@@ -21,3 +21,7 @@ function belle_dash_maint_archiveLogs_() {
 function belle_dash_maint_exportRun_() {
   return belle_export_run_maintenance_();
 }
+
+function belle_dash_maint_archiveImages_() {
+  return belle_image_archive_batch_run_();
+}

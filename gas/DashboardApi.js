@@ -413,6 +413,16 @@ function belle_dash_archiveLogs() {
   });
 }
 
+function belle_dash_archiveImages() {
+  return belle_dash_wrap_("maint_archive_images", function () {
+    var env = belle_dash_requireEnvReady_();
+    if (!env.ok) return env;
+    var gate = belle_maint_requireMode_("MAINTENANCE");
+    if (!gate.ok) return gate;
+    return belle_dash_maint_archiveImages_();
+  });
+}
+
 function belle_dash_exportRun() {
   return belle_dash_wrap_("maint_export_run", function () {
     var env = belle_dash_requireEnvReady_();

@@ -10,6 +10,18 @@ function belle_export_run_buildRunId_(when) {
   return stamp + "_" + rand;
 }
 
+function belle_export_run_formatIsoJst_(when) {
+  var ts = when || new Date();
+  return Utilities.formatDate(ts, "Asia/Tokyo", "yyyy-MM-dd'T'HH:mm:ssXXX");
+}
+
+function belle_export_run_storeTimestamp_(props, when) {
+  var iso = belle_export_run_formatIsoJst_(when);
+  var p = props || belle_cfg_getProps_();
+  p.setProperty("BELLE_LAST_EXPORT_RUN_AT_ISO", iso);
+  return iso;
+}
+
 function belle_export_run_extractCsvFiles_(exportRes) {
   var out = [];
   function add(docType, res) {
@@ -150,16 +162,6 @@ function belle_export_run_writeSummary_(reportId, summary) {
     rows.push([key, c.queued || 0, c.done || 0, c.error || 0, c.retryable || 0]);
   }
   rows.push([]);
-  rows.push(["Image Archive"]);
-  rows.push(["doc_type", "moved", "failed"]);
-  var archive = summary.archive || {};
-  var moved = archive.moved || {};
-  var failed = archive.failed || {};
-  for (var a = 0; a < docTypes.length; a++) {
-    var typeKey = docTypes[a];
-    rows.push([typeKey, moved[typeKey] || 0, failed[typeKey] || 0]);
-  }
-  rows.push([]);
   rows.push(["Clear Results"]);
   rows.push(["sheet_name", "rows_deleted", "missing"]);
   var clear = summary.clear || {};
@@ -211,26 +213,6 @@ function belle_export_run_maintenance_() {
     };
   }
 
-  var imagesRootId = String(props.getProperty("BELLE_IMAGES_ARCHIVE_FOLDER_ID") || "").trim();
-  if (!imagesRootId) {
-    return {
-      ok: false,
-      reason: "IMAGES_ARCHIVE_FOLDER_ID_MISSING",
-      message: "Missing BELLE_IMAGES_ARCHIVE_FOLDER_ID.",
-      data: { run_id: runId, export: exportRes || null }
-    };
-  }
-  try {
-    DriveApp.getFolderById(imagesRootId);
-  } catch (e) {
-    return {
-      ok: false,
-      reason: "IMAGES_ARCHIVE_FOLDER_OPEN_FAILED",
-      message: "Archive folder open failed.",
-      data: { run_id: runId, export: exportRes || null }
-    };
-  }
-
   var ss = SpreadsheetApp.openById(sheetId);
   var counts = belle_export_run_collectCounts_(ss, props);
   var csvFiles = belle_export_run_extractCsvFiles_(exportRes);
@@ -244,7 +226,6 @@ function belle_export_run_maintenance_() {
     };
   }
 
-  var archiveRes = belle_image_archive_run_();
   var summaryData = {
     run_id: runId,
     created_at: new Date().toISOString(),
@@ -257,24 +238,8 @@ function belle_export_run_maintenance_() {
     counts: counts,
     csv_files: csvFiles,
     report_folder_path: reportRes.folder_path,
-    archive: archiveRes && archiveRes.data ? archiveRes.data : {},
     clear: {}
   };
-
-  if (!archiveRes.ok) {
-    belle_export_run_writeSummary_(reportRes.report_id, summaryData);
-    return {
-      ok: false,
-      reason: archiveRes.reason || "ARCHIVE_FAILED",
-      message: archiveRes.message || "Image archive failed.",
-      data: {
-        run_id: runId,
-        report: reportRes,
-        export: exportRes || null,
-        archive: archiveRes.data || null
-      }
-    };
-  }
 
   var sheetNames = [
     belle_ocr_getQueueSheetNameForDocType_(props, BELLE_DOC_TYPE_RECEIPT),
@@ -295,6 +260,7 @@ function belle_export_run_maintenance_() {
 
   summaryData.clear = cleared;
   belle_export_run_writeSummary_(reportRes.report_id, summaryData);
+  var exportRunAtIso = belle_export_run_storeTimestamp_(props, new Date());
 
   var totalMs = Date.now() - startMs;
   return {
@@ -305,8 +271,8 @@ function belle_export_run_maintenance_() {
       run_id: runId,
       report: reportRes,
       export: exportRes || null,
-      archive: archiveRes.data || null,
       clear: cleared,
+      export_run_at_iso: exportRunAtIso,
       timing_ms: { total: totalMs }
     }
   };

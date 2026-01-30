@@ -405,10 +405,16 @@
                 <span class="spinner" aria-hidden="true"></span>
                 <span class="label">Export Run</span>
               </button>
-              <button class="btn btn-secondary text-rose-600 hover:bg-rose-50" id="btn-archive-logs">
-                <span class="spinner" aria-hidden="true"></span>
-                <span class="label">Archive + Clear Logs</span>
-              </button>
+              <div class="grid grid-cols-2 gap-3">
+                <button class="btn btn-secondary" id="btn-archive-images">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span class="label">Archive Images</span>
+                </button>
+                <button class="btn btn-secondary text-rose-600 hover:bg-rose-50" id="btn-archive-logs">
+                  <span class="spinner" aria-hidden="true"></span>
+                  <span class="label">Archive + Clear Logs</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -595,6 +601,7 @@
         setEnabled(controls.btnOcrEnable, !isMaintenance);
         setEnabled(controls.btnOcrDisable, !isMaintenance);
         setEnabled(controls.btnExportRun, isMaintenance);
+        setEnabled(controls.btnArchiveImages, isMaintenance);
         setEnabled(controls.btnArchiveLogs, isMaintenance);
         setEnabled(controls.btnChangeMode, true);
       }
@@ -919,6 +926,40 @@
         });
       }
 
+      function runArchiveImages(button) {
+        setLoading(button, true);
+        rxSetCurrent("INFO", "Running archive images...");
+        callServer("belle_dash_archiveImages", undefined, function (err, res) {
+          setLoading(button, false);
+          if (err) {
+            rxPush("ERROR", "Archive images failed.");
+            return;
+          }
+          if (!res || !res.ok) {
+            var reason = res && res.reason ? String(res.reason) : "";
+            var msg = res && res.message ? String(res.message) : "Archive images failed.";
+            if (reason === "NO_EXPORT_RUN_TIMESTAMP") {
+              rxPush("WARN", "Archive images blocked: " + msg);
+              return;
+            }
+            rxPush("ERROR", "Archive images failed: " + msg);
+            return;
+          }
+          var data = res.data || {};
+          var moved = Number(data.moved_total || 0);
+          var remaining = data.remaining === true;
+          var message;
+          if (moved === 0 && !remaining) {
+            message = "Archived 0 images. Nothing to archive.";
+          } else if (remaining) {
+            message = "Archived " + moved + " images. Remaining images detected — run again.";
+          } else {
+            message = "Archived " + moved + " images. Image archive complete.";
+          }
+          rxPush("OK", message);
+        });
+      }
+
       function initTabs() {
         var buttons = document.querySelectorAll(".tab-btn");
         buttons.forEach(function (btn) {
@@ -945,6 +986,7 @@
         var btnOcrEnable = document.getElementById("btn-ocr-enable");
         var btnOcrDisable = document.getElementById("btn-ocr-disable");
         var btnExportRun = document.getElementById("btn-export-run");
+        var btnArchiveImages = document.getElementById("btn-archive-images");
         var btnArchiveLogs = document.getElementById("btn-archive-logs");
 
         appState.controls = {
@@ -952,6 +994,7 @@
           btnOcrEnable: btnOcrEnable,
           btnOcrDisable: btnOcrDisable,
           btnExportRun: btnExportRun,
+          btnArchiveImages: btnArchiveImages,
           btnArchiveLogs: btnArchiveLogs,
           btnChangeMode: btnChangeMode
         };
@@ -1027,6 +1070,9 @@
           runOp(btnExportRun, "belle_dash_exportRun", "Run export and clear operational sheets?", "Export run completed.", {
             actionLabel: "Export run"
           });
+        });
+        btnArchiveImages.addEventListener("click", function () {
+          runArchiveImages(btnArchiveImages);
         });
         btnArchiveLogs.addEventListener("click", function () {
           runOp(btnArchiveLogs, "belle_dash_archiveLogs", "Archive and clear logs?", "Logs archived and cleared.", {
