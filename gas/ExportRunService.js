@@ -10,18 +10,6 @@ function belle_export_run_buildRunId_(when) {
   return stamp + "_" + rand;
 }
 
-function belle_export_run_formatIsoJst_(when) {
-  var ts = when || new Date();
-  return Utilities.formatDate(ts, "Asia/Tokyo", "yyyy-MM-dd'T'HH:mm:ssXXX");
-}
-
-function belle_export_run_storeTimestamp_(props, when) {
-  var iso = belle_export_run_formatIsoJst_(when);
-  var p = props || belle_cfg_getProps_();
-  p.setProperty("BELLE_LAST_EXPORT_RUN_AT_ISO", iso);
-  return iso;
-}
-
 function belle_export_run_extractCsvFiles_(exportRes) {
   var out = [];
   function add(docType, res) {
@@ -260,7 +248,6 @@ function belle_export_run_maintenance_() {
 
   summaryData.clear = cleared;
   belle_export_run_writeSummary_(reportRes.report_id, summaryData);
-  var exportRunAtIso = belle_export_run_storeTimestamp_(props, new Date());
 
   var totalMs = Date.now() - startMs;
   return {
@@ -272,7 +259,6 @@ function belle_export_run_maintenance_() {
       report: reportRes,
       export: exportRes || null,
       clear: cleared,
-      export_run_at_iso: exportRunAtIso,
       timing_ms: { total: totalMs }
     }
   };

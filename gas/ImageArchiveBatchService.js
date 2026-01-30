@@ -2,19 +2,6 @@
 
 // NOTE: Keep comments ASCII only.
 
-function belle_image_archive_batch_parseCutoff_(props) {
-  var p = props || belle_cfg_getProps_();
-  var cutoffIso = String(p.getProperty("BELLE_LAST_EXPORT_RUN_AT_ISO") || "").trim();
-  if (!cutoffIso) {
-    return { ok: false, reason: "NO_EXPORT_RUN_TIMESTAMP", message: "Run Export Run before archiving images." };
-  }
-  var cutoff = new Date(cutoffIso);
-  if (isNaN(cutoff.getTime())) {
-    return { ok: false, reason: "INVALID_EXPORT_RUN_TIMESTAMP", message: "Invalid export run timestamp.", cutoff_iso: cutoffIso };
-  }
-  return { ok: true, cutoff: cutoff, cutoff_iso: cutoffIso };
-}
-
 function belle_image_archive_batch_getFolderById_(id, reason) {
   try {
     return { ok: true, folder: DriveApp.getFolderById(id) };
@@ -45,16 +32,6 @@ function belle_image_archive_batch_run_() {
   var maxMs = 240 * 1000;
   var props = belle_cfg_getProps_();
 
-  var cutoffRes = belle_image_archive_batch_parseCutoff_(props);
-  if (!cutoffRes.ok) {
-    return {
-      ok: false,
-      reason: cutoffRes.reason || "NO_EXPORT_RUN_TIMESTAMP",
-      message: cutoffRes.message || "Missing export run timestamp.",
-      data: { cutoff_iso: cutoffRes.cutoff_iso || "" }
-    };
-  }
-
   var driveRootId = belle_cfg_getString_(props, "BELLE_DRIVE_FOLDER_ID", { required: false, defaultValue: "" });
   if (!driveRootId) {
     return { ok: false, reason: "MISSING_DRIVE_FOLDER_ID", message: "Missing BELLE_DRIVE_FOLDER_ID.", data: null };
@@ -65,7 +42,7 @@ function belle_image_archive_batch_run_() {
       ok: false,
       reason: "IMAGES_ARCHIVE_FOLDER_ID_MISSING",
       message: "Missing BELLE_IMAGES_ARCHIVE_FOLDER_ID.",
-      data: { cutoff_iso: cutoffRes.cutoff_iso }
+      data: null
     };
   }
 
@@ -128,8 +105,6 @@ function belle_image_archive_batch_run_() {
         break outer;
       }
       var file = files.next();
-      var updated = file.getLastUpdated();
-      if (!updated || updated.getTime() > cutoffRes.cutoff.getTime()) continue;
       try {
         file.moveTo(archiveFolder);
       } catch (e) {
@@ -159,7 +134,6 @@ function belle_image_archive_batch_run_() {
     reason: "OK",
     message: "Image archive completed.",
     data: {
-      cutoff_iso: cutoffRes.cutoff_iso,
       moved_total: totalMoved,
       moved_by_doc_type: movedByDocType,
       remaining: remaining,

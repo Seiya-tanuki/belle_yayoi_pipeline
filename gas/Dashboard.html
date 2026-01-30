@@ -936,12 +936,7 @@
             return;
           }
           if (!res || !res.ok) {
-            var reason = res && res.reason ? String(res.reason) : "";
             var msg = res && res.message ? String(res.message) : "Archive images failed.";
-            if (reason === "NO_EXPORT_RUN_TIMESTAMP") {
-              rxPush("WARN", "Archive images blocked: " + msg);
-              return;
-            }
             rxPush("ERROR", "Archive images failed: " + msg);
             return;
           }
