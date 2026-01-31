@@ -1,4 +1,5 @@
 # Script Properties Audit (Temporary)
+Legacy/Outdated: see docs/CONFIG.md and docs/09_Dashboard_WebApp.md for current behavior.
 ## 1. Executive summary
 - Recommended MUST_BLOCK_UI keys (core pipeline cannot run without these): `BELLE_SHEET_ID`, `BELLE_DRIVE_FOLDER_ID`, `BELLE_GEMINI_API_KEY`, `BELLE_GEMINI_MODEL`.
 - Recommended WARN_ONLY keys (core still runs, but major feature impact): `BELLE_FISCAL_START_DATE`, `BELLE_FISCAL_END_DATE`, `BELLE_LOG_ARCHIVE_FOLDER_ID`, `BELLE_IMAGES_ARCHIVE_FOLDER_ID`, `BELLE_INTEGRATIONS_SHEET_ID`, `BELLE_OCR_MAX_ATTEMPTS`, `BELLE_OCR_RETRY_BACKOFF_SECONDS`, `BELLE_OCR_PARALLEL_ENABLED`, `BELLE_OCR_PARALLEL_WORKERS`.

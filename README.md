@@ -20,6 +20,7 @@
 3. docs/03_Tax_Determination_Spec.md（税区分の決定表：この案件の心臓）
 4. docs/04_Yayoi_CSV_Spec_25cols.md（25項目の列仕様）
 5. docs/05_Quality_Gates_v0.md（止める/流すの境界）
+6. docs/09_Dashboard_WebApp.md (Dashboard Web App usage and maintenance)
 
 ## 4. ディレクトリ構成
 1. docs/ : 実装仕様

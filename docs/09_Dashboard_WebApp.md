@@ -11,7 +11,7 @@ deployment is "Only myself" and "Execute as me". There is no user auth or RBAC.
 - `gas/DashboardMaintenanceApi.js` (maintenance endpoints)
 - `gas/LogArchiveService.js` (archive/clear logs)
 - `gas/ExportRunService.js` (export run orchestration)
-- `gas/ImageArchiveService.js` (archive images)
+- `gas/ImageArchiveBatchService.js` (archive images batch)
 
 ## Deploy (Apps Script)
 1. Open the Apps Script project.
@@ -22,11 +22,16 @@ deployment is "Only myself" and "Execute as me". There is no user auth or RBAC.
 6. Set `Who has access` to `Only myself`.
 7. Click `Deploy` and copy the Web App URL.
 
-## Usage
-- Overview: shows status counts per active doc type.
-- Ops (OCR mode): Queue, OCR enable/disable.
-- Ops (Maintenance mode): Quiesce & enter, Export Run, Archive + Clear Logs, Exit.
+## Dashboard UI and controls
+- Reaction Window is the only feedback surface (Current + History). No toast or bottom status.
+- Header controls: Refresh Overview, Refresh Logs, Change mode.
+- Mode panel shows OCR running badge (running/stopped) and current mode.
+- Overview: status counts per active doc type.
 - Logs: Export Guard, Export Skip, Queue Skip (summary only, no PII).
+
+## Operations
+- OCR mode: Queue, OCR enable/disable.
+- EXPORT mode (maintenance): Export Run, Archive Images, Archive + Clear Logs.
 
 ## Script properties
 - Required (health check gate):
@@ -55,22 +60,28 @@ deployment is "Only myself" and "Execute as me". There is no user auth or RBAC.
   - Archive subfolders under `BELLE_IMAGES_ARCHIVE_FOLDER_ID` and `export_run_reports/YYYY/MM` under `BELLE_LOG_ARCHIVE_FOLDER_ID`.
 
 ## Maintenance mode
-- Maintenance mode is mutually exclusive with OCR operations.
-- Entering maintenance requires OCR triggers already disabled, no live processing, and a script lock.
+- EXPORT mode (maintenance) is mutually exclusive with OCR operations.
+- Use the Change mode button to enter/exit maintenance.
+- Entering maintenance requires OCR triggers already disabled (TRIGGERS_ACTIVE gate), no live processing (LIVE_PROCESSING gate), and a script lock.
 - Maintenance auto-expires back to OCR mode after the TTL.
 
 ## Runbooks
 1) Enter maintenance:
-   - Click `Quiesce & Enter`.
-   - Confirm mode badge shows MAINTENANCE with expiry.
+   - Click `Change mode` (OCR -> EXPORT).
+   - If blocked, disable OCR triggers and wait for live processing to finish.
 2) Export Run:
    - Click `Export Run`.
    - On success, report spreadsheet is created under `export_run_reports/YYYY/MM/`.
-3) Archive + Clear Logs:
+   - Export Run does not move images.
+3) Archive Images (batch):
+   - Click `Archive Images`.
+   - Moves images in batches (max 200 files or 240 seconds). Run again until complete.
+   - No cutoff property is used; all files in input subfolders are eligible.
+4) Archive + Clear Logs:
    - Click `Archive + Clear Logs`.
    - PERF_LOG and DASHBOARD_AUDIT_LOG are archived and cleared in the integrations sheet.
-4) Exit maintenance:
-   - Click `Exit Maintenance` to return to OCR mode.
+5) Exit maintenance:
+   - Click `Change mode` (EXPORT -> OCR) to return to OCR mode.
 
 ## Notes
 - This Web App is single-user only. Do not switch to public access.

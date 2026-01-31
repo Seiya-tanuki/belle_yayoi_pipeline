@@ -1,17 +1,32 @@
 # CONFIG
 
 ## Script Properties (required)
+These are required by the dashboard health check and maintenance workflows.
 - BELLE_SHEET_ID
+- BELLE_INTEGRATIONS_SHEET_ID
+-  - Used for PERF_LOG and dashboard audit logs.
 - BELLE_DRIVE_FOLDER_ID
   - Input root folder. Files must be placed under subfolders: receipt, cc_statement, bank_statement.
   - Root-level files are skipped (logged to QUEUE_SKIP_LOG).
   - Multi-page/unknown-pagecount PDFs are skipped at queue time (QUEUE_SKIP_LOG reasons: MULTI_PAGE_PDF, PDF_PAGECOUNT_UNKNOWN).
+- BELLE_LOG_ARCHIVE_FOLDER_ID
+-  - Archive root for export reports and log archives.
+- BELLE_IMAGES_ARCHIVE_FOLDER_ID
+-  - Archive root for image archive batches.
 - BELLE_GEMINI_API_KEY
 - BELLE_GEMINI_MODEL
+- BELLE_OUTPUT_FOLDER_ID
+-  - Output root for CSV exports (falls back to BELLE_DRIVE_FOLDER_ID in core export logic).
+- BELLE_FISCAL_START_DATE (format: YYYY-MM-DD)
+- BELLE_FISCAL_END_DATE (format: YYYY-MM-DD; same year as start)
+- BELLE_OCR_MAX_ATTEMPTS (integer 1..10)
+- BELLE_OCR_RETRY_BACKOFF_SECONDS (integer 0..86400)
+- BELLE_EXPORT_BATCH_MAX_ROWS (integer 1..50000)
 
 ## Script Properties (optional)
-- BELLE_QUEUE_SHEET_NAME (receipt queue sheet override; default OCR_RECEIPT)
+- BELLE_QUEUE_SHEET_NAME (legacy receipt queue sheet override; default OCR_RECEIPT)
   - cc_statement and bank_statement use OCR_CC / OCR_BANK (no override).
+- BELLE_MAINTENANCE_TTL_MINUTES (default: 30)
 - BELLE_ACTIVE_DOC_TYPES (comma-separated; default: receipt)
   - Allowed values: receipt, cc_statement, bank_statement
   - Include cc_statement to enable OCR_CC queue + OCR processing.
@@ -31,7 +46,7 @@
 - BELLE_SKIP_LOG_SHEET_NAME (default: EXPORT_SKIP_LOG)
 - BELLE_QUEUE_SKIP_LOG_SHEET_NAME (default: QUEUE_SKIP_LOG)
 - BELLE_EXPORT_GUARD_LOG_SHEET_NAME (default: EXPORT_GUARD_LOG)
-- BELLE_EXPORT_BATCH_MAX_ROWS (default: 5000)
+- BELLE_EXPORT_BATCH_MAX_ROWS (default: 5000; required for dashboard health check)
 - BELLE_CSV_ENCODING (default: SHIFT_JIS)
 - BELLE_CSV_EOL (default: CRLF)
 - BELLE_GEMINI_SLEEP_MS (default: 500)
@@ -66,7 +81,7 @@
 - BELLE_OCR_WORKER_MAX_ITEMS (number string, default: 1): max items per worker loop.
 - BELLE_OCR_CLAIM_SCAN_MAX_ROWS (number string; unset = scan all rows).
 - BELLE_OCR_CLAIM_CURSOR__<doc_type> (internal): auto-managed scan cursor; do not edit.
-- BELLE_INTEGRATIONS_SHEET_ID (optional): required to write PERF_LOG (also used by webhook logs).
+- BELLE_INTEGRATIONS_SHEET_ID (required for dashboard health check and PERF_LOG/audit logs).
 Notes:
 - PERF_LOG v2 columns: logged_at_iso, phase, ok, doc_type, queue_sheet_name, last_reason, lock_busy_skipped, http_status, cc_error_code, cc_stage, cc_cache_hit, processing_count, detail_json.
 - QUEUE_SKIP_LOG columns: logged_at_iso, phase, file_id, file_name, drive_url, doc_type, source_subfolder, reason, detail, first_seen_at_iso, last_seen_at_iso, seen_count.
@@ -79,6 +94,7 @@ Notes:
 - Queue sheets are split by doc_type: OCR_RECEIPT (receipt), OCR_CC (cc_statement), OCR_BANK (bank_statement).
 - Queue sheet columns are extended (append-only): ocr_attempts, ocr_last_attempt_at_iso, ocr_next_retry_at_iso, ocr_error_code, ocr_error_detail.
 - Export log sheet name is fixed: EXPORT_LOG (legacy IMPORT_LOG must be renamed manually).
+- BELLE_LAST_EXPORT_RUN_AT_ISO was removed (no longer used).
 
 ## References
 - docs/WORKFLOW.md
