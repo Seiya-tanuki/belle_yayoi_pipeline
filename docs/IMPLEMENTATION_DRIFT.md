@@ -24,3 +24,7 @@ This file tracks known drifts between docs and current implementation.
 - QUEUE_SKIP_LOG tracks first_seen/last_seen/seen_count per (file_id, reason) instead of appending duplicates.
 - Queue skips multi-page PDFs and unknown page-count PDFs at import time (local byte scan).
 - PDF page-count scan prefers /Pages /Count when available, then falls back to /Type /Page occurrences.
+- Dashboard v2 uses a Reaction Window as the only feedback surface; no toast/bottom status.
+- Dashboard header uses a Change mode toggle and an OCR running badge; maintenance is presented as EXPORT mode.
+- Environment health check gates the UI and provisions missing sheets/folders when safe.
+- Export Run no longer moves images; image archiving is a standalone batch operation (200 files / 240s) with no cutoff property.

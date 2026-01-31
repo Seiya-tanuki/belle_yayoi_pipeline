@@ -11,12 +11,12 @@ THIS IS THE CURRENT SOURCE OF TRUTH FOR WORKFLOW AND ENTRYPOINTS.
 
 ## 2. Operation rules
 1. dev Apps Script only. Do not push/deploy to prod/stg.
-2. Sheets/Drive are append-only (no delete/clear).
+2. Sheets/Drive are append-only except for dashboard maintenance workflows (allowlisted sheets are cleared via row deletion).
 3. Queue sheet names:
    1) receipt: BELLE_QUEUE_SHEET_NAME (optional override), else OCR_RECEIPT
    2) cc_statement: OCR_CC
    3) bank_statement: OCR_BANK
-4. OCR status: QUEUED / DONE / ERROR_RETRYABLE / ERROR_FINAL.
+4. OCR status: QUEUED / PROCESSING / DONE / ERROR_RETRYABLE / ERROR_FINAL.
 5. OCR retry uses BELLE_OCR_MAX_ATTEMPTS and BELLE_OCR_RETRY_BACKOFF_SECONDS for ERROR_RETRYABLE.
 6. OCR success writes JSON to ocr_json; errors go to ocr_error/ocr_error_detail and ocr_json is cleared.
 7. OCR generationConfig overrides use BELLE_OCR_GENCFG_JSON__<doc_type>__<stage>.
@@ -68,7 +68,12 @@ THIS IS THE CURRENT SOURCE OF TRUTH FOR WORKFLOW AND ENTRYPOINTS.
 5) Chatwork (optional): set BELLE_CHATWORK_NOTIFY_ENABLED=true and use the standard notification flow (manual *_test entrypoints were removed; rely on automated runs or tests)
 6) Chatwork Webhook (optional): deploy Web App with ?route=chatwork&token=<SECRET>, set BELLE_CHATWORK_WEBHOOK_ENABLED=true and BELLE_CHATWORK_WEBHOOK_TOKEN (same value as URL token). Logs are persisted to the integrations sheet (WEBHOOK_LOG) when BELLE_INTEGRATIONS_SHEET_ID is set, including BODY_CAPTURE (hash/length/preview). Token mismatch/parse errors are logged and still return 200.
 
-## 6. References
+## 6. Dashboard maintenance workflows (summary)
+- Export Run: export -> report snapshot -> clear allowlisted sheets (no image move).
+- Archive Images: batch move from input subfolders to BELLE_IMAGES_ARCHIVE_FOLDER_ID (max 200 files or 240s, rerun until complete).
+- Archive + Clear Logs: archive PERF_LOG + DASHBOARD_AUDIT_LOG into a spreadsheet, then clear originals.
+
+## 7. References
 - docs/CONFIG.md
 - docs/04_Yayoi_CSV_Spec_25cols.md
 - docs/03_Tax_Determination_Spec.md
