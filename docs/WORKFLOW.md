@@ -16,7 +16,7 @@ THIS IS THE CURRENT SOURCE OF TRUTH FOR WORKFLOW AND ENTRYPOINTS.
    1) receipt: BELLE_QUEUE_SHEET_NAME (optional override), else OCR_RECEIPT
    2) cc_statement: OCR_CC
    3) bank_statement: OCR_BANK
-4. OCR status: QUEUED / DONE / ERROR_RETRYABLE / ERROR_FINAL.
+4. OCR status: QUEUED / PROCESSING / DONE / ERROR_RETRYABLE / ERROR_FINAL.
 5. OCR retry uses BELLE_OCR_MAX_ATTEMPTS and BELLE_OCR_RETRY_BACKOFF_SECONDS for ERROR_RETRYABLE.
 6. OCR success writes JSON to ocr_json; errors go to ocr_error/ocr_error_detail and ocr_json is cleared.
 7. OCR generationConfig overrides use BELLE_OCR_GENCFG_JSON__<doc_type>__<stage>.

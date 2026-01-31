@@ -7,10 +7,12 @@ deployment is "Only myself" and "Execute as me". There is no user auth or RBAC.
 - `gas/DashboardWebApp.js` (Web App entry via `doGet`)
 - `gas/DashboardApi.js` (server API for overview, logs, ops)
 - `gas/Dashboard.html` (UI)
+- `gas/EnvHealthCheck.js` (env health check gate + provisioning)
 - `gas/MaintenanceMode.js` (maintenance state + quiesce)
 - `gas/DashboardMaintenanceApi.js` (maintenance endpoints)
 - `gas/LogArchiveService.js` (archive/clear logs)
 - `gas/ExportRunService.js` (export run orchestration)
+- `gas/ArchiveNaming.js` (JST snake_case naming for archives/reports)
 - `gas/ImageArchiveBatchService.js` (archive images batch)
 
 ## Deploy (Apps Script)
