@@ -14,5 +14,8 @@ gas/Code.js.bak.*
 configs/clasp/*.clasp.json
 configs/clasp/*.json
 
+# Taskchain runtime (git-ignored)
+.ai/
+
 /refactor/**
 /refactor_starter_pack_v0.zip

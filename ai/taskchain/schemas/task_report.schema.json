@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TaskReport frontmatter",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "generated_at",
+    "task_status"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^T[0-9]{4}$"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "task_report"
+      ]
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "task_status": {
+      "type": "string",
+      "enum": [
+        "blocked",
+        "done_pending_review",
+        "done",
+        "invalid"
+      ]
+    }
+  },
+  "additionalProperties": true
+}
