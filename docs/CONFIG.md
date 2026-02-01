@@ -63,6 +63,7 @@ These are required by the dashboard health check and maintenance workflows.
 - BELLE_CHATWORK_ROOM_ID (required when enabled)
 - BELLE_CHATWORK_WEBHOOK_ENABLED (default: false)
 - BELLE_CHATWORK_WEBHOOK_TOKEN (URL token for webhook; set same value as ?token=...)
+- BELLE_CHATWORK_WEBHOOK_SIGNATURE_SECRET_B64 (optional; base64 secret for signature validation)
 - BELLE_CHATWORK_WEBHOOK_ROUTE (default: chatwork)
 ### Parallel OCR
 - BELLE_OCR_PARALLEL_ENABLED (boolean, default: false): enables parallel tick execution.

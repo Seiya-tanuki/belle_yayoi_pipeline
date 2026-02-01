@@ -1,5 +1,6 @@
 const fs = require('fs');
 const vm = require('vm');
+const crypto = require('crypto');
 
 const code = fs.readFileSync('gas/Config.js', 'utf8')
   + '\n' + fs.readFileSync('gas/ChatworkWebhook.js', 'utf8');
@@ -24,7 +25,17 @@ const sandbox = {
   Utilities: {
     DigestAlgorithm: { SHA_256: 'SHA_256' },
     Charset: { UTF_8: 'UTF-8' },
-    computeDigest: () => new Array(32).fill(0)
+    computeDigest: () => new Array(32).fill(0),
+    base64Decode: (text) => Array.from(Buffer.from(String(text || ''), 'base64')),
+    base64Encode: (bytes) => Buffer.from(bytes).toString('base64'),
+    newBlob: (text) => ({
+      getBytes: () => Array.from(Buffer.from(String(text || ''), 'utf8'))
+    }),
+    computeHmacSha256Signature: (bytes, secretBytes) => {
+      const hmac = crypto.createHmac('sha256', Buffer.from(secretBytes));
+      hmac.update(Buffer.from(bytes));
+      return Array.from(hmac.digest());
+    }
   }
 };
 
@@ -102,5 +113,70 @@ runWith(
 const d = findPhase('CHATWORK_WEBHOOK_EVENT');
 expect(d && d.webhook_event_type === 'message_created', 'D: EVENT_LOG');
 expect(d && d.body_preview === 'hello', 'D: EVENT_BODY_PREVIEW');
+
+const signatureBody = JSON.stringify({
+  webhook_event_type: 'message_created',
+  webhook_setting_id: 'w2',
+  webhook_event_time: 1700000001,
+  room_id: 222,
+  account_id: 333,
+  message_id: 444,
+  webhook_event: { body: 'signed' }
+});
+const signatureSecret = Buffer.from('sig-secret', 'utf8').toString('base64');
+const signature = sandbox.belle_chatwork_webhook_computeSignature_(signatureBody, signatureSecret);
+
+runWith(
+  {
+    BELLE_CHATWORK_WEBHOOK_ENABLED: 'true',
+    BELLE_CHATWORK_WEBHOOK_ROUTE: 'chatwork',
+    BELLE_CHATWORK_WEBHOOK_TOKEN: 'secret',
+    BELLE_CHATWORK_WEBHOOK_SIGNATURE_SECRET_B64: signatureSecret
+  },
+  {
+    parameter: {
+      route: 'chatwork',
+      token: 'secret',
+      chatwork_webhook_signature: signature
+    },
+    postData: { contents: signatureBody }
+  }
+);
+const e = findPhase('CHATWORK_WEBHOOK_EVENT');
+expect(e && e.webhook_event_type === 'message_created', 'E: SIGNATURE_OK');
+
+runWith(
+  {
+    BELLE_CHATWORK_WEBHOOK_ENABLED: 'true',
+    BELLE_CHATWORK_WEBHOOK_ROUTE: 'chatwork',
+    BELLE_CHATWORK_WEBHOOK_TOKEN: 'secret',
+    BELLE_CHATWORK_WEBHOOK_SIGNATURE_SECRET_B64: signatureSecret
+  },
+  {
+    parameter: { route: 'chatwork', token: 'secret' },
+    postData: { contents: signatureBody }
+  }
+);
+const f = findPhase('CHATWORK_WEBHOOK_GUARD');
+expect(f && f.reason === 'SIGNATURE_MISSING', 'F: SIGNATURE_MISSING');
+
+runWith(
+  {
+    BELLE_CHATWORK_WEBHOOK_ENABLED: 'true',
+    BELLE_CHATWORK_WEBHOOK_ROUTE: 'chatwork',
+    BELLE_CHATWORK_WEBHOOK_TOKEN: 'secret',
+    BELLE_CHATWORK_WEBHOOK_SIGNATURE_SECRET_B64: signatureSecret
+  },
+  {
+    parameter: {
+      route: 'chatwork',
+      token: 'secret',
+      chatwork_webhook_signature: 'bad'
+    },
+    postData: { contents: signatureBody }
+  }
+);
+const g = findPhase('CHATWORK_WEBHOOK_GUARD');
+expect(g && g.reason === 'SIGNATURE_MISMATCH', 'G: SIGNATURE_MISMATCH');
 
 console.log('OK: test_chatwork_webhook');
