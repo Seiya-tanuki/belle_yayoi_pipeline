@@ -1,7 +1,7 @@
 # STATUS
 
 ## 現在地
-1. Gemini OCRプロンプト v0 を確定（prompts/receipt_ocr_prompt_v0.txt）
+1. Gemini OCRプロンプト v0 を確定（gas/OcrPrompt.js: BELLE_OCR_PROMPT_V0）
 2. 弥生変換ロジックの仕様ドキュメント v0 を作成（docs/ 配下）
 
 ## 未確定（顧客設定待ち）
