@@ -318,23 +318,23 @@ function belle_ocr_buildInvalidSchemaLogDetail_(jsonStr) {
 function belle_ocr_classifyError(message) {
   const msg = String(message || "").toLowerCase();
   const retryable = [
-    "timed out",
-    "timeout",
-    "service unavailable",
-    "rate limit",
-    "quota",
-    "exceeded",
-    "too many requests",
-    "503",
-    "500",
-    "502",
-    "504",
-    "429"
+    { needle: "timed out", code: "GEMINI_TIMEOUT" },
+    { needle: "timeout", code: "GEMINI_TIMEOUT" },
+    { needle: "service unavailable", code: "GEMINI_HTTP_503" },
+    { needle: "rate limit", code: "GEMINI_RATE_LIMIT" },
+    { needle: "quota", code: "GEMINI_RATE_LIMIT" },
+    { needle: "exceeded", code: "GEMINI_RATE_LIMIT" },
+    { needle: "too many requests", code: "GEMINI_RATE_LIMIT" },
+    { needle: "503", code: "GEMINI_HTTP_503" },
+    { needle: "500", code: "GEMINI_HTTP_500" },
+    { needle: "502", code: "GEMINI_HTTP_502" },
+    { needle: "504", code: "GEMINI_HTTP_504" },
+    { needle: "429", code: "GEMINI_RATE_LIMIT" }
   ];
   for (let i = 0; i < retryable.length; i++) {
-    if (msg.indexOf(retryable[i]) >= 0) {
-      return { retryable: true, reason: retryable[i] };
+    if (msg.indexOf(retryable[i].needle) >= 0) {
+      return { retryable: true, reason: retryable[i].needle, code: retryable[i].code };
     }
   }
-  return { retryable: false, reason: "" };
+  return { retryable: false, reason: "", code: "GEMINI_ERROR" };
 }
