@@ -59,10 +59,10 @@ Notes:
 ## Export rules (fallback)
 - Output targets: DONE + ERROR_FINAL
 - 1 file = 1 row (no multi-rate split)
-- Debit/credit default: 借方=仮払��, 貸方=現釁E(belle_yayoi_buildRow)
-- Debit tax default: BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象夁E
+- Debit/credit default: 借方=仮払金, 貸方=現金 (belle_yayoi_buildRow)
+- Debit tax default: BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
 
-## Summary (摘要E
+## Summary (摘要)
 - Format: "merchant / registration_number"
 - merchant missing -> "BELLE"
 - item is not used
@@ -76,7 +76,7 @@ Notes:
 
 ## Date fallback (export)
 - Requires BELLE_FISCAL_START_DATE and BELLE_FISCAL_END_DATE (same year, YYYY-MM-DD).
-- No/invalid date -> use fiscal end, RID=DATE_FALLBACK, DT=NO_DATE, FIX=誤った取引日.
+- No/invalid date -> use fiscal end, RID=DATE_FALLBACK, DT=NO_DATE, FIX=日付要確認.
 - Out of range -> replace year with fiscal year, DT=OUT_OF_RANGE.
 - Leap invalid after replace -> use fiscal end, DT=LEAP_ADJUST.
 - Do not use file_name or queued_at_iso for date fallback.
@@ -85,13 +85,13 @@ Notes:
 Priority:
 1) tax_meta.tax_rate_printed
 2) receipt_total_jpy + tax_total_jpy (tolerance 1 yen)
-3) line_items description with tax amount (冁E��費税筁EぁE��消費稁Eetc)
+3) line_items description with tax amount (消費税等/消費税額 etc)
 4) unknown (RID=TAX_UNKNOWN or RID=MULTI_RATE)
 Note: overall_issues with only MISSING_TAX_INFO is treated as benign when tax rate is already confirmed (no FIX).
 
 ## 8% tax kubun (official wording)
-- From 2019-10-01 and later, 8% should use "課対仕�E込軽渁E%" in tax kubun notation.
-- Source: Yayoi Kaikei Next import format (tax kubun) lists 8% reduced as "軽渁E%".
+- From 2019-10-01 and later, 8% should use "課対仕入軽減8%" in tax kubun notation.
+- Source: Yayoi Kaikei Next import format (tax kubun) lists 8% reduced as "軽減8%".
 - Invoice suffix (適格) can be appended, but may be disabled via BELLE_FALLBACK_APPEND_INVOICE_SUFFIX.
 
 ## Script Properties (high impact)
@@ -102,7 +102,7 @@ Note: overall_issues with only MISSING_TAX_INFO is treated as benign when tax ra
 - BELLE_OCR_CLAIM_SCAN_MAX_ROWS (default: 200)
 - BELLE_OCR_CLAIM_CURSOR (auto-managed)
 - BELLE_OCR_PARALLEL_TRIGGER_IDS (auto-managed)
-- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象夁E
+- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
 
 ## Deprecated entrypoints
 - belle_healthCheck

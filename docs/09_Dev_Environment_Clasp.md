@@ -1,31 +1,31 @@
 # 09_Dev_Environment_Clasp
 
-## –Ú“I
-GAS‚ğƒ[ƒJƒ‹ŠJ”­‚µAGitŠÇ—‚µ‚È‚ª‚ç **Œëpush/Œëdeploy** ‚ğ–h‚®B
+## ç›®çš„
+GASã‚’ãƒ­ãƒ¼ã‚«ãƒ«é–‹ç™ºã—ã€Gitç®¡ç†ã—ãªãŒã‚‰ **èª¤push/èª¤deploy** ã‚’é˜²ãã€‚
 
-## ‘O’ñ
-- clasp v3 ‚Í TypeScript ‚ğ“à‘ ƒgƒ‰ƒ“ƒXƒpƒCƒ‹‚µ‚È‚¢iTSÌ—p‚Í•Ê“rƒrƒ‹ƒh‚ª•K—vjB
-- v0 ‚ÍuGAS(JavaScript) + @ts-check + JSDocv‚Åƒrƒ‹ƒh–³‚µ‰^—p‚Æ‚·‚éB
-- Apps Script API ‚ğ—LŒø‰»‚µ‚Ä‚¢‚È‚¢‚Æ clasp ‚ª¸”s‚·‚éê‡‚ª‚ ‚éB
-  - script.google.com ‚Ìƒ†[ƒU[İ’è‚ÅuGoogle Apps Script APIv‚ğ ONB
+## å‰æ
+- clasp v3 ã¯ TypeScript ã‚’å†…è”µãƒˆãƒ©ãƒ³ã‚¹ãƒ‘ã‚¤ãƒ«ã—ãªã„ï¼ˆTSæ¡ç”¨æ™‚ã¯åˆ¥é€”ãƒ“ãƒ«ãƒ‰ãŒå¿…è¦ï¼‰ã€‚
+- v0 ã¯ã€ŒGAS(JavaScript) + @ts-check + JSDocã€ã§ãƒ“ãƒ«ãƒ‰ç„¡ã—é‹ç”¨ã¨ã™ã‚‹ã€‚
+- Apps Script API ã‚’æœ‰åŠ¹åŒ–ã—ã¦ã„ãªã„ã¨ clasp ãŒå¤±æ•—ã™ã‚‹å ´åˆãŒã‚ã‚‹ã€‚
+  - script.google.com ã®ãƒ¦ãƒ¼ã‚¶ãƒ¼è¨­å®šã§ã€ŒGoogle Apps Script APIã€ã‚’ ONã€‚
 
-## ‰^—pƒ‹[ƒ‹id—vj
-1. dev / stg / prod ‚Í•Ê‚Ì Apps Script ƒvƒƒWƒFƒNƒg‚É‚·‚éB
-2. .clasp.json ‚ÍƒRƒ~ƒbƒg‚µ‚È‚¢iscriptId·‚µ‘Ö‚¦–ŒÌ–h~jB
-3. push ‚Í dev ‚Ì‚İBstg/prod ‚ÍlŠÔ‚ªÀs‚·‚éB
-4. ”é–§’liSheet ID / Folder ID / API Keyj‚Í Script Properties ‚ÉŠi”[‚µAƒŠƒ|ƒWƒgƒŠ‚É’u‚©‚È‚¢B
+## é‹ç”¨ãƒ«ãƒ¼ãƒ«ï¼ˆé‡è¦ï¼‰
+1. dev / stg / prod ã¯åˆ¥ã® Apps Script ãƒ—ãƒ­ã‚¸ã‚§ã‚¯ãƒˆã«ã™ã‚‹ã€‚
+2. .clasp.json ã¯ã‚³ãƒŸãƒƒãƒˆã—ãªã„ï¼ˆscriptIdå·®ã—æ›¿ãˆäº‹æ•…é˜²æ­¢ï¼‰ã€‚
+3. push ã¯ dev ã®ã¿ã€‚stg/prod ã¯äººé–“ãŒå®Ÿè¡Œã™ã‚‹ã€‚
+4. ç§˜å¯†å€¤ï¼ˆSheet ID / Folder ID / API Keyï¼‰ã¯ Script Properties ã«æ ¼ç´ã—ã€ãƒªãƒã‚¸ãƒˆãƒªã«ç½®ã‹ãªã„ã€‚
 
-## ƒRƒ}ƒ“ƒhiÅ¬j
-1. ƒƒOƒCƒ“: clasp login
-2. devì¬: clasp create --title "belle-yayoi-dev" --type standalone --rootDir gas
-3. ó‘Ô: clasp status
+## ã‚³ãƒãƒ³ãƒ‰ï¼ˆæœ€å°ï¼‰
+1. ãƒ­ã‚°ã‚¤ãƒ³: clasp login
+2. devä½œæˆ: clasp create --title "belle-yayoi-dev" --type standalone --rootDir gas
+3. çŠ¶æ…‹: clasp status
 4. push: clasp push
 
-## Ø‘Öi„§j
-- dev/stg/prod ‚»‚ê‚¼‚ê‚Ì .clasp.json ‚ğ configs/clasp/ ‚É•Û‘¶‚µAì‹Æ‚ÉƒRƒs[‚·‚éB
+## åˆ‡æ›¿ï¼ˆæ¨å¥¨ï¼‰
+- dev/stg/prod ãã‚Œãã‚Œã® .clasp.json ã‚’ configs/clasp/ ã«ä¿å­˜ã—ã€ä½œæ¥­æ™‚ã«ã‚³ãƒ”ãƒ¼ã™ã‚‹ã€‚
 
-## Push‘Oƒ`ƒFƒbƒNiprod‹Ö~j
-1. `clasp status` ‚Å‘ÎÛ scriptId ‚ª **dev** ‚Ì‚à‚Ì‚©Šm”F‚·‚é
-2. `.clasp.json` ‚ª Git ŠÇ—ŠO‚Å‚ ‚é‚±‚Æ‚ğŠm”F‚·‚éi`git status` ‚Éo‚È‚¢‚±‚Æj
-3. `configs/clasp/*.clasp.json` ‚ğ Git ‚É“ü‚ê‚Ä‚¢‚È‚¢‚±‚Æ‚ğŠm”F‚·‚é
-4. deploy ƒRƒ}ƒ“ƒhi`clasp deploy`j‚Í v0 ‚Å‚ÍÀs‹Ö~
+## Pushå‰ãƒã‚§ãƒƒã‚¯ï¼ˆprodç¦æ­¢ï¼‰
+1. `clasp status` ã§å¯¾è±¡ scriptId ãŒ **dev** ã®ã‚‚ã®ã‹ç¢ºèªã™ã‚‹
+2. `.clasp.json` ãŒ Git ç®¡ç†å¤–ã§ã‚ã‚‹ã“ã¨ã‚’ç¢ºèªã™ã‚‹ï¼ˆ`git status` ã«å‡ºãªã„ã“ã¨ï¼‰
+3. `configs/clasp/*.clasp.json` ã‚’ Git ã«å…¥ã‚Œã¦ã„ãªã„ã“ã¨ã‚’ç¢ºèªã™ã‚‹
+4. deploy ã‚³ãƒãƒ³ãƒ‰ï¼ˆ`clasp deploy`ï¼‰ã¯ v0 ã§ã¯å®Ÿè¡Œç¦æ­¢

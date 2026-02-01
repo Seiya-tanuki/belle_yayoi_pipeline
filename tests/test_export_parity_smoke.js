@@ -118,6 +118,15 @@ function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
+function assertNoReplacementChar(paths) {
+  const bad = [];
+  for (const p of paths) {
+    const content = fs.readFileSync(p, 'utf8');
+    if (content.indexOf('\uFFFD') >= 0) bad.push(p);
+  }
+  expect(bad.length === 0, 'unexpected replacement character in: ' + bad.join(', '));
+}
+
 function buildSandbox(spreadsheet, folder, propsMap) {
   const code = fs.readFileSync('gas/Config.js', 'utf8') + '\n'
     + fs.readFileSync('gas/DocTypeRegistry.js', 'utf8') + '\n'
@@ -209,7 +218,7 @@ function buildStage2Json() {
     transactions: [
       {
         row_no: 1,
-        raw_use_date_text: '7��1��',
+        raw_use_date_text: '7/1',
         use_month: 7,
         use_day: 1,
         merchant: 'SHOP A',
@@ -219,7 +228,7 @@ function buildStage2Json() {
       },
       {
         row_no: 2,
-        raw_use_date_text: '7��2��',
+        raw_use_date_text: '7/2',
         use_month: 7,
         use_day: 2,
         merchant: 'SHOP B',
@@ -230,6 +239,13 @@ function buildStage2Json() {
     ]
   });
 }
+
+assertNoReplacementChar([
+  'gas/Export.js',
+  'docs/CONFIG.md',
+  'docs/09_Dev_Environment_Clasp.md',
+  'docs/legacy/SYSTEM_OVERVIEW_FALLBACK_V0.md'
+]);
 
 function setupHeaders(sandbox) {
   const baseHeader = sandbox.belle_getQueueHeaderColumns();

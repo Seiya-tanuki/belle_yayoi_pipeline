@@ -46,10 +46,11 @@ These are required by the dashboard health check and maintenance workflows.
 - BELLE_QUEUE_SKIP_LOG_SHEET_NAME (default: QUEUE_SKIP_LOG)
 - BELLE_EXPORT_GUARD_LOG_SHEET_NAME (default: EXPORT_GUARD_LOG)
 - BELLE_CSV_ENCODING (default: SHIFT_JIS)
+  - Docs are UTF-8; this setting only affects CSV export encoding (Shift-JIS/cp932).
 - BELLE_CSV_EOL (default: CRLF)
 - BELLE_GEMINI_SLEEP_MS (default: 500)
 - BELLE_MAX_ITEMS_PER_RUN (default: 1)
-- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象夁E)
+- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
   - The value must be a plain label (no extra description).
 - BELLE_FALLBACK_APPEND_INVOICE_SUFFIX (default: true)
   - If false, do not append "適格" to tax kubun.

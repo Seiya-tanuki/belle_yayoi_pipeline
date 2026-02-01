@@ -157,7 +157,7 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
   const batchMaxRows = Number(props.getProperty("BELLE_EXPORT_BATCH_MAX_ROWS") || "5000");
   const appendInvoiceSuffix = belle_parseBool(props.getProperty("BELLE_FALLBACK_APPEND_INVOICE_SUFFIX"), true);
   // Default label must be a plain value (no extra description).
-  const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "�ΏۊO");
+  const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "対象外");
   const errorFinalTekiyoLabel = String(props.getProperty("BELLE_ERROR_FINAL_TEKIYO_LABEL") || "BELLE");
   const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
   const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
@@ -423,19 +423,19 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       let dmFlag = false;
       if (status === "ERROR_FINAL") {
         rid = "OCR_ERROR_FINAL";
-        fix = "OCR�G���[�v�m�F";
+        fix = "OCRエラー要確認";
       } else {
         const ridInfo = belle_yayoi_pickRidAndFix(parsed, rateInfo);
         rid = ridInfo.rid;
         fix = ridInfo.fix;
         if ((rid === "OK" || rid === "TAX_INFERRED") && !debit) {
           rid = "TAX_UNKNOWN";
-          if (!fix) fix = "�ŗ�/�ŋ敪�v�m�F";
+          if (!fix) fix = "税率/税区分要確認";
         }
       }
 
       if (status === "ERROR_FINAL") {
-        fix = "�S�f�[�^�m�F";
+        fix = "全データ確認";
         dmFlag = true;
       }
 
@@ -455,7 +455,7 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       }
       if (dmFlag) {
         rid = "OCR_ERROR_FINAL";
-        fix = "�S�f�[�^�m�F";
+        fix = "全データ確認";
       }
 
       let gross = null;
@@ -467,7 +467,7 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
         gross = 1;
         if (!fix && rid === "OK") {
           rid = "AMOUNT_FALLBACK";
-          fix = "��z�v�m�F";
+          fix = "金額要確認";
         }
       }
 
