@@ -29,3 +29,7 @@
 ## 5. 出力の取り扱い
 1. FAIL は Sheets 上に「要対応」として出し、CSV出力しない（または別フォルダ隔離）
 2. WARN は CSV 生成しつつ、同時に WARN 理由を別列に記録
+
+## 6. Receipt total layering (OCR vs business)
+- OCR is factual: `receipt_total_jpy` may be null when not visible.
+- Business/export requires a total: null triggers `INVALID_SCHEMA` and a retry path.

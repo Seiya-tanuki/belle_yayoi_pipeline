@@ -16,3 +16,8 @@
 ## 4. 弥生CSVの基本方針
 1. 25項目形式・ヘッダなし（1仕訳=1行）
 2. 金額は税込で入力し、税金額列（10列目・16列目）は原則空欄とする（v0）。
+
+## 5. receipt_total_jpy null handling (2026-02-01)
+- OCR output is factual and allows null when total is not visible.
+- Business/export requires a total; null is treated as INVALID_SCHEMA and retried.
+- This preserves retry behavior while avoiding speculative totals.

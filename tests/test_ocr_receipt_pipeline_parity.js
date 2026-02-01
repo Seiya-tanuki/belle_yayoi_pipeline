@@ -63,6 +63,18 @@ expect(invalid.errorMessage.indexOf('INVALID_SCHEMA') >= 0, 'invalid schema shou
 expect(invalid.errorDetail.length > 0, 'invalid schema should set errorDetail');
 expect(invalid.nextRetryIso, 'invalid schema should set nextRetryIso');
 
+const nullTotalJson = JSON.stringify({
+  receipt_total_jpy: null,
+  merchant: 'SHOP A'
+});
+
+const nullTotal = runWithResponse(nullTotalJson);
+expect(nullTotal.statusOut === 'ERROR_RETRYABLE', 'null total should be retryable');
+expect(nullTotal.errorCode === 'INVALID_SCHEMA', 'null total should set errorCode INVALID_SCHEMA');
+expect(nullTotal.errorMessage.indexOf('INVALID_RECEIPT_TOTAL') >= 0, 'null total should include INVALID_RECEIPT_TOTAL');
+expect(nullTotal.errorDetail.length > 0, 'null total should set errorDetail');
+expect(nullTotal.nextRetryIso, 'null total should set nextRetryIso');
+
 const invalidMax = runWithResponse(invalidJson, { attempt: 3, maxAttempts: 3 });
 expect(invalidMax.statusOut === 'ERROR_FINAL', 'invalid schema at max attempts should be ERROR_FINAL');
 expect(invalidMax.errorCode === 'MAX_ATTEMPTS_EXCEEDED', 'invalid schema at max attempts should set MAX_ATTEMPTS_EXCEEDED');
