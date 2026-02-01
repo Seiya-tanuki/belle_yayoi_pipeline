@@ -83,4 +83,16 @@ const classifiedOther = sandbox.belle_ocr_classifyError('bad request');
 expect(classifiedOther.retryable === false, 'classifyError should mark unknown errors non-retryable');
 expect(classifiedOther.code === 'GEMINI_ERROR', 'classifyError should return GEMINI_ERROR for unknown');
 
+const classifiedNotJson = sandbox.belle_ocr_classifyError('OCR output is not valid JSON: {}');
+expect(classifiedNotJson.retryable === true, 'classifyError should retry invalid JSON output');
+expect(classifiedNotJson.code === 'INVALID_SCHEMA', 'classifyError should return INVALID_SCHEMA for invalid JSON');
+
+const classifiedInvalidSchema = sandbox.belle_ocr_classifyError('INVALID_SCHEMA: CC_STAGE1_PARSE_ERROR');
+expect(classifiedInvalidSchema.retryable === true, 'classifyError should retry invalid schema');
+expect(classifiedInvalidSchema.code === 'INVALID_SCHEMA', 'classifyError should return INVALID_SCHEMA for invalid schema');
+
+const classifiedTooLong = sandbox.belle_ocr_classifyError('OCR JSON too long for single cell: 999999');
+expect(classifiedTooLong.retryable === true, 'classifyError should retry oversized JSON');
+expect(classifiedTooLong.code === 'OCR_JSON_TOO_LONG', 'classifyError should return OCR_JSON_TOO_LONG');
+
 console.log('OK: test_gemini_client_parity_smoke');

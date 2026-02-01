@@ -317,6 +317,18 @@ function belle_ocr_buildInvalidSchemaLogDetail_(jsonStr) {
 
 function belle_ocr_classifyError(message) {
   const msg = String(message || "").toLowerCase();
+  if (msg.indexOf("ocr output is not valid json") >= 0) {
+    return { retryable: true, reason: "ocr output is not valid json", code: "INVALID_SCHEMA" };
+  }
+  if (msg.indexOf("invalid_schema:") >= 0 || msg.indexOf("invalid schema") >= 0) {
+    return { retryable: true, reason: "invalid_schema", code: "INVALID_SCHEMA" };
+  }
+  if (msg.indexOf("parse error") >= 0) {
+    return { retryable: true, reason: "parse error", code: "INVALID_SCHEMA" };
+  }
+  if (msg.indexOf("ocr json too long for single cell") >= 0) {
+    return { retryable: true, reason: "ocr json too long for single cell", code: "OCR_JSON_TOO_LONG" };
+  }
   const retryable = [
     { needle: "timed out", code: "GEMINI_TIMEOUT" },
     { needle: "timeout", code: "GEMINI_TIMEOUT" },
