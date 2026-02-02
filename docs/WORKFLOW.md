@@ -13,7 +13,7 @@ THIS IS THE CURRENT SOURCE OF TRUTH FOR WORKFLOW AND ENTRYPOINTS.
 1. dev Apps Script only. Do not push/deploy to prod/stg.
 2. Sheets/Drive are append-only except for dashboard maintenance workflows (allowlisted sheets are cleared via row deletion).
 3. Queue sheet names:
-   1) receipt: BELLE_QUEUE_SHEET_NAME (optional override), else OCR_RECEIPT
+   1) receipt: OCR_RECEIPT
    2) cc_statement: OCR_CC
    3) bank_statement: OCR_BANK
 4. OCR status: QUEUED / PROCESSING / DONE / ERROR_RETRYABLE / ERROR_FINAL.

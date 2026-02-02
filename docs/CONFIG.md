@@ -26,9 +26,6 @@ These are required by the dashboard health check and maintenance workflows.
 - BELLE_EXPORT_BATCH_MAX_ROWS (integer 1..50000)
 
 ## Script Properties (optional)
-- BELLE_QUEUE_SHEET_NAME (legacy receipt queue sheet override; default OCR_RECEIPT)
-  - cc_statement and bank_statement use OCR_CC / OCR_BANK (no override).
-  - Legacy override; normally not needed. Recommended to remove unless you intentionally override the receipt queue sheet name.
 - BELLE_MAINTENANCE_TTL_MINUTES (default: 30)
 - BELLE_ACTIVE_DOC_TYPES (comma-separated; default: receipt)
   - Allowed values: receipt, cc_statement, bank_statement

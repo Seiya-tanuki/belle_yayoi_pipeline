@@ -162,11 +162,10 @@ expect(handlerKeys[1] === 'receipt', 'export handler order should include receip
 
 const envRes = runEnvHealthCheck({
   BELLE_SHEET_ID: 'sheet1',
-  BELLE_ACTIVE_DOC_TYPES: 'receipt,cc_statement,bank_statement',
-  BELLE_QUEUE_SHEET_NAME: 'CUSTOM_QUEUE'
+  BELLE_ACTIVE_DOC_TYPES: 'receipt,cc_statement,bank_statement'
 });
 const created = envRes && envRes.data && envRes.data.ensured ? envRes.data.ensured.sheets_created : [];
-expect(created.indexOf('CUSTOM_QUEUE') >= 0, 'env check should create receipt override queue');
+expect(created.indexOf('OCR_RECEIPT') >= 0, 'env check should create receipt queue');
 expect(created.indexOf('OCR_CC') >= 0, 'env check should create cc queue');
 expect(created.indexOf('OCR_BANK') >= 0, 'env check should create bank queue');
 

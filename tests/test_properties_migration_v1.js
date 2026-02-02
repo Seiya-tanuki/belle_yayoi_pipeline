@@ -73,15 +73,15 @@ function buildSandbox(props) {
 // S3: confirm missing -> preview only, no changes.
 {
   const props = buildProps({
-    BELLE_SHEET_NAME: 'SECRET_SHEET'
+    BELLE_BANK_STAGE2_GENCFG_JSON: 'SECRET_BANK_STAGE2'
   });
   const sandbox = buildSandbox(props);
   const report = sandbox.belle_migrate_properties_to_canonical_v1({});
   expect(report.preview === true, 'missing confirm should be preview');
   expect(report.copied.length === 1, 'preview should report copy action');
-  expect(props.__store.BELLE_QUEUE_SHEET_NAME === undefined, 'preview should not set canonical value');
-  expect(props.__store.BELLE_SHEET_NAME === 'SECRET_SHEET', 'preview should not delete legacy value');
-  expect(JSON.stringify(report).indexOf('SECRET_SHEET') === -1, 'report should not leak values');
+  expect(props.__store.BELLE_OCR_GENCFG_JSON__bank_statement__stage1 === undefined, 'preview should not set canonical value');
+  expect(props.__store.BELLE_BANK_STAGE2_GENCFG_JSON === 'SECRET_BANK_STAGE2', 'preview should not delete legacy value');
+  expect(JSON.stringify(report).indexOf('SECRET_BANK_STAGE2') === -1, 'report should not leak values');
 }
 
 console.log('OK: test_properties_migration_v1');

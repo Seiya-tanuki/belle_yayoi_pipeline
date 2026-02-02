@@ -104,10 +104,6 @@ function belle_cfg_getOutputFolderIdOrDriveFolderIdOrThrow_(props) {
   return value;
 }
 
-function belle_cfg_getQueueSheetNameOverride_(props) {
-  return belle_cfg_getString_(props, "BELLE_QUEUE_SHEET_NAME", { required: false, defaultValue: "" });
-}
-
 function belle_cfg_getSkipLogSheetName_(props) {
   return belle_cfg_getString_(props, "BELLE_SKIP_LOG_SHEET_NAME", { required: false, defaultValue: "EXPORT_SKIP_LOG" });
 }
@@ -154,12 +150,7 @@ function belle_cfg_getBankStage2GenCfgOverride_(props) {
 }
 
 function belle_cfg_getQueueSheetNameForDocType_(props, docType) {
-  const p = props || belle_cfg_getProps_();
   const key = String(docType || BELLE_DOC_TYPE_RECEIPT);
-  if (key === BELLE_DOC_TYPE_RECEIPT) {
-    const name = belle_cfg_getQueueSheetNameOverride_(p);
-    if (name) return name;
-  }
   return belle_ocr_getFixedQueueSheetNameForDocType_(key);
 }
 
