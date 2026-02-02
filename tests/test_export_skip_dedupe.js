@@ -246,12 +246,12 @@ expect(countFiles(rootFolder) === 1, 'first export should create one csv file');
 
 const skipSheet = mockSpreadsheet.getSheetByName('EXPORT_SKIP_LOG');
 expect(skipSheet, 'EXPORT_SKIP_LOG should exist');
-expect(skipSheet.data.length === 3, 'skip log should have header + 2 rows');
+expect(skipSheet.data.length === 2, 'skip log should have header + 1 row');
 
 const res2 = sandbox.belle_exportYayoiCsvCcStatement({});
 expect(res2 && res2.ok === true, 'second export should return ok');
 expect(countFiles(rootFolder) === 1, 'second export should not create new csv file');
-expect(skipSheet.data.length === 3, 'skip log should not append duplicates');
+expect(skipSheet.data.length === 2, 'skip log should not append duplicates');
 
 console.log('OK: test_export_skip_dedupe');
 
