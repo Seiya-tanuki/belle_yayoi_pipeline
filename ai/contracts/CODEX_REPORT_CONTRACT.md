@@ -3,7 +3,13 @@
 This contract defines the required structure and content of each TaskReport:
 `.ai/taskchain/reports/<ID>.report.md`
 
-## 1. Report identity (MUST)
+## 1. Language (MUST)
+1. TaskReports MUST be written in English.
+2. The report frontmatter MUST include:
+   - `language: "en"`
+   - `language_exceptions: []` (empty unless unavoidable)
+
+## 2. Report identity (MUST)
 Each report MUST start with a YAML frontmatter:
 
 ```yaml
@@ -11,11 +17,13 @@ Each report MUST start with a YAML frontmatter:
 id: T0001
 type: task_report
 generated_at: "2026-01-31T00:00:00+09:00"
+language: "en"
+language_exceptions: []
 task_status: done_pending_review
 ---
 ```
 
-## 2. Required sections (MUST)
+## 3. Required sections (MUST)
 
 Use Markdown headings exactly as follows.
 
@@ -41,7 +49,6 @@ Use Markdown headings exactly as follows.
 7. `# Notes`
    - Optional: anything else important for Belle/human review
 
-## 3. Evidence style (SHOULD)
+## 4. Evidence style (SHOULD)
 1. Prefer short excerpts and file paths over long logs.
 2. If a command output is long, summarize and reference the log file under `.ai/logs/` (runtime).
-

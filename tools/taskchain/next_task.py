@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-next_task.py - Show runnable Taskchain tasks (Belle Pack v2.0)
+next_task.py - Show runnable Taskchain tasks (Belle Pack v2.1)
 
 Usage:
   python tools/taskchain/next_task.py
@@ -117,7 +117,7 @@ def parse_simple_yaml(text: str) -> Any:
                     val = val.strip()
                     item_map: Dict[str, Any] = {}
                     if val == "":
-                        nested, i2 = parse_block(i + 1, indent + 4)
+                        nested, i2 = parse_block(i + 1, indent + 2)
                         item_map[key] = nested
                         i = i2
                     else:
@@ -131,10 +131,10 @@ def parse_simple_yaml(text: str) -> Any:
                             break
                         raw2 = _strip_comments(lines[j]).rstrip("\n")
                         ind2 = len(raw2) - len(raw2.lstrip(" "))
-                        if ind2 < indent + 4:
+                        if ind2 < indent + 2:
                             break
-                        if ind2 != indent + 4:
-                            raise ParseError(f"Invalid mapping indentation at line {j+1}: expected {indent+4}, got {ind2}")
+                        if ind2 != indent + 2:
+                            raise ParseError(f"Invalid mapping indentation at line {j+1}: expected {indent+2}, got {ind2}")
                         s2 = raw2.strip()
                         if ":" not in s2:
                             raise ParseError(f"Expected key: value at line {j+1}")
@@ -142,7 +142,7 @@ def parse_simple_yaml(text: str) -> Any:
                         k2 = k2.strip()
                         v2 = v2.strip()
                         if v2 == "":
-                            nested2, j2 = parse_block(j + 1, indent + 6)
+                            nested2, j2 = parse_block(j + 1, indent + 4)
                             item_map[k2] = nested2
                             i = j2
                         else:

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-tasklint.py - Taskchain linter (Belle Pack v2.0)
+tasklint.py - Taskchain linter (Belle Pack v2.1)
 
 Design goals:
 - Run in a plain Python 3 environment (no external deps required).
@@ -34,6 +34,85 @@ from typing import Any, Dict, List, Tuple, Optional
 TASK_ID_RE = re.compile(r"^T[0-9]{4}$")
 STATUS_ENUM = {"ready", "in_progress", "blocked", "done_pending_review", "done", "cancelled", "invalid"}
 REPORT_STATUS_ENUM = {"blocked", "done_pending_review", "done", "invalid"}
+
+
+JAPANESE_RE = re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\u3000-\u303f]")
+
+def contains_japanese(text: str) -> bool:
+    return JAPANESE_RE.search(text) is not None
+
+
+def lint_english_os(repo_root: str) -> Tuple[List[str], List[str]]:
+    """Enforce English-only policy for OS files (AGENTS.md, ai/, tools/)."""
+    errors: List[str] = []
+    warnings: List[str] = []
+
+    def should_scan(path: str) -> bool:
+        ext = os.path.splitext(path)[1].lower()
+        return ext in (".md", ".yml", ".yaml", ".json", ".py", ".txt")
+
+    candidates: List[str] = []
+    agents = os.path.join(repo_root, "AGENTS.md")
+    if os.path.isfile(agents):
+        candidates.append(agents)
+
+    for base in ("ai", "tools"):
+        base_path = os.path.join(repo_root, base)
+        if not os.path.isdir(base_path):
+            continue
+        for dirpath, _dirnames, filenames in os.walk(base_path):
+            for name in filenames:
+                p = os.path.join(dirpath, name)
+                if should_scan(p):
+                    candidates.append(p)
+
+    for p in candidates:
+        try:
+            content = _read_text(p)
+        except Exception as e:
+            errors.append(f"{p}: failed to read as UTF-8 text: {e}")
+            continue
+        if contains_japanese(content):
+            errors.append(f"{p}: contains non-English (Japanese) characters; OS files must be English-only")
+
+    return errors, warnings
+
+
+def lint_english_taskchain_extra(repo_root: str) -> Tuple[List[str], List[str]]:
+    """Enforce English-only for non-task artifacts under .ai/taskchain (e.g., snapshots)."""
+    errors: List[str] = []
+    warnings: List[str] = []
+    base = os.path.join(repo_root, ".ai", "taskchain")
+    if not os.path.isdir(base):
+        return errors, warnings
+
+    def should_scan(path: str) -> bool:
+        ext = os.path.splitext(path)[1].lower()
+        return ext in (".md", ".yml", ".yaml", ".json", ".txt")
+
+    exclude_prefixes = (
+        os.path.join(base, "tasks") + os.sep,
+        os.path.join(base, "state") + os.sep,
+        os.path.join(base, "reports") + os.sep,
+        os.path.join(base, "archive") + os.sep,
+    )
+
+    for dirpath, _dirnames, filenames in os.walk(base):
+        for name in filenames:
+            p = os.path.join(dirpath, name)
+            if not should_scan(p):
+                continue
+            if any(p.startswith(pref) for pref in exclude_prefixes):
+                continue
+            try:
+                content = _read_text(p)
+            except Exception:
+                continue
+            if contains_japanese(content):
+                errors.append(f"{p}: contains non-English (Japanese) characters; .ai/taskchain files must be English-only")
+
+    return errors, warnings
+
 
 
 class LintError(Exception):
@@ -163,7 +242,7 @@ def parse_simple_yaml(text: str) -> Any:
                     val = val.strip()
                     item_map: Dict[str, Any] = {}
                     if val == "":
-                        nested, i2 = parse_block(i + 1, indent + 4)
+                        nested, i2 = parse_block(i + 1, indent + 2)
                         item_map[key] = nested
                         i = i2
                     else:
@@ -176,10 +255,10 @@ def parse_simple_yaml(text: str) -> Any:
                             break
                         raw2 = _strip_comments(lines[j]).rstrip("\n")
                         ind2 = len(raw2) - len(raw2.lstrip(" "))
-                        if ind2 < indent + 4:
+                        if ind2 < indent + 2:
                             break
-                        if ind2 != indent + 4:
-                            raise LintError(f"Invalid mapping indentation in list item at line {j+1}: expected {indent+4}, got {ind2}")
+                        if ind2 != indent + 2:
+                            raise LintError(f"Invalid mapping indentation in list item at line {j+1}: expected {indent+2}, got {ind2}")
                         s2 = raw2.strip()
                         if ":" not in s2:
                             raise LintError(f"Expected 'key: value' at line {j+1}")
@@ -187,7 +266,7 @@ def parse_simple_yaml(text: str) -> Any:
                         k2 = k2.strip()
                         v2 = v2.strip()
                         if v2 == "":
-                            nested2, j2 = parse_block(j + 1, indent + 6)
+                            nested2, j2 = parse_block(j + 1, indent + 4)
                             item_map[k2] = nested2
                             i = j2
                         else:
@@ -324,10 +403,56 @@ def lint_task_spec(repo_root: str, path: str) -> LintResult:
         if not fname.startswith(task_id) or not fname.endswith(".task.md"):
             errors.append(f"{path}: filename must be <ID>.task.md (got {fname})")
 
-    required_keys = ["title", "created_at", "depends_on", "status_policy", "authority", "scope", "acceptance", "reporting"]
+    required_keys = ["title", "created_at", "language", "language_exceptions", "depends_on", "status_policy", "authority", "scope", "acceptance", "reporting"]
     for k in required_keys:
         if k not in fm:
             errors.append(f"{path}: missing required frontmatter key: {k}")
+
+
+    # Language gate (English-only by default)
+
+    lang = fm.get("language")
+
+    lex = fm.get("language_exceptions")
+
+    if lang is not None and lang != "en":
+
+        errors.append(f"{path}: language must be 'en'")
+
+    if lex is None:
+
+        errors.append(f"{path}: language_exceptions must be present (use [] by default)")
+
+        lex_list: List[str] = []
+
+    elif isinstance(lex, list):
+
+        lex_list = [x for x in lex if isinstance(x, str)]
+
+        if len(lex_list) != len(lex):
+
+            errors.append(f"{path}: language_exceptions must be a list of strings")
+
+    else:
+
+        errors.append(f"{path}: language_exceptions must be a list")
+
+        lex_list = []
+
+
+    try:
+
+        full_text = _read_text(path)
+
+        if contains_japanese(full_text) and len(lex_list) == 0:
+
+            errors.append(f"{path}: contains Japanese characters but language_exceptions is empty (TaskSpec must be English-only)")
+
+    except Exception:
+
+        pass
+
+
 
     ca = fm.get("created_at")
     if isinstance(ca, str):
@@ -376,6 +501,23 @@ def lint_task_state(repo_root: str, path: str) -> LintResult:
         return LintResult(False, [f"{path}: failed to parse YAML: {e}"], [])
     if not isinstance(state, dict):
         return LintResult(False, [f"{path}: TaskState must be a mapping/object"], [])
+
+
+    # Language gate (English-only)
+
+    try:
+
+        full_text = _read_text(path)
+
+        if contains_japanese(full_text):
+
+            errors.append(f"{path}: contains non-English (Japanese) characters; TaskState must be English-only")
+
+    except Exception:
+
+        pass
+
+
 
     task_id = state.get("id")
     if not isinstance(task_id, str) or not TASK_ID_RE.match(task_id):
@@ -434,6 +576,52 @@ def lint_task_report(repo_root: str, path: str) -> LintResult:
     if not isinstance(ga, str) or not _is_iso_datetime(ga):
         errors.append(f"{path}: generated_at must be ISO 8601 string")
 
+
+    # Language gate (English-only by default)
+
+    lang = fm.get("language")
+
+    lex = fm.get("language_exceptions")
+
+    if lang is not None and lang != "en":
+
+        errors.append(f"{path}: language must be 'en'")
+
+    if lex is None:
+
+        errors.append(f"{path}: language_exceptions must be present (use [] by default)")
+
+        lex_list: List[str] = []
+
+    elif isinstance(lex, list):
+
+        lex_list = [x for x in lex if isinstance(x, str)]
+
+        if len(lex_list) != len(lex):
+
+            errors.append(f"{path}: language_exceptions must be a list of strings")
+
+    else:
+
+        errors.append(f"{path}: language_exceptions must be a list")
+
+        lex_list = []
+
+
+    try:
+
+        full_text = _read_text(path)
+
+        if contains_japanese(full_text) and len(lex_list) == 0:
+
+            errors.append(f"{path}: contains Japanese characters but language_exceptions is empty (TaskReport must be English-only)")
+
+    except Exception:
+
+        pass
+
+
+
     ts = fm.get("task_status")
     if ts not in REPORT_STATUS_ENUM:
         errors.append(f"{path}: task_status must be one of {sorted(REPORT_STATUS_ENUM)}")
@@ -485,6 +673,15 @@ def main() -> int:
     errors += m_err
     warnings += m_warn
 
+
+    # English-only gate for OS files (AGENTS.md, ai/, tools/)
+
+    os_err, os_warn = lint_english_os(repo_root)
+
+    errors += os_err
+
+    warnings += os_warn
+
     if args.preflight and not args.all and not args.task_id:
         for w in warnings:
             print("WARN:", w)
@@ -493,6 +690,15 @@ def main() -> int:
         return 0 if not errors else 1
 
     task_specs, task_states, task_reports = find_runtime_files(repo_root)
+
+
+    # English-only gate for additional .ai/taskchain artifacts (e.g., snapshots)
+
+    extra_err, extra_warn = lint_english_taskchain_extra(repo_root)
+
+    errors += extra_err
+
+    warnings += extra_warn
 
     specs_by_id: Dict[str, str] = {}
     states_by_id: Dict[str, str] = {}

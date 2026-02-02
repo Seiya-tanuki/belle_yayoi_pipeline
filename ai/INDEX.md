@@ -15,7 +15,7 @@ This `ai/` directory is the **source of truth for AI-driven development** in thi
 10. `ai/kb/` (design constraints & decisions, if present)
 
 ## Directory roles (source-of-truth)
-- `ai/rules/`      : always-on rules (placement, safety, testing, git)
+- `ai/rules/`      : always-on rules (placement, safety, language, git)
 - `ai/contracts/`  : execution/reporting contracts for Codex
 - `ai/taskchain/`  : taskchain protocol/schemas/templates
 - `ai/profile/`    : how to run this repo (commands, env)
@@ -25,6 +25,10 @@ This `ai/` directory is the **source of truth for AI-driven development** in thi
 - `ai/audit/`      : audit logs / changelog (optional)
 - `ai/cleanup/`    : cleanup protocols (optional)
 
+## Language policy (MUST)
+- AI OS files (`AGENTS.md`, `ai/`, `tools/`) MUST be written in English.
+- Active Taskchain files under `.ai/taskchain/` MUST be written in English.
+
 ## Runtime (git-ignored)
 - `.ai/` is the runtime layer.
 - Taskchain runtime paths:
@@ -33,6 +37,8 @@ This `ai/` directory is the **source of truth for AI-driven development** in thi
   - `.ai/taskchain/reports/`
 - Incoming zips:
   - `.ai/inbox/`
+- Runtime archive (inactive):
+  - `.ai/archive/`
 
 ## If something is unclear
 Stop and report. Do not guess. Create a snapshot/report task if needed.

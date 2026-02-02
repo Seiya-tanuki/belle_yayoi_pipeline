@@ -6,6 +6,8 @@
     "id",
     "title",
     "created_at",
+    "language_exceptions",
+    "language",
     "depends_on",
     "status_policy",
     "authority",
@@ -181,6 +183,24 @@
     },
     "extensions": {
       "type": "object"
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "en"
+      ]
+    },
+    "language_exceptions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "jp_required_in_output",
+          "jp_sample_data",
+          "jp_docs_only"
+        ]
+      },
+      "default": []
     }
   },
   "additionalProperties": false

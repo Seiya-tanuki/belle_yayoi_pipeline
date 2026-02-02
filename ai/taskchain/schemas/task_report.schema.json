@@ -6,6 +6,8 @@
     "id",
     "type",
     "generated_at",
+    "language_exceptions",
+    "language",
     "task_status"
   ],
   "properties": {
@@ -31,6 +33,24 @@
         "done",
         "invalid"
       ]
+    },
+    "language": {
+      "type": "string",
+      "enum": [
+        "en"
+      ]
+    },
+    "language_exceptions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "jp_required_in_output",
+          "jp_sample_data",
+          "jp_docs_only"
+        ]
+      },
+      "default": []
     }
   },
   "additionalProperties": true

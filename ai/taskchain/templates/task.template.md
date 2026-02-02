@@ -3,9 +3,11 @@ id: T0001
 title: "TITLE"
 created_at: "2026-01-31T00:00:00+09:00"
 updated_at: "2026-01-31T00:00:00+09:00"
+language: "en"
+language_exceptions: []
 depends_on: []
 auto_advance_allowed: false
-risk_level: medium
+risk_level: low
 destructive_ops: false
 
 status_policy:
@@ -19,6 +21,9 @@ authority:
     - "ai/contracts/CODEX_REPORT_CONTRACT.md"
     - "ai/rules/00_base.md"
     - "ai/rules/10_repo_layout.md"
+    - "ai/rules/50_git_workflow.md"
+    - "ai/rules/60_taskchain.md"
+    - "ai/taskchain/protocol.md"
   # Optional: plan_path / pack_ref
   # plan_path: "ai/plans/..."
   # pack_ref: "ai/packs/..."
@@ -26,9 +31,13 @@ authority:
 scope:
   # Globs/prefixes. Keep tight.
   allow_paths:
-    - "src/"
+    - "gas/"
     - "tests/"
     - "tools/"
+    - "configs/"
+    - "fixtures/"
+    - "templates/"
+    - "docs/"
   deny_paths:
     - "ai/"
     - ".git/"
@@ -37,10 +46,8 @@ scope:
 acceptance:
   # Machine-checkable acceptance steps. Each step MUST be runnable.
   machine:
-    - id: "lint"
-      run: "echo \"TODO: replace with repo lint command\""
-    - id: "tests"
-      run: "echo \"TODO: replace with repo test command\""
+    - id: "taskchain_lint"
+      run: "python tools/taskchain/tasklint.py --all"
   # Human checks (for Belle/human review). If none, set to [].
   human:
     - "Review the TaskReport for scope discipline and risks."

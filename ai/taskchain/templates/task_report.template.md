@@ -2,6 +2,8 @@
 id: T0001
 type: task_report
 generated_at: "2026-01-31T00:00:00+09:00"
+language: "en"
+language_exceptions: []
 task_status: done_pending_review
 ---
 
