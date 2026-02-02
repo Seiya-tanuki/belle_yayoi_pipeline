@@ -81,9 +81,9 @@ expect(reasons[1] === 'BANK_AMOUNT_SIGN_UNKNOWN', 'unknown sign skip reason mism
 
 const row1 = built.rows[0];
 expect(row1[0] === '2000', 'A column should be 2000');
-expect(row1[4] === '現金', 'debit account should be 現金');
-expect(row1[10] === '仮払金', 'credit account should be 仮払金');
-expect(row1[7] === '課対仕入込10%適格', 'H column should be fixed tax kubun');
+expect(row1[4] === '仮払金', 'debit account should be 現金');
+expect(row1[10] === '普通預金', 'credit account should be 仮払金');
+expect(row1[7] === '対象外', 'H column should be fixed tax kubun');
 expect(row1[13] === '対象外', 'N column should be 対象外');
 expect(row1[19] === '0', 'T column should be 0');
 expect(row1[3] === '2025/04/01', 'date should use fiscal start year');
@@ -93,8 +93,8 @@ expect(row1[21].includes('SIGN=debit'), 'memo should include amount_sign');
 expect(row1[21].includes('AMT=1500'), 'memo should include amount');
 
 const row2 = built.rows[1];
-expect(row2[4] === '仮払金', 'credit row debit account should be 仮払金');
-expect(row2[10] === '現金', 'credit row credit account should be 現金');
+expect(row2[4] === '普通預金', 'credit row debit account should be 仮払金');
+expect(row2[10] === '仮払金', 'credit row credit account should be 現金');
 expect(row2[21].includes('SIGN=credit'), 'memo should include credit sign');
 
 console.log('OK: test_bank_statement_export');

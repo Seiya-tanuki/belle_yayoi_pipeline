@@ -70,7 +70,7 @@ expect(built.skipDetails[0].reason === 'CC_CREDIT_UNSUPPORTED', 'credit skip rea
 const row1 = built.rows[0];
 expect(row1[0] === '2000', 'A column should be 2000');
 expect(row1[4] === '仮払金', 'E column should be 仮払金');
-expect(row1[7] === '課対仕入込10%適格', 'H column should be fixed tax kubun');
+expect(row1[7] === '対象外', 'H column should be fixed tax kubun');
 expect(row1[10] === '未払金', 'K column should be 未払金');
 expect(row1[13] === '対象外', 'N column should be 対象外');
 expect(row1[19] === '0', 'T column should be 0');
