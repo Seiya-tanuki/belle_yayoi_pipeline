@@ -8,4 +8,4 @@
 1. https://aiknot.jp/media-top/?p=3799
 
 ## 同梱ファイル
-1. yayoi_import_sample.csv：顧客実務のサンプル（アップロードされたCSVのコピー）
+1. （無し）※顧客実務データはリポジトリに含めない

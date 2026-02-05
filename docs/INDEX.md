@@ -24,4 +24,4 @@ This is the human-facing documentation index for this repository.
 
 ## Archive
 1. Put non-authoritative or deprecated docs under `docs/_archive/`.
-2. Existing legacy material also exists under `docs/legacy/` (historical).
+2. Legacy material was removed to avoid confusion; refer to git history if needed.

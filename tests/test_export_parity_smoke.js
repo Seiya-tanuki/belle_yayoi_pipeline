@@ -272,8 +272,7 @@ function buildStage2JsonWithInvalid() {
 assertNoReplacementChar([
   'gas/Export.js',
   'docs/CONFIG.md',
-  'docs/09_Dev_Environment_Clasp.md',
-  'docs/legacy/SYSTEM_OVERVIEW_FALLBACK_V0.md'
+  'docs/09_Dev_Environment_Clasp.md'
 ]);
 
 function setupHeaders(sandbox) {
