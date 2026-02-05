@@ -1,0 +1,67 @@
+# Suggested Codex rules for AgentOS
+#
+# NOTE: Apply these via your Codex configuration if your environment supports rules.
+# Keep the agent safe by default; allow overrides only with explicit approval.
+
+# --- Git safety ---
+prefix_rule(
+  pattern = ["git", "push"],
+  decision = "prompt",
+  justification = "Push only when explicitly instructed by the user, using the two-step approval flow."
+)
+
+prefix_rule(
+  pattern = ["git", "commit"],
+  decision = "allow",
+  justification = "Commit is allowed after Consult-lane review/judgement marks the work acceptable."
+)
+
+prefix_rule(
+  pattern = ["git", "push", "--force"],
+  decision = "forbidden",
+  justification = "Force push is high-risk. Do not use unless a human runs it intentionally."
+)
+
+prefix_rule(
+  pattern = ["git", "push", "-f"],
+  decision = "forbidden",
+  justification = "Force push is high-risk. Do not use unless a human runs it intentionally."
+)
+
+prefix_rule(
+  pattern = ["git", "push", "--force-with-lease"],
+  decision = "forbidden",
+  justification = "History rewriting is high-risk. Do not use unless a human runs it intentionally."
+)
+
+# --- Destructive shell operations ---
+prefix_rule(
+  pattern = ["rm", "-rf"],
+  decision = "forbidden",
+  justification = "Destructive. Require explicit human action."
+)
+
+prefix_rule(
+  pattern = ["git", "reset", "--hard"],
+  decision = "forbidden",
+  justification = "Destructive. Do not use."
+)
+
+prefix_rule(
+  pattern = ["git", "clean"],
+  decision = "forbidden",
+  justification = "Destructive. Do not use."
+)
+
+# --- Clasp safety (GAS) ---
+prefix_rule(
+  pattern = ["clasp", "deploy"],
+  decision = "forbidden",
+  justification = "Deploy is human-only; avoid accidental stg/prod deploy."
+)
+
+prefix_rule(
+  pattern = ["clasp", "push"],
+  decision = "prompt",
+  justification = "Push is dev-only; confirm scriptId and follow docs/09_Dev_Environment_Clasp.md."
+)
