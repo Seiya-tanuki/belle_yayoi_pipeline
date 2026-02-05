@@ -1,3 +1,5 @@
+// @ts-check
+
 // NOTE: Keep comments ASCII only.
 
 /**

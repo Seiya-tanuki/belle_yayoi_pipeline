@@ -1,3 +1,5 @@
+// @ts-check
+
 // NOTE: Keep comments ASCII only.
 
 function belle_pdf_countPages_(pdfBlob, out) {
