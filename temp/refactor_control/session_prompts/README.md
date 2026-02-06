@@ -72,6 +72,10 @@
 2. Wave 5 consult gatekeeper session
 - `temp/refactor_control/session_prompts/wave5_consult_gatekeeper.md`
 
+## Wave 5 (Implement)
+1. X1 implement session
+- `temp/refactor_control/session_prompts/wave5_implement_X1.md`
+
 How to use:
 1. Open a new session for each agent thread.
 2. Paste the full content of the matching prompt file.

@@ -54,7 +54,7 @@ Program-level done definition:
 | C3 | OCR worker state split spec | `gas/OcrWorkerParallel.js`, `tests/` | `temp/refactor_control/session_prompts/wave3_consult_C3.md` | `.spec/specs/T-20260206-CORE-C3-ocr-worker-state-split.md` | Implement judged (Accept) | 2026-02-06 | Wave 3 completed for this track |
 | U1 | Dashboard script decomposition spec | `gas/Dashboard.html`, `tests/` | `temp/refactor_control/session_prompts/wave4_consult_U1.md` | `.spec/specs/T-20260206-UI-U1-dashboard-script-decomposition.md` | Implement judged (Accept) | 2026-02-06 | Wave 4 completed for this track |
 | T1 | Shared test helper extraction spec | `tests/` | `temp/refactor_control/session_prompts/wave4_consult_T1.md` | `.spec/specs/T-20260206-TEST-T1-test-helper-library.md` | Implement judged (Accept) | 2026-02-06 | Wave 4 completed for this track |
-| X1 | Correlation key normalization spec | multi-module integration scope | `temp/refactor_control/session_prompts/wave5_consult_X1.md` | `.spec/specs/T-20260206-INTEG-X1-correlation-key-normalization.md` | Spec accepted (gatekeeper rerun Accept) | 2026-02-06 | Prepare Wave 5 implement prompt (`wave5_implement_X1.md`) with serial-only execution |
+| X1 | Correlation key normalization spec | multi-module integration scope | `temp/refactor_control/session_prompts/wave5_consult_X1.md` | `.spec/specs/T-20260206-INTEG-X1-correlation-key-normalization.md` | Implement launch-ready | 2026-02-06 | Launch `wave5_implement_X1.md` in a fresh implementation thread (single-thread only) |
 
 ## 5. Blocker Escalation Log
 
@@ -104,3 +104,4 @@ Program-level done definition:
 | 2026-02-06 | Received Wave 5 gatekeeper result: Revise (scope.allow_edit/report mismatch, Phase D quantitative cleanup gate missing, destructive-ops prohibition missing). |
 | 2026-02-06 | Applied required X1 Revise fixes to spec (`.spec/reports/*` allow_edit, Phase D confirmation criteria, explicit destructive-ops prohibition); gatekeeper rerun pending. |
 | 2026-02-06 | Received Wave 5 gatekeeper rerun result: X1 Accept; Wave 5 implement launch is GO (single-thread only, Phase D deferred). |
+| 2026-02-06 | Prepared Wave 5 implement prompt (`wave5_implement_X1.md`) and updated prompt index; ready to launch X1 implement thread. |
