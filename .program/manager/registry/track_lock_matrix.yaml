@@ -1,0 +1,21 @@
+version: 1
+updated_at: "2026-02-07T00:41:39+09:00"
+program_id: "P-20260207-manager-planning-foundation"
+tracks:
+  - track: "manager_foundation"
+    wave: "foundation"
+    owner_lane: "manager"
+    owner_agent: "manager"
+    allow_edit:
+      - ".program/manager/*"
+      - ".lanes/manager/AGENTS.md"
+      - ".agents/skills/manager-*"
+      - ".spec/decisions/ADR-*.md"
+    forbid_edit:
+      - "gas/*"
+      - "tests/*"
+    freeze_overlay:
+      - "mainline merge operations"
+    conflict_stop:
+      - "BLOCKER: SCOPE_CONFLICT <path> <reason>"
+    status: "active"

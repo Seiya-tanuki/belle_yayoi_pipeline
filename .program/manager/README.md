@@ -12,14 +12,20 @@ This workspace is used to:
 - `control_board.md`: program source of truth
 - `active_context.md`: compact restart context
 - `context_window_protocol.md`: mandatory checkpoint/recovery rules
-- `registry/`: instruction, branch/worktree, and evidence indexes
+- `registry/`: instruction, branch/worktree, evidence, lock, gate, and assumption indexes
 - `snapshots/`: chronological checkpoints
 - `waves/`: per-wave prompt packs and decisions
 - `integration/`: merge plans and readiness reports
 - `tools/`: validation and quality-gate scripts
-- `reports/`: self-analysis and comparison reports
+- `reports/`: planning foundation and self-analysis reports
 - `migrations/`: mapping from legacy manager artifacts
 - `templates/`: reusable manager templates
+
+Planning foundation files:
+1. `reports/P-*.md`
+2. `registry/track_lock_matrix.yaml`
+3. `registry/gate_contract.yaml`
+4. `registry/assumption_ledger.yaml`
 
 ## Migration note
 Previous temporary control artifacts may still exist under `temp/`.

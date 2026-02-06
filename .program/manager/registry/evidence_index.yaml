@@ -1,5 +1,5 @@
 version: 1
-updated_at: "2026-02-06T20:56:00+09:00"
+updated_at: "2026-02-07T00:42:52+09:00"
 evidence:
   - wave: "wave5"
     track: "X1"
@@ -15,6 +15,14 @@ evidence:
     track: "manager_lane"
     spec: "n/a"
     report: ".program/manager/reports/temp_comparison_self_analysis_20260206.md"
+    gatekeeper_decision: "n/a"
+    verify_commands:
+      - "powershell -ExecutionPolicy Bypass -File .program/manager/tools/manager_lane_quality_gate.ps1"
+    status: "accepted_internal"
+  - wave: "planner_hardening"
+    track: "manager_program_planning"
+    spec: "n/a"
+    report: ".program/manager/reports/P-20260207-manager-planning-foundation.md"
     gatekeeper_decision: "n/a"
     verify_commands:
       - "powershell -ExecutionPolicy Bypass -File .program/manager/tools/manager_lane_quality_gate.ps1"

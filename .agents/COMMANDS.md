@@ -20,14 +20,19 @@ These are **natural-language commands** you can type into Codex chat. The root `
    - Loads the instruction file at `<path>` and executes it as the primary brief.
    - Recommended for manager-led operations to reduce prompt copy/paste overhead.
 
+5. `管理役で計画作成`
+   - Runs manager planning foundation workflow for large cross-project programs.
+   - Uses manager templates/registry artifacts and quality gates before wave launch.
+   - `project_type` is free-form; control logic is driven by `change_vectors`.
+
 ## Artifact commands
-5. `この内容で仕様書作成`
+6. `この内容で仕様書作成`
    - Creates/updates a spec in `.spec/specs/` using `$spec-writer` and `$spec-check`.
 
-6. `このレポートをジャッジして`
+7. `このレポートをジャッジして`
    - Reviews diffs + report against the spec using `$judge`.
 
-7. `AgentOSを進化して`
+8. `AgentOSを進化して`
    - Propose and apply changes to AGENTS/skills/playbooks/rules using `$agentos-evolve`.
 
 ## Helpful VS Code Codex commands

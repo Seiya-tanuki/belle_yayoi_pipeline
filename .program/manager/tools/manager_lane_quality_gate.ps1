@@ -30,16 +30,24 @@ function Add-Check {
 
 $requiredPaths = @(
   ".lanes/manager/AGENTS.md",
+  ".agents/skills/manager-program-planner/SKILL.md",
   ".program/manager/context_window_protocol.md",
   ".program/manager/control_board.md",
   ".program/manager/active_context.md",
+  ".program/manager/templates/program_foundation_template.md",
+  ".program/manager/templates/track_lock_matrix_template.yaml",
+  ".program/manager/templates/gate_contract_template.yaml",
+  ".program/manager/templates/assumption_ledger_template.yaml",
   ".program/manager/templates/consult_track_prompt_template.md",
   ".program/manager/templates/consult_gatekeeper_prompt_template.md",
   ".program/manager/templates/implement_track_prompt_template.md",
   ".program/manager/templates/wave_prompt_packet_template.md",
   ".program/manager/registry/instruction_index.yaml",
   ".program/manager/registry/branch_worktree_map.yaml",
-  ".program/manager/registry/evidence_index.yaml"
+  ".program/manager/registry/evidence_index.yaml",
+  ".program/manager/registry/track_lock_matrix.yaml",
+  ".program/manager/registry/gate_contract.yaml",
+  ".program/manager/registry/assumption_ledger.yaml"
 )
 
 $missing = @()
@@ -86,15 +94,56 @@ $policyNeedles = @(
   "External context window protocol (required)",
   "BLOCKER: SCOPE_CONFLICT",
   "Do not merge into",
-  "Do not push by default."
+  "Do not push by default.",
+  "project_type",
+  "change_vectors"
 )
 Add-Check -Name "manager_policy_safety" -Pass (Test-ContainsAll -Content $managerPolicy -Needles $policyNeedles) -Detail "manager safety contract"
+
+$plannerTemplate = Get-Content -Encoding utf8 ".program/manager/templates/program_foundation_template.md" -Raw
+$plannerNeedles = @(
+  "project_type: <free-form text>",
+  "change_vectors:",
+  "Boundary Proof Standard",
+  "Launch Decision"
+)
+Add-Check -Name "program_foundation_template_contract" -Pass (Test-ContainsAll -Content $plannerTemplate -Needles $plannerNeedles) -Detail "planner template required blocks"
+
+$gateContractTemplate = Get-Content -Encoding utf8 ".program/manager/templates/gate_contract_template.yaml" -Raw
+$gateContractNeedles = @(
+  "tracked",
+  "staged",
+  "unstaged",
+  "untracked",
+  "report_allowlist",
+  ".spec/reports/*"
+)
+Add-Check -Name "gate_contract_template_completeness" -Pass (Test-ContainsAll -Content $gateContractTemplate -Needles $gateContractNeedles) -Detail "gate contract coverage and report allowlist"
 
 $snapshotCount = @(Get-ChildItem ".program/manager/snapshots" -File -ErrorAction SilentlyContinue | Where-Object { $_.Name -ne "README.md" }).Count
 Add-Check -Name "snapshot_presence" -Pass ($snapshotCount -ge 1) -Detail "snapshot files: $snapshotCount"
 
 $instructionIndex = Get-Content -Encoding utf8 ".program/manager/registry/instruction_index.yaml" -Raw
 Add-Check -Name "instruction_registry_seeded" -Pass ($instructionIndex -match 'id:\s*".+"') -Detail "instruction id seeded"
+
+$assumptionLedger = Get-Content -Encoding utf8 ".program/manager/registry/assumption_ledger.yaml" -Raw
+Add-Check -Name "assumption_ledger_expiry" -Pass ($assumptionLedger -match 'expiry:\s*"[0-9]{4}-[0-9]{2}-[0-9]{2}"') -Detail "assumption expiry fields present"
+
+$foundationReports = @(Get-ChildItem ".program/manager/reports" -File -Filter "P-*.md" -ErrorAction SilentlyContinue)
+$foundationPresent = $foundationReports.Count -ge 1
+Add-Check -Name "foundation_report_presence" -Pass $foundationPresent -Detail "foundation reports: $($foundationReports.Count)"
+
+if ($foundationPresent) {
+  $latestFoundation = ($foundationReports | Sort-Object LastWriteTime -Descending | Select-Object -First 1)
+  $latestContent = Get-Content -Encoding utf8 $latestFoundation.FullName -Raw
+  $foundationNeedles = @(
+    "project_type:",
+    "change_vectors:",
+    "Boundary Proof Standard",
+    "Launch Decision"
+  )
+  Add-Check -Name "foundation_report_contract" -Pass (Test-ContainsAll -Content $latestContent -Needles $foundationNeedles) -Detail "latest foundation report: $($latestFoundation.Name)"
+}
 
 $total = $script:checks.Count
 $passed = @($script:checks | Where-Object { $_.pass }).Count
