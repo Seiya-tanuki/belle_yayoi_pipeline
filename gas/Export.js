@@ -40,6 +40,45 @@ function belle_exportLog_buildSchemaMismatchDetail_(docType, sheetName, expected
   });
 }
 
+function belle_export_observeCorr_(counters, payload, props) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  if (typeof belle_corr_observeItem_ === "function") {
+    return belle_corr_observeItem_("X1_CORR_EXPORT_ITEM", counters, source, { props: props });
+  }
+  const docType = String(source.doc_type || source.docType || "").trim();
+  const fileId = String(source.file_id || source.fileId || "").trim();
+  const corrKey = docType && fileId ? (docType + "::" + fileId) : "";
+  const resolved = {
+    mode: "compatibility",
+    corr_key: corrKey,
+    missing: !corrKey,
+    invalid_format: false,
+    derived_from_legacy: !!corrKey,
+    mismatch: false
+  };
+  if (counters && typeof counters === "object") {
+    if (resolved.missing) counters.missing++;
+    if (resolved.invalid_format) counters.invalid++;
+    if (resolved.derived_from_legacy) counters.derived++;
+    if (resolved.mismatch) counters.mismatch++;
+  }
+  Logger.log({
+    phase: "X1_CORR_EXPORT_ITEM",
+    ok: true,
+    doc_type: source.doc_type || source.docType || "",
+    file_id: source.file_id || source.fileId || "",
+    corr_key: resolved.corr_key,
+    queue_sheet_name: source.queue_sheet_name || source.queueSheetName || "",
+    rowIndex: source.rowIndex !== undefined ? source.rowIndex : "",
+    mode: resolved.mode,
+    missing: resolved.missing,
+    invalid: resolved.invalid_format,
+    derived: resolved.derived_from_legacy,
+    mismatch: resolved.mismatch
+  });
+  return resolved;
+}
+
 
 function belle_export_pickSingleFolder_(folders, folderName, docType, parentFolderId) {
   const list = Array.isArray(folders) ? folders : [];
@@ -115,349 +154,6 @@ function belle_export_getHandlersByRegistry_(options) {
   return handlers;
 }
 
-function belle_export_skeleton_buildCountsJson_(counts) {
-  if (!counts) return "";
-  return JSON.stringify({
-    total: counts.totalCount,
-    done: counts.doneCount,
-    retryable: counts.errorRetryableCount,
-    error_final: counts.errorFinalCount,
-    queued: counts.queuedRemaining
-  });
-}
-
-function belle_export_skeleton_logGuard_(ss, props, docType, queueSheetName, reason, counts, detail) {
-  belle_export_appendGuardLogRow_(ss, props, {
-    doc_type: docType,
-    queue_sheet_name: queueSheetName,
-    reason: reason,
-    counts_json: belle_export_skeleton_buildCountsJson_(counts),
-    detail: detail || ""
-  });
-}
-
-function belle_export_skeleton_buildGuardResult_(phase, reason, docType, includeDocType) {
-  const res = {
-    phase: phase,
-    ok: true,
-    reason: reason,
-    exportedRows: 0,
-    exportedFiles: 0,
-    skipped: 0,
-    errors: 0,
-    csvFileId: ""
-  };
-  if (includeDocType) res.doc_type = docType;
-  return res;
-}
-
-function belle_export_skeleton_buildPendingGuardResult_(reason, counts, samples, docType, includeDocType) {
-  const res = {
-    phase: "EXPORT_GUARD",
-    ok: true,
-    reason: reason,
-    exportedRows: 0,
-    exportedFiles: 0,
-    errors: 0,
-    queuedRemaining: reason === "OCR_PENDING" ? counts.queuedRemaining : 0,
-    doneCount: counts.doneCount,
-    totalCount: counts.totalCount,
-    pendingSamples: samples,
-    csvFileId: ""
-  };
-  if (includeDocType) res.doc_type = docType;
-  return res;
-}
-
-function belle_export_skeleton_runQueuePreflight_(params) {
-  const ss = params.ss;
-  const props = params.props;
-  const docType = params.docType;
-  const queueSheetName = params.queueSheetName;
-  const fiscalRange = params.fiscalRange;
-  const includeDocTypeInGuardResult = !!params.includeDocTypeInGuardResult;
-  const includeDocTypeInStartLog = !!params.includeDocTypeInStartLog;
-
-  if (!fiscalRange.ok) {
-    belle_export_skeleton_logGuard_(ss, props, docType, queueSheetName, fiscalRange.reason || "FISCAL_RANGE_INVALID", null, "");
-    const fiscalRes = belle_export_skeleton_buildGuardResult_("EXPORT_GUARD", fiscalRange.reason, docType, includeDocTypeInGuardResult);
-    Logger.log(fiscalRes);
-    return { ok: false, result: fiscalRes };
-  }
-
-  const queue = ss.getSheetByName(queueSheetName);
-  if (!queue) {
-    belle_export_skeleton_logGuard_(ss, props, docType, queueSheetName, "QUEUE_SHEET_NOT_FOUND", null, "");
-    const queueMissingRes = belle_export_skeleton_buildGuardResult_("EXPORT_GUARD", "QUEUE_SHEET_NOT_FOUND", docType, includeDocTypeInGuardResult);
-    Logger.log(queueMissingRes);
-    return { ok: false, result: queueMissingRes };
-  }
-
-  const baseHeader = belle_getQueueHeaderColumns();
-  const extraHeader = belle_getQueueLockHeaderColumns_();
-  const lastRow = queue.getLastRow();
-  if (lastRow < 2) {
-    belle_export_skeleton_logGuard_(ss, props, docType, queueSheetName, "NO_ROWS", null, "");
-    const noRowsRes = belle_export_skeleton_buildGuardResult_("EXPORT_GUARD", "NO_ROWS", docType, includeDocTypeInGuardResult);
-    Logger.log(noRowsRes);
-    return { ok: false, result: noRowsRes };
-  }
-
-  const headerMap = belle_queue_ensureHeaderMapCanonical_(queue, baseHeader, extraHeader);
-  if (!headerMap) {
-    belle_export_skeleton_logGuard_(ss, props, docType, queueSheetName, "INVALID_QUEUE_HEADER: missing required columns", null, "");
-    const badHeaderRes = belle_export_skeleton_buildGuardResult_("EXPORT_GUARD", "INVALID_QUEUE_HEADER: missing required columns", docType, includeDocTypeInGuardResult);
-    Logger.log(badHeaderRes);
-    return { ok: false, result: badHeaderRes };
-  }
-
-  const rows = queue.getRange(2, 1, lastRow - 1, queue.getLastColumn()).getValues();
-  const counts = {
-    totalCount: 0,
-    doneCount: 0,
-    errorRetryableCount: 0,
-    errorFinalCount: 0,
-    queuedRemaining: 0
-  };
-  const pendingSamples = [];
-  const retryableSamples = [];
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-    const fileId = String(row[headerMap["file_id"]] || "");
-    const fileName = String(row[headerMap["file_name"]] || "");
-    if (!fileId) continue;
-    counts.totalCount++;
-    const statusRaw = String(row[headerMap["status"]] || "");
-    const status = statusRaw || "QUEUED";
-    if (status === "DONE") counts.doneCount++;
-    else if (status === "ERROR_FINAL") counts.errorFinalCount++;
-    else if (status === "ERROR_RETRYABLE" || status === "ERROR") {
-      counts.errorRetryableCount++;
-      if (retryableSamples.length < 5) {
-        retryableSamples.push({ file_id: fileId, file_name: fileName, status: status });
-      }
-    } else {
-      counts.queuedRemaining++;
-      if (pendingSamples.length < 5) {
-        pendingSamples.push({ file_id: fileId, file_name: fileName, status: status });
-      }
-    }
-  }
-
-  const startLog = {
-    phase: "EXPORT_START",
-    ok: true,
-    totalCount: counts.totalCount,
-    doneCount: counts.doneCount,
-    errorRetryableCount: counts.errorRetryableCount,
-    errorFinalCount: counts.errorFinalCount,
-    queuedRemaining: counts.queuedRemaining
-  };
-  if (includeDocTypeInStartLog) startLog.doc_type = docType;
-  Logger.log(startLog);
-
-  if (counts.queuedRemaining > 0) {
-    belle_export_skeleton_logGuard_(ss, props, docType, queueSheetName, "OCR_PENDING", counts, "");
-    const pendingRes = belle_export_skeleton_buildPendingGuardResult_("OCR_PENDING", counts, pendingSamples, docType, includeDocTypeInGuardResult);
-    Logger.log(pendingRes);
-    return { ok: false, result: pendingRes };
-  }
-  if (counts.errorRetryableCount > 0) {
-    belle_export_skeleton_logGuard_(ss, props, docType, queueSheetName, "OCR_RETRYABLE_REMAINING", counts, "");
-    const retryableRes = belle_export_skeleton_buildPendingGuardResult_("OCR_RETRYABLE_REMAINING", counts, retryableSamples, docType, includeDocTypeInGuardResult);
-    Logger.log(retryableRes);
-    return { ok: false, result: retryableRes };
-  }
-
-  return {
-    ok: true,
-    headerMap: headerMap,
-    rows: rows
-  };
-}
-
-function belle_export_skeleton_prepareExportLog_(params) {
-  const ss = params.ss;
-  const props = params.props;
-  const docType = params.docType;
-  const queueSheetName = params.queueSheetName;
-  const includeDocTypeInExportLogGuardResult = !!params.includeDocTypeInExportLogGuardResult;
-  const includeDocTypeInSchemaMismatchResult = !!params.includeDocTypeInSchemaMismatchResult;
-
-  const exportLogResult = belle_getOrCreateExportLogSheet(ss);
-  if (exportLogResult.guard) {
-    belle_export_skeleton_logGuard_(
-      ss,
-      props,
-      docType,
-      queueSheetName,
-      exportLogResult.guard.reason || "EXPORT_LOG_GUARD",
-      null,
-      exportLogResult.guard.message || ""
-    );
-    Logger.log(exportLogResult.guard);
-    return {
-      ok: false,
-      result: belle_export_skeleton_buildGuardResult_(
-        exportLogResult.guard.phase,
-        exportLogResult.guard.reason,
-        docType,
-        includeDocTypeInExportLogGuardResult
-      )
-    };
-  }
-
-  const exportLog = exportLogResult.sheet;
-  const exportHeader = belle_getExportLogHeaderColumns();
-  const exportHeaderInfo = belle_exportLog_buildHeaderMap_(exportLog, exportHeader);
-  if (!exportHeaderInfo.ok) {
-    const detail = belle_exportLog_buildSchemaMismatchDetail_(docType, "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
-    belle_export_skeleton_logGuard_(ss, props, docType, queueSheetName, "EXPORT_LOG_SCHEMA_MISMATCH", null, detail);
-    const schemaRes = belle_export_skeleton_buildGuardResult_("EXPORT_GUARD", "EXPORT_LOG_SCHEMA_MISMATCH", docType, includeDocTypeInSchemaMismatchResult);
-    Logger.log(schemaRes);
-    return { ok: false, result: schemaRes };
-  }
-
-  const exportLogHeaderMap = exportHeaderInfo.headerMap;
-  const importSet = new Set();
-  const logRows = exportLog.getLastRow();
-  if (logRows >= 2) {
-    const fileIdCol = exportLogHeaderMap["file_id"];
-    const vals = exportLog.getRange(2, fileIdCol + 1, logRows - 1, 1).getValues();
-    for (let i = 0; i < vals.length; i++) {
-      const v = vals[i][0];
-      if (v) importSet.add(String(v));
-    }
-  }
-
-  return {
-    ok: true,
-    exportLog: exportLog,
-    exportLogHeaderMap: exportLogHeaderMap,
-    importSet: importSet
-  };
-}
-
-function belle_export_skeleton_createRuntimeState_(ss, skipLogSheetName) {
-  const state = {
-    csvRows: [],
-    exportFileIds: [],
-    skipped: 0,
-    errors: 0,
-    processed: new Set(),
-    skippedDetails: [],
-    nowIso: new Date().toISOString(),
-    logChunkSize: 200,
-    skipFlushThreshold: 200
-  };
-  state.flushSkipDetails = function () {
-    if (state.skippedDetails.length >= state.skipFlushThreshold) {
-      belle_appendSkipLogRows(ss, skipLogSheetName, state.skippedDetails, state.nowIso, "EXPORT_SKIP");
-      state.skippedDetails.length = 0;
-    }
-  };
-  return state;
-}
-
-function belle_export_skeleton_finalizeExport_(params) {
-  const runtime = params.runtime;
-  const docType = params.docType;
-  const outputFolderId = params.outputFolderId;
-  const encodingMode = params.encodingMode;
-  const eolMode = params.eolMode;
-  const filenamePrefix = params.filenamePrefix;
-  const exportLog = params.exportLog;
-  const exportLogHeaderMap = params.exportLogHeaderMap;
-  const includeDocTypeInNoRowsResult = !!params.includeDocTypeInNoRowsResult;
-  const includeDocTypeInDoneResult = !!params.includeDocTypeInDoneResult;
-  const ss = params.ss;
-  const skipLogSheetName = params.skipLogSheetName;
-
-  if (runtime.csvRows.length === 0) {
-    if (runtime.skippedDetails.length > 0) {
-      belle_appendSkipLogRows(ss, skipLogSheetName, runtime.skippedDetails, runtime.nowIso, "EXPORT_SKIP");
-    }
-    const noRowsRes = {
-      phase: "EXPORT_DONE",
-      ok: true,
-      reason: "NO_EXPORT_ROWS",
-      exportedRows: 0,
-      exportedFiles: 0,
-      skipped: runtime.skipped,
-      errors: runtime.errors,
-      csvFileId: ""
-    };
-    if (includeDocTypeInNoRowsResult) noRowsRes.doc_type = docType;
-    Logger.log(noRowsRes);
-    return noRowsRes;
-  }
-
-  const eol = eolMode === "LF" ? "\n" : "\r\n";
-  const csvText = runtime.csvRows.join(eol);
-  const ts = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmmss");
-  const filename = filenamePrefix + ts + ".csv";
-  const blob = Utilities.newBlob("", "text/csv", filename);
-  if (encodingMode === "UTF8") {
-    blob.setDataFromString(csvText, "UTF-8");
-  } else {
-    blob.setDataFromString(csvText, "Shift_JIS");
-  }
-
-  const folderRes = belle_export_resolveOutputFolderByDocType_(outputFolderId, docType);
-  if (!folderRes.ok) {
-    Logger.log({
-      phase: "EXPORT_GUARD",
-      ok: true,
-      reason: folderRes.reason,
-      doc_type: docType,
-      folder_name: folderRes.folderName || docType,
-      found_count: folderRes.foundCount || 0,
-      parent_folder_id: folderRes.parentFolderId || outputFolderId
-    });
-    return {
-      phase: "EXPORT_GUARD",
-      ok: true,
-      reason: folderRes.reason,
-      doc_type: docType,
-      exportedRows: 0,
-      exportedFiles: 0,
-      skipped: runtime.skipped,
-      errors: runtime.errors,
-      csvFileId: ""
-    };
-  }
-
-  const file = folderRes.folder.createFile(blob);
-  const csvFileId = file.getId();
-
-  belle_export_flushExportLog_(
-    exportLog,
-    runtime.exportFileIds,
-    runtime.nowIso,
-    csvFileId,
-    runtime.logChunkSize,
-    exportLogHeaderMap
-  );
-
-  if (runtime.skippedDetails.length > 0) {
-    belle_appendSkipLogRows(ss, skipLogSheetName, runtime.skippedDetails, runtime.nowIso, "EXPORT_SKIP");
-  }
-
-  const result = {
-    phase: "EXPORT_DONE",
-    ok: true,
-    reason: "EXPORTED",
-    exportedRows: runtime.csvRows.length,
-    exportedFiles: runtime.exportFileIds.length,
-    skipped: runtime.skipped,
-    errors: runtime.errors,
-    csvFileId: csvFileId
-  };
-  if (includeDocTypeInDoneResult) result.doc_type = docType;
-  Logger.log(result);
-  return result;
-}
-
 
 function belle_exportYayoiCsvInternal_(options) {
   const handlers = belle_export_getHandlersByRegistry_(options);
@@ -505,46 +201,195 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
   const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
   const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
   const skipLogSheetName = belle_getSkipLogSheetName(props);
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
 
   const ss = SpreadsheetApp.openById(sheetId);
   try {
+    function buildCountsJson(counts) {
+      if (!counts) return "";
+      return JSON.stringify({
+        total: counts.totalCount,
+        done: counts.doneCount,
+        retryable: counts.errorRetryableCount,
+        error_final: counts.errorFinalCount,
+        queued: counts.queuedRemaining
+      });
+    }
+    function logGuard(reason, counts, detail) {
+      belle_export_appendGuardLogRow_(ss, props, {
+        doc_type: BELLE_DOC_TYPE_RECEIPT,
+        queue_sheet_name: queueSheetName,
+        reason: reason,
+        counts_json: buildCountsJson(counts),
+        detail: detail || ""
+      });
+    }
     const fiscalRange = belle_yayoi_validateFiscalRange(fiscalStart, fiscalEnd);
-    const preflight = belle_export_skeleton_runQueuePreflight_({
-      ss: ss,
-      props: props,
-      docType: BELLE_DOC_TYPE_RECEIPT,
-      queueSheetName: queueSheetName,
-      fiscalRange: fiscalRange,
-      includeDocTypeInGuardResult: false,
-      includeDocTypeInStartLog: false
+    if (!fiscalRange.ok) {
+      logGuard(fiscalRange.reason || "FISCAL_RANGE_INVALID", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: fiscalRange.reason, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+    const queue = ss.getSheetByName(queueSheetName);
+    if (!queue) {
+      logGuard("QUEUE_SHEET_NOT_FOUND", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "QUEUE_SHEET_NOT_FOUND", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+
+    const baseHeader = belle_getQueueHeaderColumns();
+    const extraHeader = belle_getQueueLockHeaderColumns_();
+    const lastRow = queue.getLastRow();
+    if (lastRow < 2) {
+      logGuard("NO_ROWS", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "NO_ROWS", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+    const headerMap = belle_queue_ensureHeaderMapCanonical_(queue, baseHeader, extraHeader);
+    if (!headerMap) {
+      logGuard("INVALID_QUEUE_HEADER: missing required columns", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: missing required columns", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+
+    const rows = queue.getRange(2, 1, lastRow - 1, queue.getLastColumn()).getValues();
+    const counts = {
+      totalCount: 0,
+      doneCount: 0,
+      errorRetryableCount: 0,
+      errorFinalCount: 0,
+      queuedRemaining: 0
+    };
+    const pendingSamples = [];
+    const retryableSamples = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const fileId = String(row[headerMap["file_id"]] || "");
+      const fileName = String(row[headerMap["file_name"]] || "");
+      if (!fileId) continue;
+      counts.totalCount++;
+      const statusRaw = String(row[headerMap["status"]] || "");
+      const status = statusRaw || "QUEUED";
+      if (status === "DONE") counts.doneCount++;
+      else if (status === "ERROR_FINAL") counts.errorFinalCount++;
+      else if (status === "ERROR_RETRYABLE" || status === "ERROR") {
+        counts.errorRetryableCount++;
+        if (retryableSamples.length < 5) {
+          retryableSamples.push({ file_id: fileId, file_name: fileName, status: status });
+        }
+      } else {
+        counts.queuedRemaining++;
+        if (pendingSamples.length < 5) {
+          pendingSamples.push({ file_id: fileId, file_name: fileName, status: status });
+        }
+      }
+    }
+
+    Logger.log({
+      phase: "EXPORT_START",
+      ok: true,
+      totalCount: counts.totalCount,
+      doneCount: counts.doneCount,
+      errorRetryableCount: counts.errorRetryableCount,
+      errorFinalCount: counts.errorFinalCount,
+      queuedRemaining: counts.queuedRemaining
     });
-    if (!preflight.ok) return preflight.result;
 
-    const headerMap = preflight.headerMap;
-    const rows = preflight.rows;
+    if (counts.queuedRemaining > 0) {
+      logGuard("OCR_PENDING", counts, "");
+      const res = {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: "OCR_PENDING",
+        exportedRows: 0,
+        exportedFiles: 0,
+        errors: 0,
+        queuedRemaining: counts.queuedRemaining,
+        doneCount: counts.doneCount,
+        totalCount: counts.totalCount,
+        pendingSamples: pendingSamples,
+        csvFileId: ""
+      };
+      Logger.log(res);
+      return res;
+    }
+    if (counts.errorRetryableCount > 0) {
+      logGuard("OCR_RETRYABLE_REMAINING", counts, "");
+      const res = {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: "OCR_RETRYABLE_REMAINING",
+        exportedRows: 0,
+        exportedFiles: 0,
+        errors: 0,
+        queuedRemaining: 0,
+        doneCount: counts.doneCount,
+        totalCount: counts.totalCount,
+        pendingSamples: retryableSamples,
+        csvFileId: ""
+      };
+      Logger.log(res);
+      return res;
+    }
 
-    const exportLogSetup = belle_export_skeleton_prepareExportLog_({
-      ss: ss,
-      props: props,
-      docType: BELLE_DOC_TYPE_RECEIPT,
-      queueSheetName: queueSheetName,
-      includeDocTypeInExportLogGuardResult: false,
-      includeDocTypeInSchemaMismatchResult: true
-    });
-    if (!exportLogSetup.ok) return exportLogSetup.result;
+    const exportLogResult = belle_getOrCreateExportLogSheet(ss);
+    if (exportLogResult.guard) {
+      logGuard(exportLogResult.guard.reason || "EXPORT_LOG_GUARD", null, exportLogResult.guard.message || "");
+      Logger.log(exportLogResult.guard);
+      return {
+        phase: exportLogResult.guard.phase,
+        ok: true,
+        reason: exportLogResult.guard.reason,
+        exportedRows: 0,
+        exportedFiles: 0,
+        skipped: 0,
+        errors: 0,
+        csvFileId: ""
+      };
+    }
+    const exportLog = exportLogResult.sheet;
+    const exportHeader = belle_getExportLogHeaderColumns();
+    const exportHeaderInfo = belle_exportLog_buildHeaderMap_(exportLog, exportHeader);
+    if (!exportHeaderInfo.ok) {
+      const detail = belle_exportLog_buildSchemaMismatchDetail_(BELLE_DOC_TYPE_RECEIPT, "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
+      logGuard("EXPORT_LOG_SCHEMA_MISMATCH", null, detail);
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "EXPORT_LOG_SCHEMA_MISMATCH", doc_type: BELLE_DOC_TYPE_RECEIPT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+    const exportLogHeaderMap = exportHeaderInfo.headerMap;
+    const importSet = new Set();
+    const logRows = exportLog.getLastRow();
+    if (logRows >= 2) {
+      const fileIdCol = exportLogHeaderMap["file_id"];
+      const vals = exportLog.getRange(2, fileIdCol + 1, logRows - 1, 1).getValues();
+      for (let i = 0; i < vals.length; i++) {
+        const v = vals[i][0];
+        if (v) importSet.add(String(v));
+      }
+    }
 
-    const exportLog = exportLogSetup.exportLog;
-    const exportLogHeaderMap = exportLogSetup.exportLogHeaderMap;
-    const importSet = exportLogSetup.importSet;
-
-    const runtime = belle_export_skeleton_createRuntimeState_(ss, skipLogSheetName);
-    const csvRows = runtime.csvRows;
-    const exportFileIds = runtime.exportFileIds;
-    let skipped = runtime.skipped;
-    let errors = runtime.errors;
-    const processed = runtime.processed;
-    const skippedDetails = runtime.skippedDetails;
-    const flushSkipDetails = runtime.flushSkipDetails;
+    const csvRows = [];
+    const exportFileIds = [];
+    let skipped = 0;
+    let errors = 0;
+    const processed = new Set();
+    const skippedDetails = [];
+    const nowIso = new Date().toISOString();
+    const logChunkSize = 200;
+    const skipFlushThreshold = 200;
+    function flushSkipDetails() {
+      if (skippedDetails.length >= skipFlushThreshold) {
+        belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+        skippedDetails.length = 0;
+      }
+    }
 
     for (let i = 0; i < rows.length; i++) {
       if (csvRows.length >= batchMaxRows) break;
@@ -561,6 +406,12 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       const errorCode = String(row[headerMap["ocr_error_code"]] || "");
       const errorDetail = String(row[headerMap["ocr_error_detail"]] || "");
       if (!fileId) continue;
+      const corr = belle_export_observeCorr_(corrCounters, {
+        doc_type: docType || BELLE_DOC_TYPE_RECEIPT,
+        file_id: fileId,
+        queue_sheet_name: queueSheetName,
+        rowIndex: i + 2
+      }, props);
       if (processed.has(fileId)) continue;
       processed.add(fileId);
       if (importSet.has(fileId)) {
@@ -640,7 +491,7 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       if (status === "ERROR_FINAL") {
         summary = belle_yayoi_buildSummaryWithLabel(parsed, errorFinalTekiyoLabel);
       }
-      Logger.log({ phase: "TAX_RATE_METHOD", file_id: fileId, method: rateInfo.method || "UNKNOWN", reason: rateInfo.reason || "" });
+      Logger.log({ phase: "TAX_RATE_METHOD", file_id: fileId, corr_key: corr.corr_key, method: rateInfo.method || "UNKNOWN", reason: rateInfo.reason || "" });
 
       const dateInfo = belle_yayoi_resolveTransactionDate(parsed, fiscalRange);
       let date = dateInfo.dateYmdSlash;
@@ -689,22 +540,101 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       exportFileIds.push(fileId);
     }
 
-    runtime.skipped = skipped;
-    runtime.errors = errors;
-    return belle_export_skeleton_finalizeExport_({
-      runtime: runtime,
-      docType: BELLE_DOC_TYPE_RECEIPT,
-      outputFolderId: outputFolderId,
-      encodingMode: encodingMode,
-      eolMode: eolMode,
-      filenamePrefix: "belle_yayoi_receipt_export_",
-      exportLog: exportLog,
-      exportLogHeaderMap: exportLogHeaderMap,
-      includeDocTypeInNoRowsResult: false,
-      includeDocTypeInDoneResult: false,
-      ss: ss,
-      skipLogSheetName: skipLogSheetName
+      if (csvRows.length === 0) {
+        if (skippedDetails.length > 0) {
+          belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+        }
+      const res = { phase: "EXPORT_DONE", ok: true, reason: "NO_EXPORT_ROWS", exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, csvFileId: "" };
+      res.corr_counters = {
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      };
+      Logger.log(res);
+      Logger.log({
+        phase: "X1_CORR_EXPORT_COUNTERS",
+        ok: true,
+        doc_type: BELLE_DOC_TYPE_RECEIPT,
+        queue_sheet_name: queueSheetName,
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      });
+      return res;
+    }
+
+    const eol = eolMode === "LF" ? "\n" : "\r\n";
+    const csvText = csvRows.join(eol);
+    const ts = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmmss");
+    const filename = "belle_yayoi_receipt_export_" + ts + ".csv";
+    const blob = Utilities.newBlob("", "text/csv", filename);
+    if (encodingMode === "UTF8") {
+      blob.setDataFromString(csvText, "UTF-8");
+    } else {
+      blob.setDataFromString(csvText, "Shift_JIS");
+    }
+    const folderRes = belle_export_resolveOutputFolderByDocType_(outputFolderId, BELLE_DOC_TYPE_RECEIPT);
+    if (!folderRes.ok) {
+      Logger.log({
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: folderRes.reason,
+        doc_type: BELLE_DOC_TYPE_RECEIPT,
+        folder_name: folderRes.folderName || BELLE_DOC_TYPE_RECEIPT,
+        found_count: folderRes.foundCount || 0,
+        parent_folder_id: folderRes.parentFolderId || outputFolderId
+      });
+      return {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: folderRes.reason,
+        doc_type: BELLE_DOC_TYPE_RECEIPT,
+        exportedRows: 0,
+        exportedFiles: 0,
+        skipped: skipped,
+        errors: errors,
+        csvFileId: ""
+      };
+    }
+    const file = folderRes.folder.createFile(blob);
+    const csvFileId = file.getId();
+
+    belle_export_flushExportLog_(exportLog, exportFileIds, nowIso, csvFileId, logChunkSize, exportLogHeaderMap);
+
+    if (skippedDetails.length > 0) {
+      belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+    }
+
+    const result = {
+      phase: "EXPORT_DONE",
+      ok: true,
+      reason: "EXPORTED",
+      exportedRows: csvRows.length,
+      exportedFiles: exportFileIds.length,
+      skipped: skipped,
+      errors: errors,
+      csvFileId: csvFileId
+    };
+    result.corr_counters = {
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    };
+    Logger.log(result);
+    Logger.log({
+      phase: "X1_CORR_EXPORT_COUNTERS",
+      ok: true,
+      doc_type: BELLE_DOC_TYPE_RECEIPT,
+      queue_sheet_name: queueSheetName,
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
     });
+    return result;
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
     const stack = e && e.stack ? String(e.stack).split("\n")[0] : "";
@@ -724,46 +654,199 @@ function belle_exportYayoiCsvBankStatementInternal_(options) {
   const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
   const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
   const skipLogSheetName = belle_getSkipLogSheetName(props);
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
 
   const ss = SpreadsheetApp.openById(sheetId);
   try {
+    function buildCountsJson(counts) {
+      if (!counts) return "";
+      return JSON.stringify({
+        total: counts.totalCount,
+        done: counts.doneCount,
+        retryable: counts.errorRetryableCount,
+        error_final: counts.errorFinalCount,
+        queued: counts.queuedRemaining
+      });
+    }
+    function logGuard(reason, counts, detail) {
+      belle_export_appendGuardLogRow_(ss, props, {
+        doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+        queue_sheet_name: queueSheetName,
+        reason: reason,
+        counts_json: buildCountsJson(counts),
+        detail: detail || ""
+      });
+    }
     const fiscalRange = belle_yayoi_parseFiscalRangeAllowCrossYear_(fiscalStart, fiscalEnd);
-    const preflight = belle_export_skeleton_runQueuePreflight_({
-      ss: ss,
-      props: props,
-      docType: BELLE_DOC_TYPE_BANK_STATEMENT,
-      queueSheetName: queueSheetName,
-      fiscalRange: fiscalRange,
-      includeDocTypeInGuardResult: true,
-      includeDocTypeInStartLog: true
+    if (!fiscalRange.ok) {
+      logGuard(fiscalRange.reason || "FISCAL_RANGE_INVALID", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: fiscalRange.reason, doc_type: BELLE_DOC_TYPE_BANK_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+    const queue = ss.getSheetByName(queueSheetName);
+    if (!queue) {
+      logGuard("QUEUE_SHEET_NOT_FOUND", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "QUEUE_SHEET_NOT_FOUND", doc_type: BELLE_DOC_TYPE_BANK_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+
+    const baseHeader = belle_getQueueHeaderColumns();
+    const extraHeader = belle_getQueueLockHeaderColumns_();
+    const lastRow = queue.getLastRow();
+    if (lastRow < 2) {
+      logGuard("NO_ROWS", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "NO_ROWS", doc_type: BELLE_DOC_TYPE_BANK_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+    const headerMap = belle_queue_ensureHeaderMapCanonical_(queue, baseHeader, extraHeader);
+    if (!headerMap) {
+      logGuard("INVALID_QUEUE_HEADER: missing required columns", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: missing required columns", doc_type: BELLE_DOC_TYPE_BANK_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+
+    const rows = queue.getRange(2, 1, lastRow - 1, queue.getLastColumn()).getValues();
+    const counts = {
+      totalCount: 0,
+      doneCount: 0,
+      errorRetryableCount: 0,
+      errorFinalCount: 0,
+      queuedRemaining: 0
+    };
+    const pendingSamples = [];
+    const retryableSamples = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const fileId = String(row[headerMap["file_id"]] || "");
+      const fileName = String(row[headerMap["file_name"]] || "");
+      if (!fileId) continue;
+      counts.totalCount++;
+      const statusRaw = String(row[headerMap["status"]] || "");
+      const status = statusRaw || "QUEUED";
+      if (status === "DONE") counts.doneCount++;
+      else if (status === "ERROR_FINAL") counts.errorFinalCount++;
+      else if (status === "ERROR_RETRYABLE" || status === "ERROR") {
+        counts.errorRetryableCount++;
+        if (retryableSamples.length < 5) {
+          retryableSamples.push({ file_id: fileId, file_name: fileName, status: status });
+        }
+      } else {
+        counts.queuedRemaining++;
+        if (pendingSamples.length < 5) {
+          pendingSamples.push({ file_id: fileId, file_name: fileName, status: status });
+        }
+      }
+    }
+
+    Logger.log({
+      phase: "EXPORT_START",
+      ok: true,
+      doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+      totalCount: counts.totalCount,
+      doneCount: counts.doneCount,
+      errorRetryableCount: counts.errorRetryableCount,
+      errorFinalCount: counts.errorFinalCount,
+      queuedRemaining: counts.queuedRemaining
     });
-    if (!preflight.ok) return preflight.result;
 
-    const headerMap = preflight.headerMap;
-    const rows = preflight.rows;
+    if (counts.queuedRemaining > 0) {
+      logGuard("OCR_PENDING", counts, "");
+      const res = {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: "OCR_PENDING",
+        doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+        exportedRows: 0,
+        exportedFiles: 0,
+        errors: 0,
+        queuedRemaining: counts.queuedRemaining,
+        doneCount: counts.doneCount,
+        totalCount: counts.totalCount,
+        pendingSamples: pendingSamples,
+        csvFileId: ""
+      };
+      Logger.log(res);
+      return res;
+    }
+    if (counts.errorRetryableCount > 0) {
+      logGuard("OCR_RETRYABLE_REMAINING", counts, "");
+      const res = {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: "OCR_RETRYABLE_REMAINING",
+        doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+        exportedRows: 0,
+        exportedFiles: 0,
+        errors: 0,
+        queuedRemaining: 0,
+        doneCount: counts.doneCount,
+        totalCount: counts.totalCount,
+        pendingSamples: retryableSamples,
+        csvFileId: ""
+      };
+      Logger.log(res);
+      return res;
+    }
 
-    const exportLogSetup = belle_export_skeleton_prepareExportLog_({
-      ss: ss,
-      props: props,
-      docType: BELLE_DOC_TYPE_BANK_STATEMENT,
-      queueSheetName: queueSheetName,
-      includeDocTypeInExportLogGuardResult: true,
-      includeDocTypeInSchemaMismatchResult: true
-    });
-    if (!exportLogSetup.ok) return exportLogSetup.result;
+    const exportLogResult = belle_getOrCreateExportLogSheet(ss);
+    if (exportLogResult.guard) {
+      logGuard(exportLogResult.guard.reason || "EXPORT_LOG_GUARD", null, exportLogResult.guard.message || "");
+      Logger.log(exportLogResult.guard);
+      return {
+        phase: exportLogResult.guard.phase,
+        ok: true,
+        reason: exportLogResult.guard.reason,
+        doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+        exportedRows: 0,
+        exportedFiles: 0,
+        skipped: 0,
+        errors: 0,
+        csvFileId: ""
+      };
+    }
+    const exportLog = exportLogResult.sheet;
+    const exportHeader = belle_getExportLogHeaderColumns();
+    const exportHeaderInfo = belle_exportLog_buildHeaderMap_(exportLog, exportHeader);
+    if (!exportHeaderInfo.ok) {
+      const detail = belle_exportLog_buildSchemaMismatchDetail_(BELLE_DOC_TYPE_BANK_STATEMENT, "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
+      logGuard("EXPORT_LOG_SCHEMA_MISMATCH", null, detail);
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "EXPORT_LOG_SCHEMA_MISMATCH", doc_type: BELLE_DOC_TYPE_BANK_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+    const exportLogHeaderMap = exportHeaderInfo.headerMap;
+    const importSet = new Set();
+    const logRows = exportLog.getLastRow();
+    if (logRows >= 2) {
+      const fileIdCol = exportLogHeaderMap["file_id"];
+      const vals = exportLog.getRange(2, fileIdCol + 1, logRows - 1, 1).getValues();
+      for (let i = 0; i < vals.length; i++) {
+        const v = vals[i][0];
+        if (v) importSet.add(String(v));
+      }
+    }
 
-    const exportLog = exportLogSetup.exportLog;
-    const exportLogHeaderMap = exportLogSetup.exportLogHeaderMap;
-    const importSet = exportLogSetup.importSet;
-
-    const runtime = belle_export_skeleton_createRuntimeState_(ss, skipLogSheetName);
-    const csvRows = runtime.csvRows;
-    const exportFileIds = runtime.exportFileIds;
-    let skipped = runtime.skipped;
-    let errors = runtime.errors;
-    const processed = runtime.processed;
-    const skippedDetails = runtime.skippedDetails;
-    const flushSkipDetails = runtime.flushSkipDetails;
+    const csvRows = [];
+    const exportFileIds = [];
+    let skipped = 0;
+    let errors = 0;
+    const processed = new Set();
+    const skippedDetails = [];
+    const nowIso = new Date().toISOString();
+    const logChunkSize = 200;
+    const skipFlushThreshold = 200;
+    function flushSkipDetails() {
+      if (skippedDetails.length >= skipFlushThreshold) {
+        belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+        skippedDetails.length = 0;
+      }
+    }
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -776,6 +859,12 @@ function belle_exportYayoiCsvBankStatementInternal_(options) {
       const driveUrl = String(row[headerMap["drive_url"]] || "");
       const ocrJson = String(row[headerMap["ocr_json"]] || "");
       if (!fileId) continue;
+      belle_export_observeCorr_(corrCounters, {
+        doc_type: docType || BELLE_DOC_TYPE_BANK_STATEMENT,
+        file_id: fileId,
+        queue_sheet_name: queueSheetName,
+        rowIndex: i + 2
+      }, props);
       if (processed.has(fileId)) continue;
       processed.add(fileId);
       if (importSet.has(fileId)) {
@@ -855,22 +944,102 @@ function belle_exportYayoiCsvBankStatementInternal_(options) {
       exportFileIds.push(fileId);
     }
 
-    runtime.skipped = skipped;
-    runtime.errors = errors;
-    return belle_export_skeleton_finalizeExport_({
-      runtime: runtime,
-      docType: BELLE_DOC_TYPE_BANK_STATEMENT,
-      outputFolderId: outputFolderId,
-      encodingMode: encodingMode,
-      eolMode: eolMode,
-      filenamePrefix: "belle_yayoi_" + BELLE_DOC_TYPE_BANK_STATEMENT + "_export_",
-      exportLog: exportLog,
-      exportLogHeaderMap: exportLogHeaderMap,
-      includeDocTypeInNoRowsResult: true,
-      includeDocTypeInDoneResult: true,
-      ss: ss,
-      skipLogSheetName: skipLogSheetName
+      if (csvRows.length === 0) {
+        if (skippedDetails.length > 0) {
+          belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+        }
+      const res = { phase: "EXPORT_DONE", ok: true, reason: "NO_EXPORT_ROWS", doc_type: BELLE_DOC_TYPE_BANK_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, csvFileId: "" };
+      res.corr_counters = {
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      };
+      Logger.log(res);
+      Logger.log({
+        phase: "X1_CORR_EXPORT_COUNTERS",
+        ok: true,
+        doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+        queue_sheet_name: queueSheetName,
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      });
+      return res;
+    }
+
+    const eol = eolMode === "LF" ? "\n" : "\r\n";
+    const csvText = csvRows.join(eol);
+    const ts = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmmss");
+    const filename = "belle_yayoi_" + BELLE_DOC_TYPE_BANK_STATEMENT + "_export_" + ts + ".csv";
+    const blob = Utilities.newBlob("", "text/csv", filename);
+    if (encodingMode === "UTF8") {
+      blob.setDataFromString(csvText, "UTF-8");
+    } else {
+      blob.setDataFromString(csvText, "Shift_JIS");
+    }
+    const folderRes = belle_export_resolveOutputFolderByDocType_(outputFolderId, BELLE_DOC_TYPE_BANK_STATEMENT);
+    if (!folderRes.ok) {
+      Logger.log({
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: folderRes.reason,
+        doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+        folder_name: folderRes.folderName || BELLE_DOC_TYPE_BANK_STATEMENT,
+        found_count: folderRes.foundCount || 0,
+        parent_folder_id: folderRes.parentFolderId || outputFolderId
+      });
+      return {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: folderRes.reason,
+        doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+        exportedRows: 0,
+        exportedFiles: 0,
+        skipped: skipped,
+        errors: errors,
+        csvFileId: ""
+      };
+    }
+    const file = folderRes.folder.createFile(blob);
+    const csvFileId = file.getId();
+
+    belle_export_flushExportLog_(exportLog, exportFileIds, nowIso, csvFileId, logChunkSize, exportLogHeaderMap);
+
+    if (skippedDetails.length > 0) {
+      belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+    }
+
+    const result = {
+      phase: "EXPORT_DONE",
+      ok: true,
+      reason: "EXPORTED",
+      doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+      exportedRows: csvRows.length,
+      exportedFiles: exportFileIds.length,
+      skipped: skipped,
+      errors: errors,
+      csvFileId: csvFileId
+    };
+    result.corr_counters = {
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    };
+    Logger.log(result);
+    Logger.log({
+      phase: "X1_CORR_EXPORT_COUNTERS",
+      ok: true,
+      doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+      queue_sheet_name: queueSheetName,
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
     });
+    return result;
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
     const stack = e && e.stack ? String(e.stack).split("\n")[0] : "";
@@ -890,46 +1059,199 @@ function belle_exportYayoiCsvCcStatementInternal_(options) {
   const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
   const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
   const skipLogSheetName = belle_getSkipLogSheetName(props);
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
 
   const ss = SpreadsheetApp.openById(sheetId);
   try {
+    function buildCountsJson(counts) {
+      if (!counts) return "";
+      return JSON.stringify({
+        total: counts.totalCount,
+        done: counts.doneCount,
+        retryable: counts.errorRetryableCount,
+        error_final: counts.errorFinalCount,
+        queued: counts.queuedRemaining
+      });
+    }
+    function logGuard(reason, counts, detail) {
+      belle_export_appendGuardLogRow_(ss, props, {
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+        queue_sheet_name: queueSheetName,
+        reason: reason,
+        counts_json: buildCountsJson(counts),
+        detail: detail || ""
+      });
+    }
     const fiscalRange = belle_yayoi_parseFiscalRangeAllowCrossYear_(fiscalStart, fiscalEnd);
-    const preflight = belle_export_skeleton_runQueuePreflight_({
-      ss: ss,
-      props: props,
-      docType: BELLE_DOC_TYPE_CC_STATEMENT,
-      queueSheetName: queueSheetName,
-      fiscalRange: fiscalRange,
-      includeDocTypeInGuardResult: true,
-      includeDocTypeInStartLog: true
+    if (!fiscalRange.ok) {
+      logGuard(fiscalRange.reason || "FISCAL_RANGE_INVALID", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: fiscalRange.reason, doc_type: BELLE_DOC_TYPE_CC_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+    const queue = ss.getSheetByName(queueSheetName);
+    if (!queue) {
+      logGuard("QUEUE_SHEET_NOT_FOUND", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "QUEUE_SHEET_NOT_FOUND", doc_type: BELLE_DOC_TYPE_CC_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+
+    const baseHeader = belle_getQueueHeaderColumns();
+    const extraHeader = belle_getQueueLockHeaderColumns_();
+    const lastRow = queue.getLastRow();
+    if (lastRow < 2) {
+      logGuard("NO_ROWS", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "NO_ROWS", doc_type: BELLE_DOC_TYPE_CC_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+    const headerMap = belle_queue_ensureHeaderMapCanonical_(queue, baseHeader, extraHeader);
+    if (!headerMap) {
+      logGuard("INVALID_QUEUE_HEADER: missing required columns", null, "");
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "INVALID_QUEUE_HEADER: missing required columns", doc_type: BELLE_DOC_TYPE_CC_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+
+    const rows = queue.getRange(2, 1, lastRow - 1, queue.getLastColumn()).getValues();
+    const counts = {
+      totalCount: 0,
+      doneCount: 0,
+      errorRetryableCount: 0,
+      errorFinalCount: 0,
+      queuedRemaining: 0
+    };
+    const pendingSamples = [];
+    const retryableSamples = [];
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const fileId = String(row[headerMap["file_id"]] || "");
+      const fileName = String(row[headerMap["file_name"]] || "");
+      if (!fileId) continue;
+      counts.totalCount++;
+      const statusRaw = String(row[headerMap["status"]] || "");
+      const status = statusRaw || "QUEUED";
+      if (status === "DONE") counts.doneCount++;
+      else if (status === "ERROR_FINAL") counts.errorFinalCount++;
+      else if (status === "ERROR_RETRYABLE" || status === "ERROR") {
+        counts.errorRetryableCount++;
+        if (retryableSamples.length < 5) {
+          retryableSamples.push({ file_id: fileId, file_name: fileName, status: status });
+        }
+      } else {
+        counts.queuedRemaining++;
+        if (pendingSamples.length < 5) {
+          pendingSamples.push({ file_id: fileId, file_name: fileName, status: status });
+        }
+      }
+    }
+
+    Logger.log({
+      phase: "EXPORT_START",
+      ok: true,
+      doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+      totalCount: counts.totalCount,
+      doneCount: counts.doneCount,
+      errorRetryableCount: counts.errorRetryableCount,
+      errorFinalCount: counts.errorFinalCount,
+      queuedRemaining: counts.queuedRemaining
     });
-    if (!preflight.ok) return preflight.result;
 
-    const headerMap = preflight.headerMap;
-    const rows = preflight.rows;
+    if (counts.queuedRemaining > 0) {
+      logGuard("OCR_PENDING", counts, "");
+      const res = {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: "OCR_PENDING",
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+        exportedRows: 0,
+        exportedFiles: 0,
+        errors: 0,
+        queuedRemaining: counts.queuedRemaining,
+        doneCount: counts.doneCount,
+        totalCount: counts.totalCount,
+        pendingSamples: pendingSamples,
+        csvFileId: ""
+      };
+      Logger.log(res);
+      return res;
+    }
+    if (counts.errorRetryableCount > 0) {
+      logGuard("OCR_RETRYABLE_REMAINING", counts, "");
+      const res = {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: "OCR_RETRYABLE_REMAINING",
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+        exportedRows: 0,
+        exportedFiles: 0,
+        errors: 0,
+        queuedRemaining: 0,
+        doneCount: counts.doneCount,
+        totalCount: counts.totalCount,
+        pendingSamples: retryableSamples,
+        csvFileId: ""
+      };
+      Logger.log(res);
+      return res;
+    }
 
-    const exportLogSetup = belle_export_skeleton_prepareExportLog_({
-      ss: ss,
-      props: props,
-      docType: BELLE_DOC_TYPE_CC_STATEMENT,
-      queueSheetName: queueSheetName,
-      includeDocTypeInExportLogGuardResult: true,
-      includeDocTypeInSchemaMismatchResult: false
-    });
-    if (!exportLogSetup.ok) return exportLogSetup.result;
+    const exportLogResult = belle_getOrCreateExportLogSheet(ss);
+    if (exportLogResult.guard) {
+      logGuard(exportLogResult.guard.reason || "EXPORT_LOG_GUARD", null, exportLogResult.guard.message || "");
+      Logger.log(exportLogResult.guard);
+      return {
+        phase: exportLogResult.guard.phase,
+        ok: true,
+        reason: exportLogResult.guard.reason,
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+        exportedRows: 0,
+        exportedFiles: 0,
+        skipped: 0,
+        errors: 0,
+        csvFileId: ""
+      };
+    }
+    const exportLog = exportLogResult.sheet;
+    const exportHeader = belle_getExportLogHeaderColumns();
+    const exportHeaderInfo = belle_exportLog_buildHeaderMap_(exportLog, exportHeader);
+    if (!exportHeaderInfo.ok) {
+      const detail = belle_exportLog_buildSchemaMismatchDetail_(BELLE_DOC_TYPE_CC_STATEMENT, "EXPORT_LOG", exportHeader, exportHeaderInfo.actualHeader);
+      logGuard("EXPORT_LOG_SCHEMA_MISMATCH", null, detail);
+      const res = { phase: "EXPORT_GUARD", ok: true, reason: "EXPORT_LOG_SCHEMA_MISMATCH", exportedRows: 0, exportedFiles: 0, skipped: 0, errors: 0, csvFileId: "" };
+      Logger.log(res);
+      return res;
+    }
+    const exportLogHeaderMap = exportHeaderInfo.headerMap;
+    const importSet = new Set();
+    const logRows = exportLog.getLastRow();
+    if (logRows >= 2) {
+      const fileIdCol = exportLogHeaderMap["file_id"];
+      const vals = exportLog.getRange(2, fileIdCol + 1, logRows - 1, 1).getValues();
+      for (let i = 0; i < vals.length; i++) {
+        const v = vals[i][0];
+        if (v) importSet.add(String(v));
+      }
+    }
 
-    const exportLog = exportLogSetup.exportLog;
-    const exportLogHeaderMap = exportLogSetup.exportLogHeaderMap;
-    const importSet = exportLogSetup.importSet;
-
-    const runtime = belle_export_skeleton_createRuntimeState_(ss, skipLogSheetName);
-    const csvRows = runtime.csvRows;
-    const exportFileIds = runtime.exportFileIds;
-    let skipped = runtime.skipped;
-    let errors = runtime.errors;
-    const processed = runtime.processed;
-    const skippedDetails = runtime.skippedDetails;
-    const flushSkipDetails = runtime.flushSkipDetails;
+    const csvRows = [];
+    const exportFileIds = [];
+    let skipped = 0;
+    let errors = 0;
+    const processed = new Set();
+    const skippedDetails = [];
+    const nowIso = new Date().toISOString();
+    const logChunkSize = 200;
+    const skipFlushThreshold = 200;
+    function flushSkipDetails() {
+      if (skippedDetails.length >= skipFlushThreshold) {
+        belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+        skippedDetails.length = 0;
+      }
+    }
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
@@ -942,6 +1264,12 @@ function belle_exportYayoiCsvCcStatementInternal_(options) {
       const driveUrl = String(row[headerMap["drive_url"]] || "");
       const ocrJson = String(row[headerMap["ocr_json"]] || "");
       if (!fileId) continue;
+      belle_export_observeCorr_(corrCounters, {
+        doc_type: docType || BELLE_DOC_TYPE_CC_STATEMENT,
+        file_id: fileId,
+        queue_sheet_name: queueSheetName,
+        rowIndex: i + 2
+      }, props);
       if (processed.has(fileId)) continue;
       processed.add(fileId);
       if (importSet.has(fileId)) {
@@ -1021,22 +1349,102 @@ function belle_exportYayoiCsvCcStatementInternal_(options) {
       exportFileIds.push(fileId);
     }
 
-    runtime.skipped = skipped;
-    runtime.errors = errors;
-    return belle_export_skeleton_finalizeExport_({
-      runtime: runtime,
-      docType: BELLE_DOC_TYPE_CC_STATEMENT,
-      outputFolderId: outputFolderId,
-      encodingMode: encodingMode,
-      eolMode: eolMode,
-      filenamePrefix: "belle_yayoi_" + BELLE_DOC_TYPE_CC_STATEMENT + "_export_",
-      exportLog: exportLog,
-      exportLogHeaderMap: exportLogHeaderMap,
-      includeDocTypeInNoRowsResult: true,
-      includeDocTypeInDoneResult: true,
-      ss: ss,
-      skipLogSheetName: skipLogSheetName
+      if (csvRows.length === 0) {
+        if (skippedDetails.length > 0) {
+          belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+        }
+      const res = { phase: "EXPORT_DONE", ok: true, reason: "NO_EXPORT_ROWS", doc_type: BELLE_DOC_TYPE_CC_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, csvFileId: "" };
+      res.corr_counters = {
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      };
+      Logger.log(res);
+      Logger.log({
+        phase: "X1_CORR_EXPORT_COUNTERS",
+        ok: true,
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+        queue_sheet_name: queueSheetName,
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      });
+      return res;
+    }
+
+    const eol = eolMode === "LF" ? "\n" : "\r\n";
+    const csvText = csvRows.join(eol);
+    const ts = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmmss");
+    const filename = "belle_yayoi_" + BELLE_DOC_TYPE_CC_STATEMENT + "_export_" + ts + ".csv";
+    const blob = Utilities.newBlob("", "text/csv", filename);
+    if (encodingMode === "UTF8") {
+      blob.setDataFromString(csvText, "UTF-8");
+    } else {
+      blob.setDataFromString(csvText, "Shift_JIS");
+    }
+    const folderRes = belle_export_resolveOutputFolderByDocType_(outputFolderId, BELLE_DOC_TYPE_CC_STATEMENT);
+    if (!folderRes.ok) {
+      Logger.log({
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: folderRes.reason,
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+        folder_name: folderRes.folderName || BELLE_DOC_TYPE_CC_STATEMENT,
+        found_count: folderRes.foundCount || 0,
+        parent_folder_id: folderRes.parentFolderId || outputFolderId
+      });
+      return {
+        phase: "EXPORT_GUARD",
+        ok: true,
+        reason: folderRes.reason,
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+        exportedRows: 0,
+        exportedFiles: 0,
+        skipped: skipped,
+        errors: errors,
+        csvFileId: ""
+      };
+    }
+    const file = folderRes.folder.createFile(blob);
+    const csvFileId = file.getId();
+
+    belle_export_flushExportLog_(exportLog, exportFileIds, nowIso, csvFileId, logChunkSize, exportLogHeaderMap);
+
+    if (skippedDetails.length > 0) {
+      belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+    }
+
+    const result = {
+      phase: "EXPORT_DONE",
+      ok: true,
+      reason: "EXPORTED",
+      doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+      exportedRows: csvRows.length,
+      exportedFiles: exportFileIds.length,
+      skipped: skipped,
+      errors: errors,
+      csvFileId: csvFileId
+    };
+    result.corr_counters = {
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    };
+    Logger.log(result);
+    Logger.log({
+      phase: "X1_CORR_EXPORT_COUNTERS",
+      ok: true,
+      doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+      queue_sheet_name: queueSheetName,
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
     });
+    return result;
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
     const stack = e && e.stack ? String(e.stack).split("\n")[0] : "";

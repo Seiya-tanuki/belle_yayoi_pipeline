@@ -195,3 +195,173 @@ function belle_getOutputFolderId(props) {
   const p = props || belle_cfg_getProps_();
   return String(p.getProperty("BELLE_OUTPUT_FOLDER_ID") || p.getProperty("BELLE_DRIVE_FOLDER_ID") || "");
 }
+
+function belle_corr_toText_(value) {
+  if (value === null || value === undefined) return "";
+  return String(value).trim();
+}
+
+function belle_corr_composeActionKey_(action, rid) {
+  const actionText = belle_corr_toText_(action);
+  const ridText = belle_corr_toText_(rid);
+  if (!actionText || !ridText) return "";
+  return actionText + "::" + ridText;
+}
+
+function belle_corr_composeItemKey_(docType, fileId) {
+  const docTypeText = belle_corr_toText_(docType);
+  const fileIdText = belle_corr_toText_(fileId);
+  if (!docTypeText || !fileIdText) return "";
+  return docTypeText + "::" + fileIdText;
+}
+
+function belle_corr_isItemKeyFormat_(value) {
+  const s = belle_corr_toText_(value);
+  if (!s) return false;
+  const sep = s.indexOf("::");
+  if (sep <= 0) return false;
+  if (sep >= s.length - 2) return false;
+  return s.indexOf("::", sep + 2) < 0;
+}
+
+function belle_corr_parseItemKey_(value) {
+  const s = belle_corr_toText_(value);
+  if (!belle_corr_isItemKeyFormat_(s)) {
+    return { ok: false, doc_type: "", file_id: "" };
+  }
+  const sep = s.indexOf("::");
+  return {
+    ok: true,
+    doc_type: s.slice(0, sep),
+    file_id: s.slice(sep + 2)
+  };
+}
+
+function belle_corr_getReadMode_(props) {
+  const p = props || belle_cfg_getProps_();
+  const raw = belle_cfg_getString_(p, "BELLE_X1_CORRELATION_READ_MODE", {
+    required: false,
+    trim: true,
+    defaultValue: "compatibility"
+  });
+  const normalized = String(raw || "").toLowerCase();
+  if (normalized === "normalized_first" || normalized === "normalized-first" || normalized === "normalized") {
+    return "normalized_first";
+  }
+  return "compatibility";
+}
+
+function belle_corr_resolveItemKey_(input, opts) {
+  const source = input && typeof input === "object" ? input : {};
+  const options = opts && typeof opts === "object" ? opts : {};
+  const props = options.props || belle_cfg_getProps_();
+  const readMode = options.mode ? String(options.mode) : belle_corr_getReadMode_(props);
+  const mode = readMode === "normalized_first" ? "normalized_first" : "compatibility";
+  const docType = belle_corr_toText_(source.doc_type || source.docType);
+  const fileId = belle_corr_toText_(source.file_id || source.fileId);
+  const providedCorrKey = belle_corr_toText_(source.corr_key || source.corrKey);
+  const providedValid = belle_corr_isItemKeyFormat_(providedCorrKey);
+  const legacyCorrKey = belle_corr_composeItemKey_(docType, fileId);
+
+  let corrKey = "";
+  let missing = false;
+  let invalidFormat = false;
+  let derivedFromLegacy = false;
+  let mismatch = false;
+
+  if (mode === "normalized_first") {
+    if (providedCorrKey && providedValid) {
+      corrKey = providedCorrKey;
+    } else if (legacyCorrKey) {
+      corrKey = legacyCorrKey;
+      derivedFromLegacy = true;
+      if (providedCorrKey && !providedValid) invalidFormat = true;
+    } else {
+      if (providedCorrKey && !providedValid) invalidFormat = true;
+      missing = true;
+    }
+  } else {
+    if (legacyCorrKey) {
+      corrKey = legacyCorrKey;
+      if (!providedCorrKey || !providedValid || providedCorrKey !== legacyCorrKey) {
+        derivedFromLegacy = true;
+      }
+      if (providedCorrKey && !providedValid) invalidFormat = true;
+    } else if (providedCorrKey && providedValid) {
+      corrKey = providedCorrKey;
+    } else {
+      if (providedCorrKey && !providedValid) invalidFormat = true;
+      missing = true;
+    }
+  }
+
+  if (legacyCorrKey && corrKey && legacyCorrKey !== corrKey) {
+    mismatch = true;
+  }
+
+  return {
+    mode: mode,
+    corr_key: corrKey,
+    doc_type: docType,
+    file_id: fileId,
+    missing: missing,
+    invalid_format: invalidFormat,
+    derived_from_legacy: derivedFromLegacy,
+    mismatch: mismatch
+  };
+}
+
+function belle_corr_createCounters_() {
+  return {
+    missing: 0,
+    invalid: 0,
+    derived: 0,
+    mismatch: 0
+  };
+}
+
+function belle_corr_countResolved_(counters, resolved) {
+  const out = counters && typeof counters === "object" ? counters : belle_corr_createCounters_();
+  const value = resolved && typeof resolved === "object" ? resolved : null;
+  if (!value) return out;
+  if (value.missing) out.missing++;
+  if (value.invalid_format) out.invalid++;
+  if (value.derived_from_legacy) out.derived++;
+  if (value.mismatch) out.mismatch++;
+  return out;
+}
+
+function belle_corr_emitSignal_(signal, payload) {
+  const data = payload && typeof payload === "object" ? payload : {};
+  const row = { phase: String(signal || "X1_CORR"), ok: true };
+  const keys = Object.keys(data);
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    row[key] = data[key];
+  }
+  Logger.log(row);
+  return row;
+}
+
+function belle_corr_observeItem_(signal, counters, input, opts) {
+  const source = input && typeof input === "object" ? input : {};
+  const resolved = belle_corr_resolveItemKey_(source, opts);
+  belle_corr_countResolved_(counters, resolved);
+  const event = {
+    doc_type: source.doc_type !== undefined ? source.doc_type : source.docType,
+    file_id: source.file_id !== undefined ? source.file_id : source.fileId,
+    corr_key: resolved.corr_key,
+    corr_action_key: source.corr_action_key || source.corrActionKey || "",
+    rid: source.rid || "",
+    action: source.action || "",
+    queue_sheet_name: source.queue_sheet_name || source.queueSheetName || "",
+    rowIndex: source.rowIndex !== undefined ? source.rowIndex : "",
+    mode: resolved.mode,
+    missing: resolved.missing,
+    invalid: resolved.invalid_format,
+    derived: resolved.derived_from_legacy,
+    mismatch: resolved.mismatch
+  };
+  belle_corr_emitSignal_(signal, event);
+  return resolved;
+}

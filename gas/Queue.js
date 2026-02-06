@@ -66,37 +66,64 @@ function belle_queue_loadExistingFileIds_(sh, headerMap) {
   return existing;
 }
 
-function belle_queue_buildIngestRowsForDocType_(baseHeader, files, docType, nowIso) {
-  const rows = [];
-  for (let j = 0; j < files.length; j++) {
-    const f = files[j];
-    const row = belle_queue_buildRow_(baseHeader, {
-      status: "QUEUED",
-      file_id: String(f.id),
-      file_name: String(f.name || ""),
-      mime_type: String(f.mimeType || ""),
-      drive_url: String(f.url || ""),
-      queued_at_iso: nowIso,
-      doc_type: docType,
-      source_subfolder: String(f.source_subfolder || ""),
-      ocr_json: "",
-      ocr_error: "",
-      ocr_attempts: "",
-      ocr_last_attempt_at_iso: "",
-      ocr_next_retry_at_iso: "",
-      ocr_error_code: "",
-      ocr_error_detail: ""
-    });
-    rows.push(row);
+function belle_queue_resolveCorr_(payload, props) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  if (typeof belle_corr_resolveItemKey_ === "function") {
+    return belle_corr_resolveItemKey_(source, { props: props });
   }
-  return rows;
+  const docType = String(source.doc_type || source.docType || "").trim();
+  const fileId = String(source.file_id || source.fileId || "").trim();
+  const corrKey = docType && fileId ? (docType + "::" + fileId) : "";
+  return {
+    mode: "compatibility",
+    corr_key: corrKey,
+    doc_type: docType,
+    file_id: fileId,
+    missing: !corrKey,
+    invalid_format: false,
+    derived_from_legacy: !!corrKey,
+    mismatch: false
+  };
 }
 
-function belle_queue_appendRows_(sh, rows, width) {
-  if (!rows || rows.length === 0) return 0;
-  const startRow = sh.getLastRow() + 1;
-  sh.getRange(startRow, 1, rows.length, width).setValues(rows);
-  return rows.length;
+function belle_queue_observeCorr_(counters, payload, props) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  if (typeof belle_corr_observeItem_ === "function") {
+    return belle_corr_observeItem_("X1_CORR_QUEUE_ITEM", counters, source, { props: props });
+  }
+  const resolved = belle_queue_resolveCorr_(source, props);
+  if (counters && typeof counters === "object") {
+    if (resolved.missing) counters.missing++;
+    if (resolved.invalid_format) counters.invalid++;
+    if (resolved.derived_from_legacy) counters.derived++;
+    if (resolved.mismatch) counters.mismatch++;
+  }
+  Logger.log({
+    phase: "X1_CORR_QUEUE_ITEM",
+    ok: true,
+    doc_type: source.doc_type || source.docType || "",
+    file_id: source.file_id || source.fileId || "",
+    corr_key: resolved.corr_key,
+    queue_sheet_name: source.queue_sheet_name || source.queueSheetName || "",
+    rowIndex: source.rowIndex !== undefined ? source.rowIndex : "",
+    mode: resolved.mode,
+    missing: resolved.missing,
+    invalid: resolved.invalid_format,
+    derived: resolved.derived_from_legacy,
+    mismatch: resolved.mismatch
+  });
+  return resolved;
+}
+
+function belle_queue_collectSampleCorrKey_(sampleCorrKeys, docType, fileId) {
+  const out = Array.isArray(sampleCorrKeys) ? sampleCorrKeys : [];
+  const resolved = belle_queue_resolveCorr_({ doc_type: docType, file_id: fileId });
+  const corrKey = resolved.corr_key;
+  if (!corrKey) return out;
+  if (out.indexOf(corrKey) >= 0) return out;
+  if (out.length >= 20) return out;
+  out.push(corrKey);
+  return out;
 }
 
 /**
@@ -116,6 +143,10 @@ function belle_queueFolderFilesToSheetInternal_() {
   const extraHeader = belle_getQueueLockHeaderColumns_();
   const nowIso = new Date().toISOString();
   const queuedByDocType = {};
+  const sampleCorrKeys = [];
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
   let queuedTotal = 0;
 
   for (let i = 0; i < activeDocTypes.length; i++) {
@@ -128,10 +159,45 @@ function belle_queueFolderFilesToSheetInternal_() {
     if (!headerMap) throw new Error("INVALID_QUEUE_HEADER: " + sheetName);
     const existing = belle_queue_loadExistingFileIds_(sh, headerMap);
     const files = belle_queue_filterNewFiles_(filesByDocType[docType] || [], existing);
-    const rows = belle_queue_buildIngestRowsForDocType_(baseHeader, files, docType, nowIso);
-    const appended = belle_queue_appendRows_(sh, rows, baseHeader.length);
-    queuedByDocType[docType] = appended;
-    queuedTotal += appended;
+    const rows = [];
+    for (let j = 0; j < files.length; j++) {
+      const f = files[j];
+      const fileId = String(f.id);
+      belle_queue_collectSampleCorrKey_(sampleCorrKeys, docType, fileId);
+      const row = belle_queue_buildRow_(baseHeader, {
+        status: "QUEUED",
+        file_id: fileId,
+        file_name: String(f.name || ""),
+        mime_type: String(f.mimeType || ""),
+        drive_url: String(f.url || ""),
+        queued_at_iso: nowIso,
+        doc_type: docType,
+        source_subfolder: String(f.source_subfolder || ""),
+        ocr_json: "",
+        ocr_error: "",
+        ocr_attempts: "",
+        ocr_last_attempt_at_iso: "",
+        ocr_next_retry_at_iso: "",
+        ocr_error_code: "",
+        ocr_error_detail: ""
+      });
+      rows.push(row);
+    }
+    if (rows.length > 0) {
+      const startRow = sh.getLastRow() + 1;
+      sh.getRange(startRow, 1, rows.length, baseHeader.length).setValues(rows);
+      for (let j = 0; j < rows.length; j++) {
+        const f = files[j];
+        belle_queue_observeCorr_(corrCounters, {
+          doc_type: docType,
+          file_id: String(f && f.id ? f.id : ""),
+          queue_sheet_name: sheetName,
+          rowIndex: startRow + j
+        }, props);
+      }
+    }
+    queuedByDocType[docType] = rows.length;
+    queuedTotal += rows.length;
   }
 
   if (skipped.length > 0) {
@@ -143,9 +209,18 @@ function belle_queueFolderFilesToSheetInternal_() {
     queued: queuedTotal,
     queuedByDocType: queuedByDocType,
     totalListed: listed.files ? listed.files.length : 0,
-    skipped: skipped.length
+    skipped: skipped.length,
+    sample_corr_keys: sampleCorrKeys.slice(0, 20)
   };
   Logger.log(result);
+  Logger.log({
+    phase: "X1_CORR_QUEUE_COUNTERS",
+    ok: true,
+    missing: corrCounters.missing,
+    invalid: corrCounters.invalid,
+    derived: corrCounters.derived,
+    mismatch: corrCounters.mismatch
+  });
   return result;
 }
 
@@ -242,147 +317,6 @@ function belle_ocr_buildStaleRecovery_(row, headerMap, nowMs) {
   };
 }
 
-function belle_ocr_buildClaimContext_(props, valuesLength, docType) {
-  const nowMs = Date.now();
-  const nowIso = new Date(nowMs).toISOString();
-  const scanMaxRaw = props.getProperty("BELLE_OCR_CLAIM_SCAN_MAX_ROWS");
-  const cursorKey = belle_ocr_buildClaimCursorKey_(docType);
-  const cursorRaw = belle_cfg_getOcrClaimCursorRaw_(props, docType, cursorKey);
-  const scanPlan = belle_ocr_buildClaimScanPlan_(valuesLength, cursorRaw, scanMaxRaw);
-  props.setProperty(cursorKey, String(scanPlan.nextCursor));
-  return {
-    nowMs: nowMs,
-    nowIso: nowIso,
-    scanIndices: scanPlan.indices
-  };
-}
-
-function belle_ocr_applyStaleRecoveries_(sh, values, headerMap, scanIndices, nowMs) {
-  const staleFixed = [];
-  for (let s = 0; s < scanIndices.length; s++) {
-    const i = scanIndices[s];
-    const row = values[i];
-    const fileId = String(row[headerMap["file_id"]] || "");
-    if (!fileId) continue;
-    const recovery = belle_ocr_buildStaleRecovery_(row, headerMap, nowMs);
-    if (!recovery) continue;
-    const sheetRow = i + 2;
-    const detail = String(recovery.errorDetail || "").slice(0, 500);
-    sh.getRange(sheetRow, headerMap["status"] + 1).setValue(recovery.statusOut);
-    sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue(String(recovery.errorMessage || ""));
-    sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue(String(recovery.errorCode || ""));
-    sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue(detail);
-    sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
-    if (recovery.clearLocks) {
-      sh.getRange(sheetRow, headerMap["ocr_lock_owner"] + 1).setValue("");
-      sh.getRange(sheetRow, headerMap["ocr_lock_until_iso"] + 1).setValue("");
-      sh.getRange(sheetRow, headerMap["ocr_processing_started_at_iso"] + 1).setValue("");
-    }
-    row[headerMap["status"]] = recovery.statusOut;
-    row[headerMap["ocr_error"]] = String(recovery.errorMessage || "");
-    row[headerMap["ocr_error_code"]] = String(recovery.errorCode || "");
-    row[headerMap["ocr_error_detail"]] = detail;
-    row[headerMap["ocr_next_retry_at_iso"]] = "";
-    if (recovery.clearLocks) {
-      row[headerMap["ocr_lock_owner"]] = "";
-      row[headerMap["ocr_lock_until_iso"]] = "";
-      row[headerMap["ocr_processing_started_at_iso"]] = "";
-    }
-    staleFixed.push(fileId);
-  }
-  if (staleFixed.length > 0) {
-    Logger.log({ phase: "OCR_REAP_STALE", fixed: staleFixed.length, sampleFileIds: staleFixed.slice(0, 5) });
-  }
-}
-
-function belle_ocr_claimAtIndex_(sh, values, headerMap, index, claimCtx, claimOpts) {
-  const row = values[index];
-  const fileId = String(row[headerMap["file_id"]] || "");
-  const fileName = String(row[headerMap["file_name"]] || "");
-  const sheetRow = index + 2;
-  const lockUntilIso = new Date(claimCtx.nowMs + claimOpts.ttlSeconds * 1000).toISOString();
-  sh.getRange(sheetRow, headerMap["status"] + 1).setValue("PROCESSING");
-  sh.getRange(sheetRow, headerMap["ocr_lock_owner"] + 1).setValue(claimOpts.workerId);
-  sh.getRange(sheetRow, headerMap["ocr_lock_until_iso"] + 1).setValue(lockUntilIso);
-  sh.getRange(sheetRow, headerMap["ocr_processing_started_at_iso"] + 1).setValue(claimCtx.nowIso);
-  const res = {
-    phase: "OCR_CLAIM",
-    ok: true,
-    claimed: true,
-    rowIndex: sheetRow,
-    file_id: fileId,
-    file_name: fileName,
-    statusBefore: claimOpts.statusBefore,
-    workerId: claimOpts.workerId,
-    lockUntilIso: lockUntilIso,
-    docType: claimOpts.docType,
-    queueSheetName: claimOpts.queueSheetName,
-    processingCount: claimOpts.processingCount
-  };
-  Logger.log(res);
-  return res;
-}
-
-function belle_ocr_claimFromQueued_(sh, values, headerMap, claimCtx, claimOpts) {
-  for (let s = 0; s < claimCtx.scanIndices.length; s++) {
-    const i = claimCtx.scanIndices[s];
-    const row = values[i];
-    const status = String(row[headerMap["status"]] || "");
-    const normalized = status || "QUEUED";
-    const fileId = String(row[headerMap["file_id"]] || "");
-    if (!fileId) continue;
-    if (normalized === "DONE" || normalized === "ERROR_FINAL") continue;
-    if (normalized === "QUEUED") {
-      return belle_ocr_claimAtIndex_(sh, values, headerMap, i, claimCtx, {
-        workerId: claimOpts.workerId,
-        ttlSeconds: claimOpts.ttlSeconds,
-        statusBefore: normalized,
-        docType: claimOpts.docType,
-        queueSheetName: claimOpts.queueSheetName,
-        processingCount: claimOpts.processingCount
-      });
-    }
-  }
-  return null;
-}
-
-function belle_ocr_claimFromRetryable_(sh, values, headerMap, claimCtx, claimOpts) {
-  for (let s = 0; s < claimCtx.scanIndices.length; s++) {
-    const i = claimCtx.scanIndices[s];
-    const row = values[i];
-    const status = String(row[headerMap["status"]] || "");
-    const normalized = status || "QUEUED";
-    const fileId = String(row[headerMap["file_id"]] || "");
-    if (!fileId) continue;
-    if (normalized === "DONE" || normalized === "ERROR_FINAL") continue;
-    if (normalized === "ERROR_RETRYABLE" || normalized === "ERROR") {
-      const nextRetryAt = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
-      if (!nextRetryAt) {
-        return belle_ocr_claimAtIndex_(sh, values, headerMap, i, claimCtx, {
-          workerId: claimOpts.workerId,
-          ttlSeconds: claimOpts.ttlSeconds,
-          statusBefore: normalized,
-          docType: claimOpts.docType,
-          queueSheetName: claimOpts.queueSheetName,
-          processingCount: claimOpts.processingCount
-        });
-      }
-      const t = Date.parse(nextRetryAt);
-      if (isNaN(t) || t <= claimCtx.nowMs) {
-        return belle_ocr_claimAtIndex_(sh, values, headerMap, i, claimCtx, {
-          workerId: claimOpts.workerId,
-          ttlSeconds: claimOpts.ttlSeconds,
-          statusBefore: normalized,
-          docType: claimOpts.docType,
-          queueSheetName: claimOpts.queueSheetName,
-          processingCount: claimOpts.processingCount
-        });
-      }
-    }
-  }
-  return null;
-}
-
 function belle_ocr_claimNextRow_(opts) {
   const props = belle_cfg_getProps_();
   const sheetId = belle_cfg_getSheetIdOrThrow_(props);
@@ -394,6 +328,9 @@ function belle_ocr_claimNextRow_(opts) {
 
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
   const ttlSeconds = Number((opts && opts.ttlSeconds) || "180");
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
   let lock;
   try {
     lock = LockService.getScriptLock();
@@ -441,25 +378,126 @@ function belle_ocr_claimNextRow_(opts) {
       const status = String(values[i][headerMap["status"]] || "");
       if (status === "PROCESSING") processingCount++;
     }
-    const claimCtx = belle_ocr_buildClaimContext_(props, values.length, docType);
-    belle_ocr_applyStaleRecoveries_(sh, values, headerMap, claimCtx.scanIndices, claimCtx.nowMs);
+    const nowMs = Date.now();
+    const nowIso = new Date(nowMs).toISOString();
+    const scanMaxRaw = props.getProperty("BELLE_OCR_CLAIM_SCAN_MAX_ROWS");
+    const cursorKey = belle_ocr_buildClaimCursorKey_(docType);
+    const cursorRaw = belle_cfg_getOcrClaimCursorRaw_(props, docType, cursorKey);
+    const scanPlan = belle_ocr_buildClaimScanPlan_(values.length, cursorRaw, scanMaxRaw);
+    const scanIndices = scanPlan.indices;
+    props.setProperty(cursorKey, String(scanPlan.nextCursor));
 
-    const claimBaseOpts = {
-      workerId: workerId,
-      ttlSeconds: ttlSeconds,
-      docType: docType,
-      queueSheetName: queueSheetName,
-      processingCount: processingCount
-    };
+    const staleFixed = [];
+    for (let s = 0; s < scanIndices.length; s++) {
+      const i = scanIndices[s];
+      const row = values[i];
+      const fileId = String(row[headerMap["file_id"]] || "");
+      if (!fileId) continue;
+      const recovery = belle_ocr_buildStaleRecovery_(row, headerMap, nowMs);
+      if (!recovery) continue;
+      const sheetRow = i + 2;
+      const detail = String(recovery.errorDetail || "").slice(0, 500);
+      sh.getRange(sheetRow, headerMap["status"] + 1).setValue(recovery.statusOut);
+      sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue(String(recovery.errorMessage || ""));
+      sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue(String(recovery.errorCode || ""));
+      sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue(detail);
+      sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+      if (recovery.clearLocks) {
+        sh.getRange(sheetRow, headerMap["ocr_lock_owner"] + 1).setValue("");
+        sh.getRange(sheetRow, headerMap["ocr_lock_until_iso"] + 1).setValue("");
+        sh.getRange(sheetRow, headerMap["ocr_processing_started_at_iso"] + 1).setValue("");
+      }
+      row[headerMap["status"]] = recovery.statusOut;
+      row[headerMap["ocr_error"]] = String(recovery.errorMessage || "");
+      row[headerMap["ocr_error_code"]] = String(recovery.errorCode || "");
+      row[headerMap["ocr_error_detail"]] = detail;
+      row[headerMap["ocr_next_retry_at_iso"]] = "";
+      if (recovery.clearLocks) {
+        row[headerMap["ocr_lock_owner"]] = "";
+        row[headerMap["ocr_lock_until_iso"]] = "";
+        row[headerMap["ocr_processing_started_at_iso"]] = "";
+      }
+      staleFixed.push(fileId);
+    }
+    if (staleFixed.length > 0) {
+      Logger.log({ phase: "OCR_REAP_STALE", fixed: staleFixed.length, sampleFileIds: staleFixed.slice(0, 5) });
+    }
 
-    const queuedClaim = belle_ocr_claimFromQueued_(sh, values, headerMap, claimCtx, claimBaseOpts);
-    if (queuedClaim) return queuedClaim;
+    function claimAt(index, statusBefore) {
+      const row = values[index];
+      const fileId = String(row[headerMap["file_id"]] || "");
+      const fileName = String(row[headerMap["file_name"]] || "");
+      const rowDocType = headerMap["doc_type"] !== undefined ? String(row[headerMap["doc_type"]] || docType || "") : String(docType || "");
+      const sheetRow = index + 2;
+      const lockUntilIso = new Date(nowMs + ttlSeconds * 1000).toISOString();
+      const corr = belle_queue_observeCorr_(corrCounters, {
+        doc_type: rowDocType,
+        file_id: fileId,
+        queue_sheet_name: queueSheetName,
+        rowIndex: sheetRow
+      }, props);
+      sh.getRange(sheetRow, headerMap["status"] + 1).setValue("PROCESSING");
+      sh.getRange(sheetRow, headerMap["ocr_lock_owner"] + 1).setValue(workerId);
+      sh.getRange(sheetRow, headerMap["ocr_lock_until_iso"] + 1).setValue(lockUntilIso);
+      sh.getRange(sheetRow, headerMap["ocr_processing_started_at_iso"] + 1).setValue(nowIso);
+      const res = {
+        phase: "OCR_CLAIM",
+        ok: true,
+        claimed: true,
+        rowIndex: sheetRow,
+        file_id: fileId,
+        file_name: fileName,
+        corr_key: corr.corr_key,
+        statusBefore: statusBefore,
+        workerId: workerId,
+        lockUntilIso: lockUntilIso,
+        docType: docType,
+        queueSheetName: queueSheetName,
+        processingCount: processingCount
+      };
+      Logger.log(res);
+      return res;
+    }
 
-    const retryClaim = belle_ocr_claimFromRetryable_(sh, values, headerMap, claimCtx, claimBaseOpts);
-    if (retryClaim) return retryClaim;
+    for (let s = 0; s < scanIndices.length; s++) {
+      const i = scanIndices[s];
+      const row = values[i];
+      const status = String(row[headerMap["status"]] || "");
+      const normalized = status || "QUEUED";
+      const fileId = String(row[headerMap["file_id"]] || "");
+      if (!fileId) continue;
+      if (normalized === "DONE" || normalized === "ERROR_FINAL") continue;
+      if (normalized === "QUEUED") {
+        return claimAt(i, normalized);
+      }
+    }
+
+    for (let s = 0; s < scanIndices.length; s++) {
+      const i = scanIndices[s];
+      const row = values[i];
+      const status = String(row[headerMap["status"]] || "");
+      const normalized = status || "QUEUED";
+      const fileId = String(row[headerMap["file_id"]] || "");
+      if (!fileId) continue;
+      if (normalized === "DONE" || normalized === "ERROR_FINAL") continue;
+      if (normalized === "ERROR_RETRYABLE" || normalized === "ERROR") {
+        const nextRetryAt = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
+        if (!nextRetryAt) return claimAt(i, normalized);
+        const t = Date.parse(nextRetryAt);
+        if (isNaN(t) || t <= nowMs) return claimAt(i, normalized);
+      }
+    }
 
     const res = { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "NO_TARGET", processingCount: processingCount };
     Logger.log(res);
+    Logger.log({
+      phase: "X1_CORR_QUEUE_COUNTERS",
+      ok: true,
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    });
     return res;
   } finally {
     if (lock) lock.releaseLock();
@@ -513,7 +551,43 @@ function belle_processQueueOnceInternal_(options) {
   }
 }
 
-function belle_ocr_normalizeLegacyRows_(sh, values, headerMap, backoffSeconds, docType) {
+function belle_processQueueOnceForDocType_(props, docType, options) {
+  const sheetId = belle_cfg_getSheetIdOrThrow_(props);
+  const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, docType);
+  const maxAttempts = Number(props.getProperty("BELLE_OCR_MAX_ATTEMPTS") || "3");
+  const backoffSeconds = Number(props.getProperty("BELLE_OCR_RETRY_BACKOFF_SECONDS") || "300");
+  if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
+
+  const cfg = belle_getGeminiConfig();
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sh = ss.getSheetByName(queueSheetName);
+  if (!sh) throw new Error("Sheet not found: " + queueSheetName);
+
+  const baseHeader = belle_getQueueHeaderColumns();
+  const extraHeader = belle_getQueueLockHeaderColumns_();
+  const lastRow = sh.getLastRow();
+  if (lastRow < 1) {
+    return { ok: false, processed: 0, reason: "QUEUE_EMPTY: sheet has no header", errorsCount: 0, docType: docType, queueSheetName: queueSheetName };
+  }
+
+  const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
+  if (!headerMap) {
+    return { ok: false, processed: 0, reason: "INVALID_QUEUE_HEADER: missing required columns", errorsCount: 0, docType: docType, queueSheetName: queueSheetName };
+  }
+
+  if (lastRow < 2) {
+    return { ok: false, processed: 0, reason: "QUEUE_EMPTY: run belle_queueFolderFilesToSheet first", errorsCount: 0, docType: docType, queueSheetName: queueSheetName };
+  }
+
+  const values = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
+  let processed = 0;
+  let scanned = 0;
+  const processedRows = [];
+  let errorsCount = 0;
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
+
   const legacyFixed = [];
   const nowIso = new Date().toISOString();
   for (let i = 0; i < values.length; i++) {
@@ -553,11 +627,10 @@ function belle_ocr_normalizeLegacyRows_(sh, values, headerMap, backoffSeconds, d
   if (legacyFixed.length > 0) {
     Logger.log({ phase: "OCR_LEGACY_NORMALIZE", fixed: legacyFixed.length, sampleFileIds: legacyFixed.slice(0, 5), docType: docType });
   }
-}
 
-function belle_ocr_collectRunOnceTargets_(values, headerMap, nowMs) {
   const queuedIdx = [];
   const retryIdx = [];
+  const nowMs = Date.now();
   for (let i = 0; i < values.length; i++) {
     const row = values[i];
     const status = String(row[headerMap["status"]] || "");
@@ -578,179 +651,138 @@ function belle_ocr_collectRunOnceTargets_(values, headerMap, nowMs) {
       }
     }
   }
-  return {
-    queuedIdx: queuedIdx,
-    retryIdx: retryIdx,
-    targets: queuedIdx.concat(retryIdx)
-  };
-}
 
-function belle_ocr_executeRunOnceTarget_(sh, values, headerMap, targetIndex, runCtx) {
-  const row = values[targetIndex];
-  const status = String(row[headerMap["status"]] || "");
-  const fileId = String(row[headerMap["file_id"]] || "");
-  const fileName = String(row[headerMap["file_name"]] || "");
-  const mimeType = String(row[headerMap["mime_type"]] || "");
-  const ocrJson = String(row[headerMap["ocr_json"]] || "");
-  const nextRetryAt = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
-  const rowDocType = String(row[headerMap["doc_type"]] || runCtx.docType || "");
-  if (!fileId) return { handled: false, processed: 0, errors: 0, sheetRow: 0 };
-
-  const normalized = status || "QUEUED";
-  if (normalized === "DONE") return { handled: false, processed: 0, errors: 0, sheetRow: 0 };
-  if (ocrJson && normalized !== "ERROR_RETRYABLE" && normalized !== "ERROR") {
-    return { handled: false, processed: 0, errors: 0, sheetRow: 0 };
-  }
-
-  const sheetRow = targetIndex + 2;
-  const attempt = Number(row[headerMap["ocr_attempts"]] || 0) + 1;
-  const attemptIso = new Date().toISOString();
-  sh.getRange(sheetRow, headerMap["ocr_attempts"] + 1).setValue(attempt);
-  sh.getRange(sheetRow, headerMap["ocr_last_attempt_at_iso"] + 1).setValue(attemptIso);
-  Logger.log({
-    phase: "OCR_ITEM_START",
-    row: sheetRow,
-    file_id: fileId,
-    file_name: fileName,
-    attempts: attempt,
-    status: status || "QUEUED",
-    isRetryableTarget: runCtx.isRetryableTarget,
-    nowIso: new Date(runCtx.nowMs).toISOString(),
-    nextRetryIso: nextRetryAt,
-    doc_type: rowDocType
-  });
-
-  let jsonStr = "";
-  try {
-    if (mimeType === "application/pdf") {
-      sh.getRange(sheetRow, headerMap["status"] + 1).setValue("ERROR_FINAL");
-      sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue("PDF not supported in v0");
-      sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue("UNSUPPORTED_PDF");
-      sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue("PDF not supported in v0");
-      sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
-      Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, status: "ERROR_FINAL", doc_type: rowDocType });
-      return { handled: true, processed: 1, errors: 1, sheetRow: sheetRow };
-    }
-
-    const file = DriveApp.getFileById(fileId);
-    const blob = file.getBlob();
-    jsonStr = belle_callGeminiOcr(blob);
-    const MAX_CELL_CHARS = 45000;
-    if (jsonStr.length > MAX_CELL_CHARS) {
-      throw new Error("OCR JSON too long for single cell: " + jsonStr.length);
-    }
-    let parsed;
-    try {
-      parsed = JSON.parse(jsonStr);
-    } catch (e) {
-      throw new Error("INVALID_SCHEMA: PARSE_ERROR");
-    }
-    const validation = belle_ocr_validateSchema(parsed);
-    if (!validation.ok) {
-      throw new Error("INVALID_SCHEMA: " + validation.reason);
-    }
-    sh.getRange(sheetRow, headerMap["ocr_json"] + 1).setValue(jsonStr);
-    sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue("");
-    sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue("");
-    sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue("");
-    sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
-    sh.getRange(sheetRow, headerMap["status"] + 1).setValue("DONE");
-    Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, status: "DONE", doc_type: rowDocType });
-    if (runCtx.cfg.sleepMs > 0) Utilities.sleep(runCtx.cfg.sleepMs);
-    return { handled: true, processed: 1, errors: 0, sheetRow: sheetRow };
-  } catch (e) {
-    const msg = String(e && e.message ? e.message : e);
-    let detail = msg.slice(0, 500);
-    const classify = belle_ocr_classifyError(msg);
-    const retryable = classify.retryable === true;
-    let statusOut = retryable ? "ERROR_RETRYABLE" : "ERROR_FINAL";
-    let errorCode = classify.code;
-    if (retryable && attempt >= runCtx.maxAttempts) {
-      statusOut = "ERROR_FINAL";
-      errorCode = "MAX_ATTEMPTS_EXCEEDED";
-    }
-    if (errorCode === "INVALID_SCHEMA" && jsonStr) {
-      detail = belle_ocr_buildInvalidSchemaLogDetail_(jsonStr);
-    }
-    sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue(msg.slice(0, 200));
-    sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue(errorCode);
-    sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue(detail);
-    sh.getRange(sheetRow, headerMap["status"] + 1).setValue(statusOut);
-    sh.getRange(sheetRow, headerMap["ocr_json"] + 1).setValue("");
-    if (statusOut === "ERROR_RETRYABLE") {
-      const backoff = Math.max(1, runCtx.backoffSeconds) * 1000 * Math.min(attempt, 6);
-      const nextRetryIso = new Date(Date.now() + backoff).toISOString();
-      sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue(nextRetryIso);
-    } else {
-      sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
-    }
-    Logger.log({
-      phase: "OCR_ITEM_ERROR",
-      row: sheetRow,
-      file_id: fileId,
-      file_name: fileName,
-      error_code: errorCode,
-      message: msg.slice(0, 200),
-      doc_type: rowDocType
-    });
-    return { handled: true, processed: 1, errors: 1, sheetRow: sheetRow };
-  }
-}
-
-function belle_processQueueOnceForDocType_(props, docType, options) {
-  const sheetId = belle_cfg_getSheetIdOrThrow_(props);
-  const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, docType);
-  const maxAttempts = Number(props.getProperty("BELLE_OCR_MAX_ATTEMPTS") || "3");
-  const backoffSeconds = Number(props.getProperty("BELLE_OCR_RETRY_BACKOFF_SECONDS") || "300");
-  if (!sheetId) throw new Error("Missing Script Property: BELLE_SHEET_ID");
-
-  const cfg = belle_getGeminiConfig();
-  const ss = SpreadsheetApp.openById(sheetId);
-  const sh = ss.getSheetByName(queueSheetName);
-  if (!sh) throw new Error("Sheet not found: " + queueSheetName);
-
-  const baseHeader = belle_getQueueHeaderColumns();
-  const extraHeader = belle_getQueueLockHeaderColumns_();
-  const lastRow = sh.getLastRow();
-  if (lastRow < 1) {
-    return { ok: false, processed: 0, reason: "QUEUE_EMPTY: sheet has no header", errorsCount: 0, docType: docType, queueSheetName: queueSheetName };
-  }
-
-  const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
-  if (!headerMap) {
-    return { ok: false, processed: 0, reason: "INVALID_QUEUE_HEADER: missing required columns", errorsCount: 0, docType: docType, queueSheetName: queueSheetName };
-  }
-
-  if (lastRow < 2) {
-    return { ok: false, processed: 0, reason: "QUEUE_EMPTY: run belle_queueFolderFilesToSheet first", errorsCount: 0, docType: docType, queueSheetName: queueSheetName };
-  }
-
-  const values = sh.getRange(2, 1, lastRow - 1, sh.getLastColumn()).getValues();
-  let processed = 0;
-  let scanned = 0;
-  const processedRows = [];
-  let errorsCount = 0;
-
-  belle_ocr_normalizeLegacyRows_(sh, values, headerMap, backoffSeconds, docType);
-  const nowMs = Date.now();
-  const targetPlan = belle_ocr_collectRunOnceTargets_(values, headerMap, nowMs);
-  const targets = targetPlan.targets;
+  const targets = queuedIdx.concat(retryIdx);
   for (let t = 0; t < targets.length; t++) {
     if (processed >= cfg.maxItems) break;
     const i = targets[t];
     scanned++;
-    const exec = belle_ocr_executeRunOnceTarget_(sh, values, headerMap, i, {
-      nowMs: nowMs,
-      cfg: cfg,
-      maxAttempts: maxAttempts,
-      backoffSeconds: backoffSeconds,
-      docType: docType,
-      isRetryableTarget: t >= targetPlan.queuedIdx.length
+
+    const row = values[i];
+    const status = String(row[headerMap["status"]] || "");
+    const fileId = String(row[headerMap["file_id"]] || "");
+    const fileName = String(row[headerMap["file_name"]] || "");
+    const mimeType = String(row[headerMap["mime_type"]] || "");
+    const ocrJson = String(row[headerMap["ocr_json"]] || "");
+    const ocrErr = String(row[headerMap["ocr_error"]] || "");
+    const ocrErrCode = String(row[headerMap["ocr_error_code"]] || "");
+    const ocrErrDetail = String(row[headerMap["ocr_error_detail"]] || "");
+    const nextRetryAt = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
+    const rowDocType = String(row[headerMap["doc_type"]] || docType || "");
+    const corr = belle_queue_observeCorr_(corrCounters, {
+      doc_type: rowDocType,
+      file_id: fileId,
+      queue_sheet_name: queueSheetName,
+      rowIndex: i + 2
+    }, props);
+
+    if (!fileId) continue;
+    const normalized = status || "QUEUED";
+    if (normalized === "DONE") continue;
+    if (ocrJson && normalized !== "ERROR_RETRYABLE" && normalized !== "ERROR") continue;
+
+    const sheetRow = i + 2;
+    const attempt = Number(row[headerMap["ocr_attempts"]] || 0) + 1;
+    const attemptIso = new Date().toISOString();
+    sh.getRange(sheetRow, headerMap["ocr_attempts"] + 1).setValue(attempt);
+    sh.getRange(sheetRow, headerMap["ocr_last_attempt_at_iso"] + 1).setValue(attemptIso);
+    Logger.log({
+      phase: "OCR_ITEM_START",
+      row: sheetRow,
+      file_id: fileId,
+      file_name: fileName,
+      attempts: attempt,
+      status: status || "QUEUED",
+      corr_key: corr.corr_key,
+      isRetryableTarget: t >= queuedIdx.length,
+      nowIso: new Date(nowMs).toISOString(),
+      nextRetryIso: nextRetryAt,
+      doc_type: rowDocType
     });
-    if (!exec.handled) continue;
-    processedRows.push(exec.sheetRow);
-    processed += exec.processed;
-    errorsCount += exec.errors;
+
+    let jsonStr = "";
+    try {
+      if (mimeType === "application/pdf") {
+        sh.getRange(sheetRow, headerMap["status"] + 1).setValue("ERROR_FINAL");
+        sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue("PDF not supported in v0");
+        sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue("UNSUPPORTED_PDF");
+        sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue("PDF not supported in v0");
+        sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+        Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, corr_key: corr.corr_key, status: "ERROR_FINAL", doc_type: rowDocType });
+        processedRows.push(sheetRow);
+        processed++;
+        errorsCount++;
+        continue;
+      }
+
+        const file = DriveApp.getFileById(fileId);
+        const blob = file.getBlob();
+        jsonStr = belle_callGeminiOcr(blob);
+      const MAX_CELL_CHARS = 45000;
+      if (jsonStr.length > MAX_CELL_CHARS) {
+        throw new Error("OCR JSON too long for single cell: " + jsonStr.length);
+      }
+      let parsed;
+      try {
+        parsed = JSON.parse(jsonStr);
+      } catch (e) {
+        throw new Error("INVALID_SCHEMA: PARSE_ERROR");
+      }
+      const validation = belle_ocr_validateSchema(parsed);
+      if (!validation.ok) {
+        throw new Error("INVALID_SCHEMA: " + validation.reason);
+      }
+      sh.getRange(sheetRow, headerMap["ocr_json"] + 1).setValue(jsonStr);
+      sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue("");
+      sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue("");
+      sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue("");
+      sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+      sh.getRange(sheetRow, headerMap["status"] + 1).setValue("DONE");
+      Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, corr_key: corr.corr_key, status: "DONE", doc_type: rowDocType });
+      processedRows.push(sheetRow);
+      processed++;
+
+      if (cfg.sleepMs > 0) Utilities.sleep(cfg.sleepMs);
+    } catch (e) {
+      const msg = String(e && e.message ? e.message : e);
+      let detail = msg.slice(0, 500);
+      const classify = belle_ocr_classifyError(msg);
+      const retryable = classify.retryable === true;
+      let statusOut = retryable ? "ERROR_RETRYABLE" : "ERROR_FINAL";
+      let errorCode = classify.code;
+      if (retryable && attempt >= maxAttempts) {
+        statusOut = "ERROR_FINAL";
+        errorCode = "MAX_ATTEMPTS_EXCEEDED";
+      }
+      if (errorCode === "INVALID_SCHEMA" && jsonStr) {
+        detail = belle_ocr_buildInvalidSchemaLogDetail_(jsonStr);
+      }
+      sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue(msg.slice(0, 200));
+      sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue(errorCode);
+      sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue(detail);
+      sh.getRange(sheetRow, headerMap["status"] + 1).setValue(statusOut);
+      sh.getRange(sheetRow, headerMap["ocr_json"] + 1).setValue("");
+      if (statusOut === "ERROR_RETRYABLE") {
+        const backoff = Math.max(1, backoffSeconds) * 1000 * Math.min(attempt, 6);
+        const nextRetryIso = new Date(Date.now() + backoff).toISOString();
+        sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue(nextRetryIso);
+      } else {
+        sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+      }
+      Logger.log({
+        phase: "OCR_ITEM_ERROR",
+        row: sheetRow,
+        file_id: fileId,
+        corr_key: corr.corr_key,
+        file_name: fileName,
+        error_code: errorCode,
+        message: msg.slice(0, 200),
+        doc_type: rowDocType
+      });
+      processedRows.push(sheetRow);
+      processed++;
+      errorsCount++;
+    }
   }
 
   const result = {
@@ -763,6 +795,22 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
     docType: docType,
     queueSheetName: queueSheetName
   };
+  result.corr_counters = {
+    missing: corrCounters.missing,
+    invalid: corrCounters.invalid,
+    derived: corrCounters.derived,
+    mismatch: corrCounters.mismatch
+  };
   Logger.log(result);
+  Logger.log({
+    phase: "X1_CORR_QUEUE_COUNTERS",
+    ok: true,
+    doc_type: docType,
+    queue_sheet_name: queueSheetName,
+    missing: corrCounters.missing,
+    invalid: corrCounters.invalid,
+    derived: corrCounters.derived,
+    mismatch: corrCounters.mismatch
+  });
   return result;
 }

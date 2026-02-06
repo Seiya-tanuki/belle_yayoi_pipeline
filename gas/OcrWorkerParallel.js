@@ -1,4 +1,4 @@
-﻿// @ts-check
+// @ts-check
 
 // NOTE: Keep comments ASCII only.
 
@@ -38,365 +38,43 @@ function belle_ocr_worker_dispatchByPipelineKind_(pipelineKind, handlers) {
   return handlers && handlers.single_stage ? handlers.single_stage() : null;
 }
 
-function belle_ocr_worker_state_prepareClaim_(ctx) {
-  const sheetId = belle_cfg_getSheetIdOrThrow_(ctx.props);
-  const queueSheetName = ctx.claim.queueSheetName || belle_getQueueSheetName(ctx.props);
-  const maxAttempts = Number(ctx.props.getProperty("BELLE_OCR_MAX_ATTEMPTS") || "3");
-  const backoffSeconds = Number(ctx.props.getProperty("BELLE_OCR_RETRY_BACKOFF_SECONDS") || "300");
-  const ss = SpreadsheetApp.openById(sheetId);
-  const sh = ss.getSheetByName(queueSheetName);
-  if (!sh) throw new Error("Sheet not found: " + queueSheetName);
-
-  const baseHeader = belle_getQueueHeaderColumns();
-  const extraHeader = belle_getQueueLockHeaderColumns_();
-  const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
-  if (!headerMap) {
-    return { done: true, result: { ok: false, processed: 0, reason: "INVALID_QUEUE_HEADER" } };
+function belle_ocr_worker_observeCorr_(counters, payload, props) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  if (typeof belle_corr_observeItem_ === "function") {
+    return belle_corr_observeItem_("X1_CORR_WORKER_ITEM", counters, source, { props: props });
   }
-
-  const rowIndex = ctx.claim.rowIndex;
-  const row = sh.getRange(rowIndex, 1, 1, sh.getLastColumn()).getValues()[0];
-  const fileId = String(row[headerMap["file_id"]] || "");
-  const mimeType = String(row[headerMap["mime_type"]] || "");
-  const status = String(row[headerMap["status"]] || "");
-  const statusBefore = ctx.claim.statusBefore || status;
-  const rowDocType = headerMap["doc_type"] !== undefined ? String(row[headerMap["doc_type"]] || "") : "";
-  const docType = rowDocType || ctx.claim.docType || "";
-  const docSpec = belle_docType_getSpec_(docType);
-  const pipelineKind = docSpec ? docSpec.pipeline_kind : "";
-  const isTwoStage = pipelineKind === BELLE_DOC_PIPELINE_TWO_STAGE;
-  const ocrJsonBefore = String(row[headerMap["ocr_json"]] || "");
-  const ocrError = String(row[headerMap["ocr_error"]] || "");
-  const ocrErrorCode = String(row[headerMap["ocr_error_code"]] || "");
-  const ocrErrorDetail = String(row[headerMap["ocr_error_detail"]] || "");
-  const attemptsPrev = Number(row[headerMap["ocr_attempts"]] || 0) || 0;
-
-  let attempt = attemptsPrev;
-  const attemptIso = new Date().toISOString();
-  let lock = null;
-  try {
-    lock = LockService.getScriptLock();
-    lock.waitLock(30000);
-    const rowNow = sh.getRange(rowIndex, 1, 1, sh.getLastColumn()).getValues()[0];
-    const ownerNow = String(rowNow[headerMap["ocr_lock_owner"]] || "");
-    const statusNow = String(rowNow[headerMap["status"]] || "");
-    if (ownerNow !== ctx.workerId || statusNow !== "PROCESSING") {
-      const totalNow = Date.now() - ctx.totalStart;
-      const res = {
-        ok: true,
-        processed: 0,
-        reason: "CLAIM_LOST",
-        file_id: fileId,
-        rowIndex: rowIndex,
-        claimElapsedMs: ctx.claimElapsedMs,
-        statusBefore: statusBefore,
-        totalItemElapsedMs: totalNow,
-        geminiElapsedMs: 0,
-        classify: "",
-        httpStatus: 0,
-        docType: docType,
-        queueSheetName: queueSheetName,
-        processingCount: ctx.processingCount
-      };
-      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: ctx.workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex, docType: docType });
-      return { done: true, result: res };
-    }
-
-    if ((statusBefore === "ERROR_RETRYABLE" || statusBefore === "ERROR") && ocrJsonBefore && !ocrError) {
-      const detail = String(ocrJsonBefore).slice(0, 500);
-      const summary = detail.slice(0, 200);
-      sh.getRange(rowIndex, headerMap["ocr_error_code"] + 1).setValue("LEGACY_ERROR_IN_OCR_JSON");
-      sh.getRange(rowIndex, headerMap["ocr_error_detail"] + 1).setValue(detail);
-      sh.getRange(rowIndex, headerMap["ocr_error"] + 1).setValue(summary);
-      sh.getRange(rowIndex, headerMap["ocr_json"] + 1).setValue("");
-    }
-
-    attempt = attemptsPrev + 1;
-    sh.getRange(rowIndex, headerMap["ocr_attempts"] + 1).setValue(attempt);
-    sh.getRange(rowIndex, headerMap["ocr_last_attempt_at_iso"] + 1).setValue(attemptIso);
-  } finally {
-    if (lock) lock.releaseLock();
-  }
-
-  return {
-    done: false,
-    prepared: {
-      props: ctx.props,
-      workerId: ctx.workerId,
-      totalStart: ctx.totalStart,
-      claimElapsedMs: ctx.claimElapsedMs,
-      processingCount: ctx.processingCount,
-      maxAttempts: maxAttempts,
-      backoffSeconds: backoffSeconds,
-      queueSheetName: queueSheetName,
-      sh: sh,
-      headerMap: headerMap,
-      rowIndex: rowIndex,
-      fileId: fileId,
-      mimeType: mimeType,
-      statusBefore: statusBefore,
-      docType: docType,
-      docSpec: docSpec,
-      pipelineKind: pipelineKind,
-      isTwoStage: isTwoStage,
-      ocrJsonBefore: ocrJsonBefore,
-      ocrError: ocrError,
-      ocrErrorCode: ocrErrorCode,
-      ocrErrorDetail: ocrErrorDetail,
-      attempt: attempt
-    }
+  const docType = String(source.doc_type || source.docType || "").trim();
+  const fileId = String(source.file_id || source.fileId || "").trim();
+  const corrKey = docType && fileId ? (docType + "::" + fileId) : "";
+  const resolved = {
+    mode: "compatibility",
+    corr_key: corrKey,
+    missing: !corrKey,
+    invalid_format: false,
+    derived_from_legacy: !!corrKey,
+    mismatch: false
   };
-}
-
-function belle_ocr_worker_state_dispatchRunOnce_(prepared) {
-  const runOnceFnName = belle_ocr_getRunOnceFnNameForDocType_(prepared.docType);
-  const g = (typeof globalThis !== "undefined") ? globalThis : this;
-  const state = {
-    outcome: "",
-    jsonStr: "",
-    errorCode: "",
-    errorDetail: "",
-    errorMessage: "",
-    nextRetryIso: "",
-    statusOut: "",
-    geminiElapsedMs: 0,
-    geminiStartMs: 0,
-    httpStatus: 0,
-    classify: "",
-    totalItemElapsedMs: 0,
-    ccStage: "",
-    ccCacheHit: false,
-    ccGeminiMs: 0,
-    ccStage2Attempted: false,
-    keepOcrJsonOnError: false
-  };
-
-  function setErrorFinal_(code, message) {
-    state.statusOut = "ERROR_FINAL";
-    state.outcome = "ERROR_FINAL";
-    state.errorCode = code;
-    state.errorMessage = message;
-    state.errorDetail = message;
+  if (counters && typeof counters === "object") {
+    if (resolved.missing) counters.missing++;
+    if (resolved.invalid_format) counters.invalid++;
+    if (resolved.derived_from_legacy) counters.derived++;
+    if (resolved.mismatch) counters.mismatch++;
   }
-
-  function applyRunOnceResult_(result) {
-    if (!result) return;
-    state.geminiElapsedMs = result.geminiElapsedMs;
-    state.httpStatus = result.httpStatus;
-    state.jsonStr = result.jsonStr;
-    state.statusOut = result.statusOut;
-    state.outcome = result.outcome;
-    state.errorCode = result.errorCode;
-    state.errorMessage = result.errorMessage;
-    state.errorDetail = result.errorDetail;
-    state.nextRetryIso = result.nextRetryIso;
-    state.keepOcrJsonOnError = result.keepOcrJsonOnError === true;
-    if (typeof result.ccStage === "string") state.ccStage = result.ccStage;
-    if (result.ccCacheHit !== undefined) state.ccCacheHit = result.ccCacheHit;
-    if (result.ccStage2Attempted !== undefined) state.ccStage2Attempted = result.ccStage2Attempted;
-    if (result.ccGeminiMs !== undefined) state.ccGeminiMs = result.ccGeminiMs;
-    if (result.throwError) throw new Error(result.throwError);
-  }
-
-  function callRunOnce_() {
-    if (!prepared.docSpec) {
-      setErrorFinal_("UNSUPPORTED_SINGLE_STAGE_DOC_TYPE", "Unsupported single stage docType: " + prepared.docType);
-      return;
-    }
-    if (!runOnceFnName) {
-      setErrorFinal_("MISSING_OCR_RUN_ONCE_FN", "Missing ocr_run_once_fn for docType: " + prepared.docType);
-      return;
-    }
-    const runOnce = g[runOnceFnName];
-    if (typeof runOnce !== "function") {
-      setErrorFinal_("OCR_RUN_ONCE_NOT_FOUND", "ocr_run_once_fn not found: " + runOnceFnName);
-      return;
-    }
-    const result = runOnce({
-      props: prepared.props,
-      fileId: prepared.fileId,
-      mimeType: prepared.mimeType,
-      docType: prepared.docType,
-      attempt: prepared.attempt,
-      maxAttempts: prepared.maxAttempts,
-      statusBefore: prepared.statusBefore,
-      prevErrorCode: prepared.ocrErrorCode,
-      prevError: prepared.ocrError,
-      prevErrorDetail: prepared.ocrErrorDetail,
-      ocrJsonBefore: prepared.ocrJsonBefore,
-      backoffSeconds: prepared.backoffSeconds
-    });
-    applyRunOnceResult_(result);
-  }
-
-  try {
-    belle_ocr_worker_dispatchByPipelineKind_(prepared.pipelineKind, {
-      two_stage: function () { callRunOnce_(); },
-      single_stage: function () { callRunOnce_(); },
-      inactive: function () {
-        state.statusOut = "ERROR_FINAL";
-        state.outcome = "ERROR_FINAL";
-        state.errorCode = "DOC_TYPE_INACTIVE";
-        state.errorMessage = "DOC_TYPE_INACTIVE";
-        state.errorDetail = "DOC_TYPE_INACTIVE";
-      }
-    });
-    return state;
-  } catch (e) {
-    if (e && typeof e === "object") e.belleWorkerState = state;
-    throw e;
-  }
-}
-
-function belle_ocr_worker_state_classifyError_(prepared, state, err) {
-  const msg = String(err && err.message ? err.message : err);
-  if (state.geminiStartMs > 0 && state.geminiElapsedMs === 0) {
-    state.geminiElapsedMs = Date.now() - state.geminiStartMs;
-  }
-  if (prepared.isTwoStage && state.ccGeminiMs === 0 && state.geminiElapsedMs > 0) {
-    state.ccGeminiMs = state.geminiElapsedMs;
-  }
-  let detail = msg.slice(0, 500);
-  const classified = belle_ocr_classifyError(msg);
-  const retryable = classified.retryable === true;
-  state.statusOut = retryable ? "ERROR_RETRYABLE" : "ERROR_FINAL";
-  state.errorCode = classified.code;
-  if (retryable && prepared.attempt >= prepared.maxAttempts) {
-    state.statusOut = "ERROR_FINAL";
-    state.errorCode = "MAX_ATTEMPTS_EXCEEDED";
-  }
-  state.httpStatus = belle_ocr_extractHttpStatus_(msg);
-  state.errorMessage = msg.slice(0, 200);
-  if (state.errorCode === "INVALID_SCHEMA" && state.jsonStr) {
-    detail = belle_ocr_buildInvalidSchemaLogDetail_(state.jsonStr);
-  }
-  state.errorDetail = detail;
-  if (prepared.isTwoStage && state.ccStage2Attempted) {
-    state.keepOcrJsonOnError = true;
-  }
-  if (state.statusOut === "ERROR_RETRYABLE") {
-    const backoff = belle_ocr_worker_calcBackoffMs_(prepared.attempt, prepared.backoffSeconds);
-    state.nextRetryIso = new Date(Date.now() + backoff).toISOString();
-  }
-  state.outcome = state.statusOut;
-  return state;
-}
-
-function belle_ocr_worker_state_commitWriteback_(prepared, state) {
-  if (!state.classify) {
-    if (state.statusOut === "DONE") state.classify = "DONE";
-    else if (state.errorCode === "INVALID_SCHEMA") state.classify = "INVALID_SCHEMA";
-    else state.classify = state.statusOut || "";
-  }
-
-  let lock = null;
-  try {
-    lock = LockService.getScriptLock();
-    lock.waitLock(30000);
-    const rowNow = prepared.sh.getRange(prepared.rowIndex, 1, 1, prepared.sh.getLastColumn()).getValues()[0];
-    const ownerNow = String(rowNow[prepared.headerMap["ocr_lock_owner"]] || "");
-    const statusNow = String(rowNow[prepared.headerMap["status"]] || "");
-    if (ownerNow !== prepared.workerId || statusNow !== "PROCESSING") {
-      const totalNow = Date.now() - prepared.totalStart;
-      const res = {
-        ok: true,
-        processed: 0,
-        reason: "CLAIM_LOST",
-        file_id: prepared.fileId,
-        rowIndex: prepared.rowIndex,
-        claimElapsedMs: prepared.claimElapsedMs,
-        statusBefore: prepared.statusBefore,
-        totalItemElapsedMs: totalNow,
-        geminiElapsedMs: state.geminiElapsedMs,
-        classify: state.classify,
-        httpStatus: state.httpStatus,
-        docType: prepared.docType,
-        queueSheetName: prepared.queueSheetName,
-        processingCount: prepared.processingCount
-      };
-      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: prepared.workerId, outcome: "CLAIM_LOST", file_id: prepared.fileId, rowIndex: prepared.rowIndex, docType: prepared.docType });
-      return { done: true, result: res };
-    }
-
-    prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_lock_owner"] + 1).setValue("");
-    prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_lock_until_iso"] + 1).setValue("");
-    prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_processing_started_at_iso"] + 1).setValue("");
-
-    if (state.statusOut === "DONE") {
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_json"] + 1).setValue(state.jsonStr);
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_error"] + 1).setValue("");
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_error_code"] + 1).setValue("");
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_error_detail"] + 1).setValue("");
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["status"] + 1).setValue("DONE");
-    } else if (state.statusOut === "QUEUED") {
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_json"] + 1).setValue(state.jsonStr);
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_error"] + 1).setValue("");
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_error_code"] + 1).setValue("");
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_error_detail"] + 1).setValue("");
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["status"] + 1).setValue("QUEUED");
-    } else {
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_error"] + 1).setValue(state.errorMessage);
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_error_code"] + 1).setValue(state.errorCode);
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_error_detail"] + 1).setValue(state.errorDetail);
-      if (!state.keepOcrJsonOnError) {
-        prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_json"] + 1).setValue("");
-      }
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["ocr_next_retry_at_iso"] + 1).setValue(state.nextRetryIso);
-      prepared.sh.getRange(prepared.rowIndex, prepared.headerMap["status"] + 1).setValue(state.statusOut);
-    }
-
-    return { done: false };
-  } finally {
-    if (lock) lock.releaseLock();
-  }
-}
-
-function belle_ocr_worker_state_projectTelemetry_(prepared, state) {
-  state.totalItemElapsedMs = Date.now() - prepared.totalStart;
   Logger.log({
-    phase: "OCR_WORKER_ITEM",
-    file_id: prepared.fileId,
-    rowIndex: prepared.rowIndex,
-    outcome: state.outcome,
-    attempt: prepared.attempt,
-    workerId: prepared.workerId,
-    geminiElapsedMs: state.geminiElapsedMs,
-    totalItemElapsedMs: state.totalItemElapsedMs,
-    classify: state.classify,
-    httpStatus: state.httpStatus,
-    docType: prepared.docType,
-    queueSheetName: prepared.queueSheetName,
-    ccStage: state.ccStage,
-    ccCacheHit: state.ccCacheHit,
-    ccGeminiMs: state.ccGeminiMs,
-    ccHttpStatus: state.httpStatus,
-    ccErrorCode: state.errorCode,
-    processingCount: prepared.processingCount
-  });
-
-  return {
+    phase: "X1_CORR_WORKER_ITEM",
     ok: true,
-    processed: 1,
-    outcome: state.outcome,
-    file_id: prepared.fileId,
-    rowIndex: prepared.rowIndex,
-    claimElapsedMs: prepared.claimElapsedMs,
-    statusBefore: prepared.statusBefore,
-    geminiElapsedMs: state.geminiElapsedMs,
-    totalItemElapsedMs: state.totalItemElapsedMs,
-    classify: state.classify,
-    httpStatus: state.httpStatus,
-    docType: prepared.docType,
-    queueSheetName: prepared.queueSheetName,
-    ccStage: state.ccStage,
-    ccCacheHit: state.ccCacheHit,
-    ccGeminiMs: state.ccGeminiMs,
-    ccHttpStatus: state.httpStatus,
-    ccErrorCode: state.errorCode,
-    processingCount: prepared.processingCount
-  };
+    doc_type: source.doc_type || source.docType || "",
+    file_id: source.file_id || source.fileId || "",
+    corr_key: resolved.corr_key,
+    queue_sheet_name: source.queue_sheet_name || source.queueSheetName || "",
+    rowIndex: source.rowIndex !== undefined ? source.rowIndex : "",
+    mode: resolved.mode,
+    missing: resolved.missing,
+    invalid: resolved.invalid_format,
+    derived: resolved.derived_from_legacy,
+    mismatch: resolved.mismatch
+  });
+  return resolved;
 }
 
 function belle_ocr_workerOnce_(opts) {
@@ -427,7 +105,6 @@ function belle_ocr_workerOnce_(opts) {
       processingCount: processingCount
     };
   }
-
   const ttlSeconds = belle_ocr_worker_resolveTtlSeconds_(props.getProperty("BELLE_OCR_LOCK_TTL_SECONDS"));
   const lockMode = opts && opts.lockMode ? String(opts.lockMode) : "wait";
   const lockWaitMs = Number((opts && opts.lockWaitMs) || "30000");
@@ -457,56 +134,381 @@ function belle_ocr_workerOnce_(opts) {
     };
   }
 
-  const preparedStep = belle_ocr_worker_state_prepareClaim_({
-    props: props,
-    workerId: workerId,
-    claim: claim,
-    claimElapsedMs: claimElapsedMs,
-    processingCount: processingCount,
-    totalStart: totalStart
-  });
-  if (preparedStep.done) {
-    return preparedStep.result;
+  const sheetId = belle_cfg_getSheetIdOrThrow_(props);
+  const queueSheetName = claim.queueSheetName || belle_getQueueSheetName(props);
+  const maxAttempts = Number(props.getProperty("BELLE_OCR_MAX_ATTEMPTS") || "3");
+  const backoffSeconds = Number(props.getProperty("BELLE_OCR_RETRY_BACKOFF_SECONDS") || "300");
+  const ss = SpreadsheetApp.openById(sheetId);
+  const sh = ss.getSheetByName(queueSheetName);
+  if (!sh) throw new Error("Sheet not found: " + queueSheetName);
+
+  const baseHeader = belle_getQueueHeaderColumns();
+  const extraHeader = belle_getQueueLockHeaderColumns_();
+  const headerMap = belle_queue_ensureHeaderMapCanonical_(sh, baseHeader, extraHeader);
+  if (!headerMap) {
+    return { ok: false, processed: 0, reason: "INVALID_QUEUE_HEADER" };
   }
 
-  const prepared = preparedStep.prepared;
-  let state = null;
+  const rowIndex = claim.rowIndex;
+  const row = sh.getRange(rowIndex, 1, 1, sh.getLastColumn()).getValues()[0];
+  const fileId = String(row[headerMap["file_id"]] || "");
+  const fileName = String(row[headerMap["file_name"]] || "");
+  const mimeType = String(row[headerMap["mime_type"]] || "");
+  const status = String(row[headerMap["status"]] || "");
+  const statusBefore = claim.statusBefore || status;
+  const rowDocType = headerMap["doc_type"] !== undefined ? String(row[headerMap["doc_type"]] || "") : "";
+  const docType = rowDocType || claim.docType || "";
+  const docSpec = belle_docType_getSpec_(docType);
+  const pipelineKind = docSpec ? docSpec.pipeline_kind : "";
+  const isTwoStage = pipelineKind === BELLE_DOC_PIPELINE_TWO_STAGE;
+  const ocrJsonBefore = String(row[headerMap["ocr_json"]] || "");
+  const ocrError = String(row[headerMap["ocr_error"]] || "");
+  const ocrErrorCode = String(row[headerMap["ocr_error_code"]] || "");
+  const ocrErrorDetail = String(row[headerMap["ocr_error_detail"]] || "");
+  const attemptsPrev = Number(row[headerMap["ocr_attempts"]] || 0) || 0;
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
+  const corr = belle_ocr_worker_observeCorr_(corrCounters, {
+    doc_type: docType,
+    file_id: fileId,
+    queue_sheet_name: queueSheetName,
+    rowIndex: rowIndex
+  }, props);
+
+  let attempt = attemptsPrev;
+  const attemptIso = new Date().toISOString();
+  let lock;
   try {
-    state = belle_ocr_worker_state_dispatchRunOnce_(prepared);
-  } catch (e) {
-    if (e && typeof e === "object" && e.belleWorkerState) {
-      state = e.belleWorkerState;
-    }
-    if (!state) {
-      state = {
-        outcome: "",
-        jsonStr: "",
-        errorCode: "",
-        errorDetail: "",
-        errorMessage: "",
-        nextRetryIso: "",
-        statusOut: "",
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    const rowNow = sh.getRange(rowIndex, 1, 1, sh.getLastColumn()).getValues()[0];
+    const ownerNow = String(rowNow[headerMap["ocr_lock_owner"]] || "");
+    const statusNow = String(rowNow[headerMap["status"]] || "");
+    if (ownerNow !== workerId || statusNow !== "PROCESSING") {
+      const totalNow = Date.now() - totalStart;
+      const res = {
+        ok: true,
+        processed: 0,
+        reason: "CLAIM_LOST",
+        file_id: fileId,
+        corr_key: corr.corr_key,
+        rowIndex: rowIndex,
+        claimElapsedMs: claimElapsedMs,
+        statusBefore: statusBefore,
+        totalItemElapsedMs: totalNow,
         geminiElapsedMs: 0,
-        geminiStartMs: 0,
-        httpStatus: 0,
         classify: "",
-        totalItemElapsedMs: 0,
-        ccStage: "",
-        ccCacheHit: false,
-        ccGeminiMs: 0,
-        ccStage2Attempted: false,
-        keepOcrJsonOnError: false
+        httpStatus: 0,
+        docType: docType,
+        queueSheetName: queueSheetName,
+        processingCount: processingCount,
+        corr_counters: {
+          missing: corrCounters.missing,
+          invalid: corrCounters.invalid,
+          derived: corrCounters.derived,
+          mismatch: corrCounters.mismatch
+        }
       };
+      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, corr_key: corr.corr_key, rowIndex: rowIndex, docType: docType });
+      Logger.log({
+        phase: "X1_CORR_WORKER_COUNTERS",
+        ok: true,
+        doc_type: docType,
+        queue_sheet_name: queueSheetName,
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      });
+      return res;
     }
-    state = belle_ocr_worker_state_classifyError_(prepared, state, e);
+
+    if ((statusBefore === "ERROR_RETRYABLE" || statusBefore === "ERROR") && ocrJsonBefore && !ocrError) {
+      const detail = String(ocrJsonBefore).slice(0, 500);
+      const summary = detail.slice(0, 200);
+      sh.getRange(rowIndex, headerMap["ocr_error_code"] + 1).setValue("LEGACY_ERROR_IN_OCR_JSON");
+      sh.getRange(rowIndex, headerMap["ocr_error_detail"] + 1).setValue(detail);
+      sh.getRange(rowIndex, headerMap["ocr_error"] + 1).setValue(summary);
+      sh.getRange(rowIndex, headerMap["ocr_json"] + 1).setValue("");
+    }
+
+    attempt = attemptsPrev + 1;
+    sh.getRange(rowIndex, headerMap["ocr_attempts"] + 1).setValue(attempt);
+    sh.getRange(rowIndex, headerMap["ocr_last_attempt_at_iso"] + 1).setValue(attemptIso);
+  } finally {
+    if (lock) lock.releaseLock();
   }
 
-  const committed = belle_ocr_worker_state_commitWriteback_(prepared, state);
-  if (committed.done) {
-    return committed.result;
+  let outcome = "";
+  let jsonStr = "";
+  let errorCode = "";
+  let errorDetail = "";
+  let errorMessage = "";
+  let nextRetryIso = "";
+  let statusOut = "";
+  let geminiElapsedMs = 0;
+  let geminiStartMs = 0;
+  let httpStatus = 0;
+  let classify = "";
+  let totalItemElapsedMs = 0;
+  let ccStage = "";
+  let ccCacheHit = false;
+  let ccGeminiMs = 0;
+  let ccStage2Attempted = false;
+  let keepOcrJsonOnError = false;
+
+  try {
+    const runOnceFnName = belle_ocr_getRunOnceFnNameForDocType_(docType);
+    const g = (typeof globalThis !== "undefined") ? globalThis : this;
+    function setErrorFinal_(code, message) {
+      statusOut = "ERROR_FINAL";
+      outcome = "ERROR_FINAL";
+      errorCode = code;
+      errorMessage = message;
+      errorDetail = message;
+    }
+    function applyRunOnceResult_(result) {
+      if (!result) return;
+      geminiElapsedMs = result.geminiElapsedMs;
+      httpStatus = result.httpStatus;
+      jsonStr = result.jsonStr;
+      statusOut = result.statusOut;
+      outcome = result.outcome;
+      errorCode = result.errorCode;
+      errorMessage = result.errorMessage;
+      errorDetail = result.errorDetail;
+      nextRetryIso = result.nextRetryIso;
+      keepOcrJsonOnError = result.keepOcrJsonOnError === true;
+      if (typeof result.ccStage === "string") ccStage = result.ccStage;
+      if (result.ccCacheHit !== undefined) ccCacheHit = result.ccCacheHit;
+      if (result.ccStage2Attempted !== undefined) ccStage2Attempted = result.ccStage2Attempted;
+      if (result.ccGeminiMs !== undefined) ccGeminiMs = result.ccGeminiMs;
+      if (result.throwError) {
+        throw new Error(result.throwError);
+      }
+    }
+    function callRunOnce_() {
+      if (!docSpec) {
+        setErrorFinal_("UNSUPPORTED_SINGLE_STAGE_DOC_TYPE", "Unsupported single stage docType: " + docType);
+        return;
+      }
+      if (!runOnceFnName) {
+        setErrorFinal_("MISSING_OCR_RUN_ONCE_FN", "Missing ocr_run_once_fn for docType: " + docType);
+        return;
+      }
+      const runOnce = g[runOnceFnName];
+      if (typeof runOnce !== "function") {
+        setErrorFinal_("OCR_RUN_ONCE_NOT_FOUND", "ocr_run_once_fn not found: " + runOnceFnName);
+        return;
+      }
+      const result = runOnce({
+        props: props,
+        fileId: fileId,
+        mimeType: mimeType,
+        docType: docType,
+        attempt: attempt,
+        maxAttempts: maxAttempts,
+        statusBefore: statusBefore,
+        prevErrorCode: ocrErrorCode,
+        prevError: ocrError,
+        prevErrorDetail: ocrErrorDetail,
+        ocrJsonBefore: ocrJsonBefore,
+        backoffSeconds: backoffSeconds
+      });
+      applyRunOnceResult_(result);
+    }
+    belle_ocr_worker_dispatchByPipelineKind_(pipelineKind, {
+      two_stage: function () { callRunOnce_(); },
+      single_stage: function () { callRunOnce_(); },
+      inactive: function () {
+        statusOut = "ERROR_FINAL";
+        outcome = "ERROR_FINAL";
+        errorCode = "DOC_TYPE_INACTIVE";
+        errorMessage = "DOC_TYPE_INACTIVE";
+        errorDetail = "DOC_TYPE_INACTIVE";
+      }
+    });
+  } catch (e) {
+    const msg = String(e && e.message ? e.message : e);
+    if (geminiStartMs > 0 && geminiElapsedMs === 0) {
+      geminiElapsedMs = Date.now() - geminiStartMs;
+    }
+    if (isTwoStage && ccGeminiMs === 0 && geminiElapsedMs > 0) {
+      ccGeminiMs = geminiElapsedMs;
+    }
+    let detail = msg.slice(0, 500);
+    const classified = belle_ocr_classifyError(msg);
+    const retryable = classified.retryable === true;
+    statusOut = retryable ? "ERROR_RETRYABLE" : "ERROR_FINAL";
+    errorCode = classified.code;
+    if (retryable && attempt >= maxAttempts) {
+      statusOut = "ERROR_FINAL";
+      errorCode = "MAX_ATTEMPTS_EXCEEDED";
+    }
+    httpStatus = belle_ocr_extractHttpStatus_(msg);
+    errorMessage = msg.slice(0, 200);
+    if (errorCode === "INVALID_SCHEMA" && jsonStr) {
+      detail = belle_ocr_buildInvalidSchemaLogDetail_(jsonStr);
+    }
+    errorDetail = detail;
+    if (isTwoStage && ccStage2Attempted) {
+      keepOcrJsonOnError = true;
+    }
+    if (statusOut === "ERROR_RETRYABLE") {
+      const backoff = belle_ocr_worker_calcBackoffMs_(attempt, backoffSeconds);
+      nextRetryIso = new Date(Date.now() + backoff).toISOString();
+    }
+    outcome = statusOut;
   }
-  return belle_ocr_worker_state_projectTelemetry_(prepared, state);
+
+  if (!classify) {
+    if (statusOut === "DONE") classify = "DONE";
+    else if (errorCode === "INVALID_SCHEMA") classify = "INVALID_SCHEMA";
+    else classify = statusOut || "";
+  }
+
+  lock = null;
+  try {
+    lock = LockService.getScriptLock();
+    lock.waitLock(30000);
+    const rowNow = sh.getRange(rowIndex, 1, 1, sh.getLastColumn()).getValues()[0];
+    const ownerNow = String(rowNow[headerMap["ocr_lock_owner"]] || "");
+    const statusNow = String(rowNow[headerMap["status"]] || "");
+    if (ownerNow !== workerId || statusNow !== "PROCESSING") {
+      const totalNow = Date.now() - totalStart;
+      const res = {
+        ok: true,
+        processed: 0,
+        reason: "CLAIM_LOST",
+        file_id: fileId,
+        corr_key: corr.corr_key,
+        rowIndex: rowIndex,
+        claimElapsedMs: claimElapsedMs,
+        statusBefore: statusBefore,
+        totalItemElapsedMs: totalNow,
+        geminiElapsedMs: geminiElapsedMs,
+        classify: classify,
+        httpStatus: httpStatus,
+        docType: docType,
+        queueSheetName: queueSheetName,
+        processingCount: processingCount,
+        corr_counters: {
+          missing: corrCounters.missing,
+          invalid: corrCounters.invalid,
+          derived: corrCounters.derived,
+          mismatch: corrCounters.mismatch
+        }
+      };
+      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, corr_key: corr.corr_key, rowIndex: rowIndex, docType: docType });
+      Logger.log({
+        phase: "X1_CORR_WORKER_COUNTERS",
+        ok: true,
+        doc_type: docType,
+        queue_sheet_name: queueSheetName,
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      });
+      return res;
+    }
+
+    sh.getRange(rowIndex, headerMap["ocr_lock_owner"] + 1).setValue("");
+    sh.getRange(rowIndex, headerMap["ocr_lock_until_iso"] + 1).setValue("");
+    sh.getRange(rowIndex, headerMap["ocr_processing_started_at_iso"] + 1).setValue("");
+
+    if (statusOut === "DONE") {
+      sh.getRange(rowIndex, headerMap["ocr_json"] + 1).setValue(jsonStr);
+      sh.getRange(rowIndex, headerMap["ocr_error"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["ocr_error_code"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["ocr_error_detail"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["status"] + 1).setValue("DONE");
+    } else if (statusOut === "QUEUED") {
+      sh.getRange(rowIndex, headerMap["ocr_json"] + 1).setValue(jsonStr);
+      sh.getRange(rowIndex, headerMap["ocr_error"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["ocr_error_code"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["ocr_error_detail"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+      sh.getRange(rowIndex, headerMap["status"] + 1).setValue("QUEUED");
+    } else {
+      sh.getRange(rowIndex, headerMap["ocr_error"] + 1).setValue(errorMessage);
+      sh.getRange(rowIndex, headerMap["ocr_error_code"] + 1).setValue(errorCode);
+      sh.getRange(rowIndex, headerMap["ocr_error_detail"] + 1).setValue(errorDetail);
+      if (!keepOcrJsonOnError) {
+        sh.getRange(rowIndex, headerMap["ocr_json"] + 1).setValue("");
+      }
+      sh.getRange(rowIndex, headerMap["ocr_next_retry_at_iso"] + 1).setValue(nextRetryIso);
+      sh.getRange(rowIndex, headerMap["status"] + 1).setValue(statusOut);
+    }
+  } finally {
+    if (lock) lock.releaseLock();
+  }
+
+  totalItemElapsedMs = Date.now() - totalStart;
+  Logger.log({
+    phase: "OCR_WORKER_ITEM",
+    file_id: fileId,
+    corr_key: corr.corr_key,
+    rowIndex: rowIndex,
+    outcome: outcome,
+    attempt: attempt,
+    workerId: workerId,
+    geminiElapsedMs: geminiElapsedMs,
+    totalItemElapsedMs: totalItemElapsedMs,
+    classify: classify,
+    httpStatus: httpStatus,
+    docType: docType,
+    queueSheetName: queueSheetName,
+    ccStage: ccStage,
+    ccCacheHit: ccCacheHit,
+    ccGeminiMs: ccGeminiMs,
+    ccHttpStatus: httpStatus,
+    ccErrorCode: errorCode,
+    processingCount: processingCount
+  });
+  Logger.log({
+    phase: "X1_CORR_WORKER_COUNTERS",
+    ok: true,
+    doc_type: docType,
+    queue_sheet_name: queueSheetName,
+    missing: corrCounters.missing,
+    invalid: corrCounters.invalid,
+    derived: corrCounters.derived,
+    mismatch: corrCounters.mismatch
+  });
+
+  return {
+    ok: true,
+    processed: 1,
+    outcome: outcome,
+    file_id: fileId,
+    corr_key: corr.corr_key,
+    rowIndex: rowIndex,
+    claimElapsedMs: claimElapsedMs,
+    statusBefore: statusBefore,
+    geminiElapsedMs: geminiElapsedMs,
+    totalItemElapsedMs: totalItemElapsedMs,
+    classify: classify,
+    httpStatus: httpStatus,
+    docType: docType,
+    queueSheetName: queueSheetName,
+    ccStage: ccStage,
+    ccCacheHit: ccCacheHit,
+    ccGeminiMs: ccGeminiMs,
+    ccHttpStatus: httpStatus,
+    ccErrorCode: errorCode,
+    processingCount: processingCount,
+    corr_counters: {
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    }
+  };
 }
+
 function belle_ocr_workerLoop_(opts) {
   const props = belle_cfg_getProps_();
   const maxItemsValue = opts && opts.maxItems !== undefined ? opts.maxItems : props.getProperty("BELLE_OCR_WORKER_MAX_ITEMS");
@@ -613,4 +615,3 @@ function belle_ocr_workerLoop_(opts) {
   Logger.log(summary);
   return summary;
 }
-

@@ -127,6 +127,8 @@ function assertNoReplacementChar(paths) {
   expect(bad.length === 0, 'unexpected replacement character in: ' + bad.join(', '));
 }
 
+const capturedLogs = [];
+
 function buildSandbox(spreadsheet, folder, propsMap) {
   const code = fs.readFileSync('gas/Config.js', 'utf8') + '\n'
     + fs.readFileSync('gas/DocTypeRegistry.js', 'utf8') + '\n'
@@ -144,7 +146,7 @@ function buildSandbox(spreadsheet, folder, propsMap) {
 
   const sandbox = {
     console,
-    Logger: { log: () => {} },
+    Logger: { log: (row) => capturedLogs.push(row) },
     PropertiesService: {
       getScriptProperties: () => ({
         getProperty: (key) => propsMap[key] || ''
@@ -352,5 +354,10 @@ function runExportWithDedupe() {
 runExportWithSchemaMismatch();
 runExportWithSkipLog();
 runExportWithDedupe();
+
+const corrEvents = capturedLogs.filter((row) => row && row.phase === 'X1_CORR_EXPORT_ITEM');
+expect(corrEvents.length >= 1, 'X1_CORR_EXPORT_ITEM should be emitted');
+const hasCcCorr = corrEvents.some((row) => row.corr_key === 'cc_statement::cc_skip' || row.corr_key === 'cc_statement::cc_dedupe');
+expect(hasCcCorr, 'export corr_key should include cc_statement::* sample');
 
 console.log('OK: test_export_parity_smoke');

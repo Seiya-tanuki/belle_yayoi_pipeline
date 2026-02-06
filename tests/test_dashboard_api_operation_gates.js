@@ -162,7 +162,8 @@ function testQueueSuccessPath() {
       queued: 3,
       skipped: 2,
       totalListed: 7,
-      queuedByDocType: { receipt: 1, cc_statement: 2 }
+      queuedByDocType: { receipt: 1, cc_statement: 2 },
+      sample_corr_keys: ['receipt::r1', 'cc_statement::c2', 'bad']
     }
   });
   const res = ctx.sandbox.belle_dash_opQueue();
@@ -176,6 +177,11 @@ function testQueueSuccessPath() {
   expectEqual(res.data.totalListed, 7, 'opQueue totalListed mismatch');
   expectEqual(res.data.queuedByDocType.receipt, 1, 'opQueue queuedByDocType receipt mismatch');
   expectEqual(res.data.queuedByDocType.cc_statement, 2, 'opQueue queuedByDocType cc mismatch');
+  expectEqual(res.data.corr_action_key, 'op_queue::dash_1760000000000_apsw', 'opQueue corr_action_key mismatch');
+  expectEqual(Array.isArray(res.data.sample_corr_keys), true, 'opQueue sample_corr_keys must be array');
+  expectEqual(res.data.sample_corr_keys.length, 2, 'opQueue sample_corr_keys length mismatch');
+  expectEqual(res.data.sample_corr_keys[0], 'receipt::r1', 'opQueue sample_corr_keys[0] mismatch');
+  expectEqual(res.data.sample_corr_keys[1], 'cc_statement::c2', 'opQueue sample_corr_keys[1] mismatch');
 }
 
 function testOcrEnableBlockedBranch() {
