@@ -44,6 +44,10 @@
 2. Wave 3 consult gatekeeper session
 - `temp/refactor_control/session_prompts/wave3_consult_gatekeeper.md`
 
+## Wave 3 (Implement)
+1. C3 implement session
+- `temp/refactor_control/session_prompts/wave3_implement_C3.md`
+
 How to use:
 1. Open a new session for each agent thread.
 2. Paste the full content of the matching prompt file.
