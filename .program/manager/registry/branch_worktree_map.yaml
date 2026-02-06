@@ -1,0 +1,8 @@
+version: 1
+updated_at: "2026-02-06T20:29:00+09:00"
+tracks:
+  - track: "integration_validation"
+    branch: "feat/refactor-integration-20260206"
+    worktree: "C:/Users/seiya/Documents/belle_yayoi_pipeline_v0_x1"
+    owner_agent: "manager"
+    status: "active"
