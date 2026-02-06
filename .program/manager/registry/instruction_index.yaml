@@ -1,5 +1,5 @@
 version: 1
-updated_at: "2026-02-06T20:56:00+09:00"
+updated_at: "2026-02-07T00:42:52+09:00"
 instructions:
   - id: "BOOTSTRAP-MANAGER-LANE-20260206"
     lane: "manager"
@@ -15,3 +15,10 @@ instructions:
     track: "manager_quality_uplift"
     status: "completed"
     last_result: "checks_pass_7_of_7_score_10"
+  - id: "PROGRAM-FOUNDATION-MANAGER-20260207"
+    lane: "manager"
+    path: ".program/manager/reports/P-20260207-manager-planning-foundation.md"
+    wave: "planner_hardening"
+    track: "manager_program_planning"
+    status: "completed"
+    last_result: "foundation_seeded_change_vectors_model"

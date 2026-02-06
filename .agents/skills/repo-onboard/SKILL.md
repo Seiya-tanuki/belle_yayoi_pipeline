@@ -1,7 +1,7 @@
 ---
 name: repo-onboard
 description: >
-  Onboard an existing repository to Belle AgentOS. Scans the repo for language/tooling/tests,
+  Onboard an existing repository to AgentOS. Scans the repo for language/tooling/tests,
   proposes minimal AgentOS adjustments, and optionally applies them via agentos-evolve.
 ---
 

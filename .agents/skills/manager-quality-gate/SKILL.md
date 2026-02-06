@@ -9,6 +9,7 @@ description: >
 
 ## Inputs
 - Manager workspace root (`.program/manager`)
+- Program foundation artifacts (`reports/P-*.md`, lock/gate/assumption registries)
 
 ## Procedure
 1. Run:
@@ -24,7 +25,11 @@ description: >
    - rerun until green
 4. Record result in control board update log.
 
+Planning-specific expectations:
+1. `project_type` remains free-form text.
+2. `change_vectors` are present and used to drive controls.
+3. Boundary proof and report allowlist contracts are fully defined.
+
 ## Guardrails
 - Do not bypass failed quality gate for cross-track launches.
 - For simple two-lane fixes without manager orchestration, this gate is optional.
-

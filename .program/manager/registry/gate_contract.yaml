@@ -1,0 +1,41 @@
+version: 1
+updated_at: "2026-02-07T00:41:39+09:00"
+program_id: "P-20260207-manager-planning-foundation"
+project_type: "agentos-manager-capability-uplift"
+change_vectors:
+  - process_governance
+  - cross_module
+  - custom:agentos-lane-architecture
+boundary_proof:
+  required: true
+  coverage:
+    - tracked
+    - staged
+    - unstaged
+    - untracked
+  command_set:
+    tracked: "git diff --name-only HEAD"
+    untracked: "git ls-files --others --exclude-standard"
+report_allowlist:
+  - ".spec/reports/*"
+gates:
+  spec_driven:
+    required: true
+  test_driven:
+    required: true
+    red_green_required_when:
+      - "playbook:tdd-standard"
+  data_driven:
+    required_for_runtime_change: true
+high_risk_controls:
+  quantitative_cleanup_gate_required: true
+  destructive_operations_forbidden:
+    - "rm -rf"
+    - "git reset --hard"
+    - "git clean -fd"
+    - "clasp deploy"
+launch:
+  decision: "GO"
+  hold_conditions:
+    - "quality gate failed"
+    - "scope conflict unresolved"

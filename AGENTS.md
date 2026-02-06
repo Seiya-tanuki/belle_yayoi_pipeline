@@ -64,6 +64,12 @@ Treat the following Japanese phrases as **commands**, not requests:
    - Load the instruction file at `<path>` and execute it as the primary brief.
    - Recommended for manager-led multi-agent operation to reduce chat payload size.
 
+8. `管理役で計画作成`
+   - Run manager planning foundation workflow before large cross-project initiatives.
+   - Use `.program/manager/templates/program_foundation_template.md` as the planning baseline.
+   - `project_type` is free-form text; do not force enum classification.
+   - Use `change_vectors` to drive required controls and quality gates.
+
 ## Windows PowerShell note (encoding)
 - If Japanese text appears as mojibake when viewing files in PowerShell, read with UTF-8 explicitly:
   - `Get-Content -Encoding utf8 <path>`

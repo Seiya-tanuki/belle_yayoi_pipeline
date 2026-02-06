@@ -1,0 +1,17 @@
+version: 1
+updated_at: "<ISO8601>"
+program_id: "P-<YYYYMMDD>-<slug>"
+tracks:
+  - track: "<TRACK_ID>"
+    wave: "<WAVE_ID>"
+    owner_lane: "implement"
+    owner_agent: "<agent-id>"
+    allow_edit:
+      - "<path>"
+    forbid_edit:
+      - "<path>"
+    freeze_overlay:
+      - "<path>"
+    conflict_stop:
+      - "BLOCKER: SCOPE_CONFLICT <path> <reason>"
+    status: "planned"

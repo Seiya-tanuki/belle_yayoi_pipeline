@@ -1,0 +1,12 @@
+version: 1
+updated_at: "<ISO8601>"
+program_id: "P-<YYYYMMDD>-<slug>"
+assumptions:
+  - id: "ASM-001"
+    statement: "<assumption text>"
+    impact: "<risk if invalid>"
+    owner: "<role or agent>"
+    validation_method: "<command or deterministic check>"
+    expiry: "<YYYY-MM-DD>"
+    status: "open"
+    last_validated_at: "<ISO8601>"

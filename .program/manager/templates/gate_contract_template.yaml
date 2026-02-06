@@ -1,0 +1,38 @@
+version: 1
+updated_at: "<ISO8601>"
+program_id: "P-<YYYYMMDD>-<slug>"
+change_vectors:
+  - "<vector>"
+boundary_proof:
+  required: true
+  coverage:
+    - tracked
+    - staged
+    - unstaged
+    - untracked
+  command_set:
+    tracked: "git diff --name-only HEAD"
+    untracked: "git ls-files --others --exclude-standard"
+report_allowlist:
+  - ".spec/reports/*"
+gates:
+  spec_driven:
+    required: true
+  test_driven:
+    required: true
+    red_green_required_when:
+      - "playbook:tdd-standard"
+  data_driven:
+    required_for_runtime_change: true
+high_risk_controls:
+  quantitative_cleanup_gate_required: true
+  destructive_operations_forbidden:
+    - "rm -rf"
+    - "git reset --hard"
+    - "git clean -fd"
+    - "clasp deploy"
+launch:
+  decision: "GO|HOLD"
+  hold_conditions:
+    - "any blocker unresolved"
+    - "quality gate failed"
