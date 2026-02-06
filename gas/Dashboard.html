@@ -494,6 +494,7 @@
     (function () {
       var ocrStatusErrorShown = false;
       var dashboardStarted = false;
+      var dashboardActionsWired = false;
       var rxMax = 5;
       var appState = {
         mode: "OCR",
@@ -577,10 +578,20 @@
         });
       }
 
-      function applyModeState(state) {
+      function u1_state_projectMode_(state) {
         var mode = state && state.mode ? String(state.mode).toUpperCase() : "OCR";
         if (mode !== "MAINTENANCE") mode = "OCR";
         var untilIso = state && state.until_iso ? String(state.until_iso) : "";
+        return {
+          mode: mode,
+          untilIso: untilIso
+        };
+      }
+
+      function u1_render_modePanel_(projectedState) {
+        var mode = projectedState && projectedState.mode ? String(projectedState.mode).toUpperCase() : "OCR";
+        var untilIso = projectedState && projectedState.untilIso ? String(projectedState.untilIso) : "";
+        if (mode !== "MAINTENANCE") mode = "OCR";
         appState.mode = mode;
         appState.untilIso = untilIso;
 
@@ -604,6 +615,11 @@
         setEnabled(controls.btnArchiveImages, isMaintenance);
         setEnabled(controls.btnArchiveLogs, isMaintenance);
         setEnabled(controls.btnChangeMode, true);
+      }
+
+      function applyModeState(state) {
+        var projectedState = u1_state_projectMode_(state);
+        u1_render_modePanel_(projectedState);
       }
 
       function refreshMode(options) {
@@ -642,7 +658,7 @@
         });
       }
 
-      function callServer(fnName, payload, callback) {
+      function u1_transport_callServer_(fnName, payload, callback) {
         var runner = google.script.run
           .withSuccessHandler(function (res) {
             callback(null, res);
@@ -652,6 +668,10 @@
           });
         if (payload !== undefined) runner[fnName](payload);
         else runner[fnName]();
+      }
+
+      function callServer(fnName, payload, callback) {
+        u1_transport_callServer_(fnName, payload, callback);
       }
 
       function renderSetupDiagnostics(diags) {
@@ -715,12 +735,21 @@
         }
       }
 
-      function renderOverview(res) {
-        var tbody = document.querySelector("#overview-table tbody");
-        tbody.innerHTML = "";
+      function u1_state_projectOverview_(res) {
         var data = res && res.data ? res.data : null;
         var rows = data && data.docTypes ? data.docTypes : [];
         var totals = data && data.totals ? data.totals : null;
+        return {
+          rows: rows || [],
+          totals: totals || null
+        };
+      }
+
+      function u1_render_overviewTable_(projectedOverview) {
+        var tbody = document.querySelector("#overview-table tbody");
+        tbody.innerHTML = "";
+        var rows = projectedOverview && projectedOverview.rows ? projectedOverview.rows : [];
+        var totals = projectedOverview && projectedOverview.totals ? projectedOverview.totals : null;
         if (!rows || rows.length === 0) {
           var empty = document.createElement("tr");
           var td = document.createElement("td");
@@ -770,6 +799,11 @@
           });
           tbody.appendChild(totalRow);
         }
+      }
+
+      function renderOverview(res) {
+        var projectedOverview = u1_state_projectOverview_(res);
+        u1_render_overviewTable_(projectedOverview);
       }
 
       function countsToText(counts) {
@@ -973,113 +1007,150 @@
         });
       }
 
-      function initDashboard() {
-        var btnRefreshOverview = document.getElementById("btn-refresh-overview");
-        var btnRefreshLogs = document.getElementById("btn-refresh-logs");
-        var btnChangeMode = document.getElementById("btn-change-mode");
-        var btnQueue = document.getElementById("btn-queue");
-        var btnOcrEnable = document.getElementById("btn-ocr-enable");
-        var btnOcrDisable = document.getElementById("btn-ocr-disable");
-        var btnExportRun = document.getElementById("btn-export-run");
-        var btnArchiveImages = document.getElementById("btn-archive-images");
-        var btnArchiveLogs = document.getElementById("btn-archive-logs");
+      function u1_action_wireDashboard_(controls) {
+        if (dashboardActionsWired) return;
+        dashboardActionsWired = true;
 
-        appState.controls = {
-          btnQueue: btnQueue,
-          btnOcrEnable: btnOcrEnable,
-          btnOcrDisable: btnOcrDisable,
-          btnExportRun: btnExportRun,
-          btnArchiveImages: btnArchiveImages,
-          btnArchiveLogs: btnArchiveLogs,
-          btnChangeMode: btnChangeMode
-        };
+        var btnRefreshOverview = controls.btnRefreshOverview;
+        var btnRefreshLogs = controls.btnRefreshLogs;
+        var btnChangeMode = controls.btnChangeMode;
+        var btnQueue = controls.btnQueue;
+        var btnOcrEnable = controls.btnOcrEnable;
+        var btnOcrDisable = controls.btnOcrDisable;
+        var btnExportRun = controls.btnExportRun;
+        var btnArchiveImages = controls.btnArchiveImages;
+        var btnArchiveLogs = controls.btnArchiveLogs;
 
-        btnRefreshOverview.addEventListener("click", function () {
-          refreshOverview({ history: true, button: btnRefreshOverview });
-        });
-        btnRefreshLogs.addEventListener("click", function () {
-          refreshLogs({ history: true, button: btnRefreshLogs });
-        });
-        btnQueue.addEventListener("click", function () {
-          runOp(btnQueue, "belle_dash_opQueue", null, "Queue completed.", {
-            actionLabel: "Queue files",
-            onSuccess: function () {
-              refreshOverview({
-                button: btnRefreshOverview,
-                onError: function () {
-                  rxSetCurrent("ERROR", "Queue completed, but overview refresh failed.");
+        if (btnRefreshOverview) {
+          btnRefreshOverview.addEventListener("click", function () {
+            refreshOverview({ history: true, button: btnRefreshOverview });
+          });
+        }
+        if (btnRefreshLogs) {
+          btnRefreshLogs.addEventListener("click", function () {
+            refreshLogs({ history: true, button: btnRefreshLogs });
+          });
+        }
+        if (btnQueue) {
+          btnQueue.addEventListener("click", function () {
+            runOp(btnQueue, "belle_dash_opQueue", null, "Queue completed.", {
+              actionLabel: "Queue files",
+              onSuccess: function () {
+                refreshOverview({
+                  button: btnRefreshOverview,
+                  onError: function () {
+                    rxSetCurrent("ERROR", "Queue completed, but overview refresh failed.");
+                  }
+                });
+              }
+            });
+          });
+        }
+        if (btnOcrEnable) {
+          btnOcrEnable.addEventListener("click", function () {
+            runOp(btnOcrEnable, "belle_dash_opOcrEnable", null, "OCR enabled.", {
+              actionLabel: "OCR enable",
+              onSuccess: function () {
+                refreshOcrRunStatus();
+              }
+            });
+          });
+        }
+        if (btnOcrDisable) {
+          btnOcrDisable.addEventListener("click", function () {
+            runOp(btnOcrDisable, "belle_dash_opOcrDisable", "Disable OCR workers?", "OCR disabled.", {
+              actionLabel: "OCR disable",
+              onSuccess: function () {
+                refreshOcrRunStatus();
+              }
+            });
+          });
+        }
+        if (btnChangeMode) {
+          btnChangeMode.addEventListener("click", function () {
+            if (appState.mode === "MAINTENANCE") {
+              runOp(btnChangeMode, "belle_dash_exitMaintenance", null, "Returned to OCR mode.", {
+                actionLabel: "Exit maintenance",
+                onSuccess: function (res) {
+                  if (res && res.data) applyModeState(res.data);
+                  else refreshMode();
                 }
               });
+              return;
             }
-          });
-        });
-        btnOcrEnable.addEventListener("click", function () {
-          runOp(btnOcrEnable, "belle_dash_opOcrEnable", null, "OCR enabled.", {
-            actionLabel: "OCR enable",
-            onSuccess: function () {
-              refreshOcrRunStatus();
-            }
-          });
-        });
-        btnOcrDisable.addEventListener("click", function () {
-          runOp(btnOcrDisable, "belle_dash_opOcrDisable", "Disable OCR workers?", "OCR disabled.", {
-            actionLabel: "OCR disable",
-            onSuccess: function () {
-              refreshOcrRunStatus();
-            }
-          });
-        });
-        btnChangeMode.addEventListener("click", function () {
-          if (appState.mode === "MAINTENANCE") {
-            runOp(btnChangeMode, "belle_dash_exitMaintenance", null, "Returned to OCR mode.", {
-              actionLabel: "Exit maintenance",
+            runOp(btnChangeMode, "belle_dash_enterMaintenance", "Enter maintenance mode?", "Maintenance mode enabled.", {
+              actionLabel: "Enter maintenance",
+              onError: function (res) {
+                var reason = res && res.reason ? String(res.reason) : "";
+                if (reason === "TRIGGERS_ACTIVE") {
+                  rxPush("WARN", "Disable OCR triggers before entering maintenance.");
+                  return;
+                }
+                if (reason === "LIVE_PROCESSING") {
+                  rxPush("WARN", "Processing still active.");
+                  return;
+                }
+                var msg = res && res.message ? String(res.message) : "Maintenance entry failed.";
+                rxPush("ERROR", "Enter maintenance failed: " + msg);
+              },
               onSuccess: function (res) {
                 if (res && res.data) applyModeState(res.data);
                 else refreshMode();
               }
             });
-            return;
-          }
-          runOp(btnChangeMode, "belle_dash_enterMaintenance", "Enter maintenance mode?", "Maintenance mode enabled.", {
-            actionLabel: "Enter maintenance",
-            onError: function (res) {
-              var reason = res && res.reason ? String(res.reason) : "";
-              if (reason === "TRIGGERS_ACTIVE") {
-                rxPush("WARN", "Disable OCR triggers before entering maintenance.");
-                return;
-              }
-              if (reason === "LIVE_PROCESSING") {
-                rxPush("WARN", "Processing still active.");
-                return;
-              }
-              var msg = res && res.message ? String(res.message) : "Maintenance entry failed.";
-              rxPush("ERROR", "Enter maintenance failed: " + msg);
-            },
-            onSuccess: function (res) {
-              if (res && res.data) applyModeState(res.data);
-              else refreshMode();
-            }
           });
-        });
-        btnExportRun.addEventListener("click", function () {
-          runOp(btnExportRun, "belle_dash_exportRun", "Run export and clear operational sheets?", "Export run completed.", {
-            actionLabel: "Export run"
+        }
+        if (btnExportRun) {
+          btnExportRun.addEventListener("click", function () {
+            runOp(btnExportRun, "belle_dash_exportRun", "Run export and clear operational sheets?", "Export run completed.", {
+              actionLabel: "Export run"
+            });
           });
-        });
-        btnArchiveImages.addEventListener("click", function () {
-          runArchiveImages(btnArchiveImages);
-        });
-        btnArchiveLogs.addEventListener("click", function () {
-          runOp(btnArchiveLogs, "belle_dash_archiveLogs", "Archive and clear logs?", "Logs archived and cleared.", {
-            actionLabel: "Archive logs"
+        }
+        if (btnArchiveImages) {
+          btnArchiveImages.addEventListener("click", function () {
+            runArchiveImages(btnArchiveImages);
           });
-        });
+        }
+        if (btnArchiveLogs) {
+          btnArchiveLogs.addEventListener("click", function () {
+            runOp(btnArchiveLogs, "belle_dash_archiveLogs", "Archive and clear logs?", "Logs archived and cleared.", {
+              actionLabel: "Archive logs"
+            });
+          });
+        }
 
         initTabs();
+      }
+
+      function initDashboard() {
+        var controls = {
+          btnRefreshOverview: document.getElementById("btn-refresh-overview"),
+          btnRefreshLogs: document.getElementById("btn-refresh-logs"),
+          btnChangeMode: document.getElementById("btn-change-mode"),
+          btnQueue: document.getElementById("btn-queue"),
+          btnOcrEnable: document.getElementById("btn-ocr-enable"),
+          btnOcrDisable: document.getElementById("btn-ocr-disable"),
+          btnExportRun: document.getElementById("btn-export-run"),
+          btnArchiveImages: document.getElementById("btn-archive-images"),
+          btnArchiveLogs: document.getElementById("btn-archive-logs")
+        };
+
+        appState.controls = {
+          btnQueue: controls.btnQueue,
+          btnOcrEnable: controls.btnOcrEnable,
+          btnOcrDisable: controls.btnOcrDisable,
+          btnExportRun: controls.btnExportRun,
+          btnArchiveImages: controls.btnArchiveImages,
+          btnArchiveLogs: controls.btnArchiveLogs,
+          btnChangeMode: controls.btnChangeMode
+        };
+
+        u1_action_wireDashboard_(controls);
         refreshMode();
         refreshOcrRunStatus();
-        refreshOverview({ button: btnRefreshOverview });
-        refreshLogs({ button: btnRefreshLogs });
+        refreshOverview({ button: controls.btnRefreshOverview });
+        refreshLogs({ button: controls.btnRefreshLogs });
       }
 
       function initSetup() {
