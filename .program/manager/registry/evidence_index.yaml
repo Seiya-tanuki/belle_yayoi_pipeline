@@ -1,0 +1,21 @@
+version: 1
+updated_at: "2026-02-06T20:56:00+09:00"
+evidence:
+  - wave: "wave5"
+    track: "X1"
+    spec: ".spec/specs/T-20260206-INTEG-X1-correlation-key-normalization.md"
+    report: ".spec/reports/T-20260206-INTEG-X1-correlation-key-normalization-implementation.md"
+    gatekeeper_decision: "Accept"
+    verify_commands:
+      - "node tests/test_csv_row_regression.js"
+      - "npm run typecheck"
+      - "npm test"
+    status: "accepted"
+  - wave: "quality_uplift"
+    track: "manager_lane"
+    spec: "n/a"
+    report: ".program/manager/reports/temp_comparison_self_analysis_20260206.md"
+    gatekeeper_decision: "n/a"
+    verify_commands:
+      - "powershell -ExecutionPolicy Bypass -File .program/manager/tools/manager_lane_quality_gate.ps1"
+    status: "accepted_internal"

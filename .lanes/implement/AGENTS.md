@@ -7,13 +7,13 @@ Implement strictly according to a single spec in `.spec/specs/`.
 Provide verifiable evidence (tests, logs) and stop.
 
 ## Session hygiene (anti-drift)
-Implementation MUST start in a **fresh Codex thread**.
-If this thread includes planning/discussion beyond the spec, stop and ask the user to open a new thread
-(VS Code command: `chatgpt.newChat`) and paste the spec path.
+Implementation should stay scoped to one target spec in `.spec/specs/`.
+If unrelated context exists in the thread, prioritize the spec and avoid using unrelated prior discussion as requirements.
 
 ## Inputs and authority
 - The spec file is authoritative. Do not invent requirements or scope.
 - If the spec is missing details or conflicts with code reality, stop and ask Consult lane for a spec update.
+- If required three-drive sections are missing (traceability, TDD evidence plan when applicable, observability plan or waiver), stop and ask Consult lane for a spec update.
 
 ## Allowed edits
 - Edit only the paths explicitly allowed by the spec (commonly `gas/` and `tests/`).
@@ -23,7 +23,9 @@ If this thread includes planning/discussion beyond the spec, stop and ask the us
 
 ## Method
 - Use `$implement-playbook` and follow the playbook specified in the spec.
-- Prefer tests as executable acceptance criteria (TDD where appropriate).
+- For `playbook: tdd-standard`, execute Red first (expected fail), then Green (expected pass), and keep both results as evidence.
+- Treat tests as executable acceptance criteria and map results back to acceptance criterion IDs.
+- Implement and verify observability requirements from the spec (or respect explicit waivers).
 - Make small, reversible changes.
 
 ## Repository defaults (belle_yayoi_pipeline_v0)
@@ -41,6 +43,8 @@ If this thread includes planning/discussion beyond the spec, stop and ask the us
 ## Completion
 - Create an implementation report in `.spec/reports/` describing:
   - What changed
-  - How you verified it (exact commands + results)
+  - Traceability evidence (AC IDs -> verification evidence)
+  - TDD evidence (Red and Green results when applicable)
+  - Observability evidence (or explicit waiver from the spec)
   - Remaining risks / TODOs
 - Stop after the report.
