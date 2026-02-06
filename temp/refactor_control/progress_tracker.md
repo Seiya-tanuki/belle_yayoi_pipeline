@@ -40,7 +40,7 @@ Program-level done definition:
 | Wave 2 | Core extraction with bounded overlap | C1, C2 | Implement: 2 | Completed (C1/C2 judged Accept; wave gate passed) | Per-spec judge accept + wave regression |
 | Wave 3 | OCR worker decomposition | C3 | Implement: 1 | Completed (C3 judged Accept; wave gate passed) | Per-spec judge accept + wave regression |
 | Wave 4 | Dashboard decomposition + test helper extraction | U1, T1 | Implement: 2 | Completed (U1/T1 judged Accept; wave gate passed) | Per-spec judge accept + wave regression |
-| Wave 5 | Correlation key normalization integration | X1 | Implement: 1 | Not started | Per-spec judge accept + wave regression |
+| Wave 5 | Correlation key normalization integration | X1 | Implement: 1 | Consult launch-ready (X1 spec drafting) | Per-spec judge accept + wave regression |
 
 ## 4. Track Board
 
@@ -54,7 +54,7 @@ Program-level done definition:
 | C3 | OCR worker state split spec | `gas/OcrWorkerParallel.js`, `tests/` | `temp/refactor_control/session_prompts/wave3_consult_C3.md` | `.spec/specs/T-20260206-CORE-C3-ocr-worker-state-split.md` | Implement judged (Accept) | 2026-02-06 | Wave 3 completed for this track |
 | U1 | Dashboard script decomposition spec | `gas/Dashboard.html`, `tests/` | `temp/refactor_control/session_prompts/wave4_consult_U1.md` | `.spec/specs/T-20260206-UI-U1-dashboard-script-decomposition.md` | Implement judged (Accept) | 2026-02-06 | Wave 4 completed for this track |
 | T1 | Shared test helper extraction spec | `tests/` | `temp/refactor_control/session_prompts/wave4_consult_T1.md` | `.spec/specs/T-20260206-TEST-T1-test-helper-library.md` | Implement judged (Accept) | 2026-02-06 | Wave 4 completed for this track |
-| X1 | Correlation key normalization spec | multi-module integration scope | - | `.spec/specs/T-20260206-INTEG-X1-correlation-key-normalization.md` | Waiting wave start | 2026-02-06 | Hold until final wave |
+| X1 | Correlation key normalization spec | multi-module integration scope | `temp/refactor_control/session_prompts/wave5_consult_X1.md` | `.spec/specs/T-20260206-INTEG-X1-correlation-key-normalization.md` | Consult prompt ready | 2026-02-06 | Launch X1 consult, then run `wave5_consult_gatekeeper.md` |
 
 ## 5. Blocker Escalation Log
 
@@ -99,3 +99,5 @@ Program-level done definition:
 | 2026-02-06 | Judged U1 implementation (`T-20260206-UI-U1`) as Accept after local verification rerun (`V1-V6`, `csv/typecheck/npm test` pass). |
 | 2026-02-06 | Judged T1 implementation (`T-20260206-TEST-T1`) as Accept after local verification rerun (`V1-V6`, `csv/typecheck/npm test` pass). |
 | 2026-02-06 | Wave 4 closed: U1/T1 accepted and wave-level verification passed on dedicated U1/T1 worktrees. |
+| 2026-02-06 | Prepared Wave 5 consult prompts (`wave5_consult_X1.md`, `wave5_consult_gatekeeper.md`) for final integration spec with `migration-safe` preconditions. |
+| 2026-02-06 | Wave 5 switched to consult-launch-ready state (X1 spec missing; implement prompt deferred until gatekeeper Accept). |
