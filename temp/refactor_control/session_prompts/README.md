@@ -30,6 +30,13 @@
 3. Wave 2 consult gatekeeper session
 - `temp/refactor_control/session_prompts/wave2_consult_gatekeeper.md`
 
+## Wave 2 (Implement)
+1. C1 implement session
+- `temp/refactor_control/session_prompts/wave2_implement_C1.md`
+
+2. C2 implement session
+- `temp/refactor_control/session_prompts/wave2_implement_C2.md`
+
 How to use:
 1. Open a new session for each agent thread.
 2. Paste the full content of the matching prompt file.
