@@ -8,8 +8,8 @@ These are **natural-language commands** you can type into Codex chat. The root `
    - Use for: research, planning, writing specs, judging, evolving AgentOS.
 
 2. `実装役を起動`
-   - Implementation must start in a fresh thread.
-   - In VS Code, run command **Codex: New Chat** (command ID: `chatgpt.newChat`) and paste the spec path.
+   - Activates Implement lane for this thread.
+   - Provide the target spec path and execute implementation from that spec.
 
 3. `管理役を起動`
    - Activates Manager lane for this thread.
@@ -31,7 +31,6 @@ These are **natural-language commands** you can type into Codex chat. The root `
    - Propose and apply changes to AGENTS/skills/playbooks/rules using `$agentos-evolve`.
 
 ## Helpful VS Code Codex commands
-- New thread: `chatgpt.newChat`
 - New Codex panel: `chatgpt.newCodexPanel`
 - Add selection to thread context: `chatgpt.addToThread`
 - Add current file to thread context: `chatgpt.addFileToThread`

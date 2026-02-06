@@ -37,9 +37,9 @@ Treat the following Japanese phrases as **commands**, not requests:
    - Print a short "Consult lane ready" status summary.
 
 2. `実装役を起動`
-   - Implementation must start in a **fresh Codex thread** to minimize context drift.
-   - Ask the user to run VS Code command `chatgpt.newChat` (or open a new Codex panel) and then paste the spec path.
-   - Once in the new thread, read `.lanes/implement/AGENTS.md` and follow it as the active lane policy.
+   - Enter **Implement lane** for this thread.
+   - Read `.lanes/implement/AGENTS.md` and follow it as the active lane policy.
+   - Provide the target spec path and execute implementation from that spec.
 
 3. `管理役を起動`
    - Enter **Manager lane** for this thread.
