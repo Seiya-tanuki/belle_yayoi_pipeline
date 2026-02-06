@@ -39,7 +39,7 @@ Program-level done definition:
 | Wave 1 | Operational module test expansion | O1, O2, O3 | Implement: 3 | Completed (O1/O2/O3 judged Accept; wave gate passed) | Per-spec judge accept + wave regression |
 | Wave 2 | Core extraction with bounded overlap | C1, C2 | Implement: 2 | Completed (C1/C2 judged Accept; wave gate passed) | Per-spec judge accept + wave regression |
 | Wave 3 | OCR worker decomposition | C3 | Implement: 1 | Completed (C3 judged Accept; wave gate passed) | Per-spec judge accept + wave regression |
-| Wave 4 | Dashboard decomposition + test helper extraction | U1, T1 | Implement: 2 | Implement launch-ready (U1/T1) | Per-spec judge accept + wave regression |
+| Wave 4 | Dashboard decomposition + test helper extraction | U1, T1 | Implement: 2 | Completed (U1/T1 judged Accept; wave gate passed) | Per-spec judge accept + wave regression |
 | Wave 5 | Correlation key normalization integration | X1 | Implement: 1 | Not started | Per-spec judge accept + wave regression |
 
 ## 4. Track Board
@@ -52,8 +52,8 @@ Program-level done definition:
 | C1 | Export skeleton extraction spec | `gas/Export.js`, `tests/` | `temp/refactor_control/session_prompts/wave2_consult_C1.md` | `.spec/specs/T-20260206-CORE-C1-export-skeleton-extraction.md` | Implement judged (Accept) | 2026-02-06 | Wave 2 completed for this track |
 | C2 | Queue claim/stale split spec | `gas/Queue.js`, `tests/` | `temp/refactor_control/session_prompts/wave2_consult_C2.md` | `.spec/specs/T-20260206-CORE-C2-queue-claim-stale-split.md` | Implement judged (Accept) | 2026-02-06 | Wave 2 completed for this track |
 | C3 | OCR worker state split spec | `gas/OcrWorkerParallel.js`, `tests/` | `temp/refactor_control/session_prompts/wave3_consult_C3.md` | `.spec/specs/T-20260206-CORE-C3-ocr-worker-state-split.md` | Implement judged (Accept) | 2026-02-06 | Wave 3 completed for this track |
-| U1 | Dashboard script decomposition spec | `gas/Dashboard.html`, `tests/` | `temp/refactor_control/session_prompts/wave4_consult_U1.md` | `.spec/specs/T-20260206-UI-U1-dashboard-script-decomposition.md` | Implement prompt ready | 2026-02-06 | Launch `wave4_implement_U1.md` in dedicated U1 branch/worktree |
-| T1 | Shared test helper extraction spec | `tests/` | `temp/refactor_control/session_prompts/wave4_consult_T1.md` | `.spec/specs/T-20260206-TEST-T1-test-helper-library.md` | Implement prompt ready | 2026-02-06 | Launch `wave4_implement_T1.md` in dedicated T1 branch/worktree |
+| U1 | Dashboard script decomposition spec | `gas/Dashboard.html`, `tests/` | `temp/refactor_control/session_prompts/wave4_consult_U1.md` | `.spec/specs/T-20260206-UI-U1-dashboard-script-decomposition.md` | Implement judged (Accept) | 2026-02-06 | Wave 4 completed for this track |
+| T1 | Shared test helper extraction spec | `tests/` | `temp/refactor_control/session_prompts/wave4_consult_T1.md` | `.spec/specs/T-20260206-TEST-T1-test-helper-library.md` | Implement judged (Accept) | 2026-02-06 | Wave 4 completed for this track |
 | X1 | Correlation key normalization spec | multi-module integration scope | - | `.spec/specs/T-20260206-INTEG-X1-correlation-key-normalization.md` | Waiting wave start | 2026-02-06 | Hold until final wave |
 
 ## 5. Blocker Escalation Log
@@ -96,3 +96,6 @@ Program-level done definition:
 | 2026-02-06 | Received Wave 4 gatekeeper rerun result: U1 Accept / T1 Accept; Wave 4 parallel implement start is GO. |
 | 2026-02-06 | Wave 4 moved to implement-launch-ready state; next step is preparing U1/T1 implement prompts with non-overlap ownership. |
 | 2026-02-06 | Prepared Wave 4 implement prompts (`wave4_implement_U1.md`, `wave4_implement_T1.md`) with strict U1/T1 non-overlap boundaries and branch/worktree preconditions. |
+| 2026-02-06 | Judged U1 implementation (`T-20260206-UI-U1`) as Accept after local verification rerun (`V1-V6`, `csv/typecheck/npm test` pass). |
+| 2026-02-06 | Judged T1 implementation (`T-20260206-TEST-T1`) as Accept after local verification rerun (`V1-V6`, `csv/typecheck/npm test` pass). |
+| 2026-02-06 | Wave 4 closed: U1/T1 accepted and wave-level verification passed on dedicated U1/T1 worktrees. |
