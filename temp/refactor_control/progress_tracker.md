@@ -38,7 +38,7 @@ Program-level done definition:
 | Wave 0 | Spec backlog setup for first implementation wave | O1, O2, O3 | Consult: 3 | Completed (O1/O2/O3 reviewed) | 3 specs handoff-ready |
 | Wave 1 | Operational module test expansion | O1, O2, O3 | Implement: 3 | Completed (O1/O2/O3 judged Accept; wave gate passed) | Per-spec judge accept + wave regression |
 | Wave 2 | Core extraction with bounded overlap | C1, C2 | Implement: 2 | Completed (C1/C2 judged Accept; wave gate passed) | Per-spec judge accept + wave regression |
-| Wave 3 | OCR worker decomposition | C3 | Implement: 1 | Implement launch-ready (C3) | Per-spec judge accept + wave regression |
+| Wave 3 | OCR worker decomposition | C3 | Implement: 1 | Completed (C3 judged Accept; wave gate passed) | Per-spec judge accept + wave regression |
 | Wave 4 | Dashboard decomposition + test helper extraction | U1, T1 | Implement: 2 | Not started | Per-spec judge accept + wave regression |
 | Wave 5 | Correlation key normalization integration | X1 | Implement: 1 | Not started | Per-spec judge accept + wave regression |
 
@@ -51,7 +51,7 @@ Program-level done definition:
 | O3 | Add server-side dashboard API test spec | `gas/DashboardApi.js`, `tests/` | `temp/refactor_control/session_prompts/wave0_consult_O3.md` | `.spec/specs/T-20260206-OPS-O3-dashboard-api-tests.md` | Implement judged (Accept) | 2026-02-06 | Wave 1 completed for this track |
 | C1 | Export skeleton extraction spec | `gas/Export.js`, `tests/` | `temp/refactor_control/session_prompts/wave2_consult_C1.md` | `.spec/specs/T-20260206-CORE-C1-export-skeleton-extraction.md` | Implement judged (Accept) | 2026-02-06 | Wave 2 completed for this track |
 | C2 | Queue claim/stale split spec | `gas/Queue.js`, `tests/` | `temp/refactor_control/session_prompts/wave2_consult_C2.md` | `.spec/specs/T-20260206-CORE-C2-queue-claim-stale-split.md` | Implement judged (Accept) | 2026-02-06 | Wave 2 completed for this track |
-| C3 | OCR worker state split spec | `gas/OcrWorkerParallel.js`, `tests/` | `temp/refactor_control/session_prompts/wave3_consult_C3.md` | `.spec/specs/T-20260206-CORE-C3-ocr-worker-state-split.md` | Implement prompt ready | 2026-02-06 | Launch `wave3_implement_C3.md` in dedicated C3 branch/worktree |
+| C3 | OCR worker state split spec | `gas/OcrWorkerParallel.js`, `tests/` | `temp/refactor_control/session_prompts/wave3_consult_C3.md` | `.spec/specs/T-20260206-CORE-C3-ocr-worker-state-split.md` | Implement judged (Accept) | 2026-02-06 | Wave 3 completed for this track |
 | U1 | Dashboard script decomposition spec | `gas/Dashboard.html`, `tests/` | - | `.spec/specs/T-20260206-UI-U1-dashboard-script-decomposition.md` | Waiting wave start | 2026-02-06 | Hold until Wave 4 |
 | T1 | Shared test helper extraction spec | `tests/` | - | `.spec/specs/T-20260206-TEST-T1-test-helper-library.md` | Waiting wave start | 2026-02-06 | Hold until Wave 4 |
 | X1 | Correlation key normalization spec | multi-module integration scope | - | `.spec/specs/T-20260206-INTEG-X1-correlation-key-normalization.md` | Waiting wave start | 2026-02-06 | Hold until final wave |
@@ -87,3 +87,5 @@ Program-level done definition:
 | 2026-02-06 | Applied gatekeeper Revise fixes to C3 spec V1 boundary coverage (`git diff --name-only HEAD` + untracked merge) and updated pass criteria; gatekeeper rerun pending. |
 | 2026-02-06 | Received gatekeeper rerun result for C3 as Accept (shared report); opened Wave 3 implement stage. |
 | 2026-02-06 | Prepared Wave 3 implement prompt (`wave3_implement_C3.md`) with mandatory pre-edit V1 boundary check and C3 ownership constraints. |
+| 2026-02-06 | Judged C3 implementation (`T-20260206-CORE-C3`) as Accept after local verification rerun (`V1/V2/V3/V4/V5/V6 equivalence/V7`, `csv/typecheck/npm test` pass). |
+| 2026-02-06 | Wave 3 closed: C3 accepted and wave-level verification passed on dedicated C3 worktree. |
