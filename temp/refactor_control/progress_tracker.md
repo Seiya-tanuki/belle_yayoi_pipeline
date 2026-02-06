@@ -37,7 +37,7 @@ Program-level done definition:
 | --- | --- | --- | --- | --- | --- |
 | Wave 0 | Spec backlog setup for first implementation wave | O1, O2, O3 | Consult: 3 | Completed (O1/O2/O3 reviewed) | 3 specs handoff-ready |
 | Wave 1 | Operational module test expansion | O1, O2, O3 | Implement: 3 | Completed (O1/O2/O3 judged Accept; wave gate passed) | Per-spec judge accept + wave regression |
-| Wave 2 | Core extraction with bounded overlap | C1, C2 | Implement: 2 | Consult launch ready (prompts prepared) | Per-spec judge accept + wave regression |
+| Wave 2 | Core extraction with bounded overlap | C1, C2 | Implement: 2 | Spec reviewed (C1/C2 Accept); implement launch ready | Per-spec judge accept + wave regression |
 | Wave 3 | OCR worker decomposition | C3 | Implement: 1 | Not started | Per-spec judge accept + wave regression |
 | Wave 4 | Dashboard decomposition + test helper extraction | U1, T1 | Implement: 2 | Not started | Per-spec judge accept + wave regression |
 | Wave 5 | Correlation key normalization integration | X1 | Implement: 1 | Not started | Per-spec judge accept + wave regression |
@@ -49,8 +49,8 @@ Program-level done definition:
 | O1 | Add test-focused spec for maintenance/export-run services | `gas/MaintenanceMode.js`, `gas/ExportRunService.js`, `tests/` | `temp/refactor_control/session_prompts/wave0_consult_O1.md` | `.spec/specs/T-20260206-OPS-O1-maintenance-exportrun-tests.md` | Implement judged (Accept) | 2026-02-06 | Wave 1 completed for this track |
 | O2 | Add test-focused spec for archive services | `gas/LogArchiveService.js`, `gas/ImageArchiveBatchService.js`, `gas/ArchiveNaming.js` (if needed), `tests/` | `temp/refactor_control/session_prompts/wave0_consult_O2.md` | `.spec/specs/T-20260206-OPS-O2-archive-services-tests.md` | Implement judged (Accept) | 2026-02-06 | Wave 1 completed for this track |
 | O3 | Add server-side dashboard API test spec | `gas/DashboardApi.js`, `tests/` | `temp/refactor_control/session_prompts/wave0_consult_O3.md` | `.spec/specs/T-20260206-OPS-O3-dashboard-api-tests.md` | Implement judged (Accept) | 2026-02-06 | Wave 1 completed for this track |
-| C1 | Export skeleton extraction spec | `gas/Export.js`, `tests/` | `temp/refactor_control/session_prompts/wave2_consult_C1.md` | `.spec/specs/T-20260206-CORE-C1-export-skeleton-extraction.md` | Consult prompt ready | 2026-02-06 | Launch Wave 2 C1 consult session |
-| C2 | Queue claim/stale split spec | `gas/Queue.js`, `tests/` | `temp/refactor_control/session_prompts/wave2_consult_C2.md` | `.spec/specs/T-20260206-CORE-C2-queue-claim-stale-split.md` | Consult prompt ready | 2026-02-06 | Launch Wave 2 C2 consult session |
+| C1 | Export skeleton extraction spec | `gas/Export.js`, `tests/` | `temp/refactor_control/session_prompts/wave2_consult_C1.md` | `.spec/specs/T-20260206-CORE-C1-export-skeleton-extraction.md` | Spec reviewed (Accept with conflict-fix) | 2026-02-06 | Ready for Wave 2 implement prompt |
+| C2 | Queue claim/stale split spec | `gas/Queue.js`, `tests/` | `temp/refactor_control/session_prompts/wave2_consult_C2.md` | `.spec/specs/T-20260206-CORE-C2-queue-claim-stale-split.md` | Spec reviewed (Accept with conflict-fix) | 2026-02-06 | Ready for Wave 2 implement prompt |
 | C3 | OCR worker state split spec | `gas/OcrWorkerParallel.js`, `tests/` | - | `.spec/specs/T-20260206-CORE-C3-ocr-worker-state-split.md` | Waiting wave start | 2026-02-06 | Hold until Wave 2-3 |
 | U1 | Dashboard script decomposition spec | `gas/Dashboard.html`, `tests/` | - | `.spec/specs/T-20260206-UI-U1-dashboard-script-decomposition.md` | Waiting wave start | 2026-02-06 | Hold until Wave 4 |
 | T1 | Shared test helper extraction spec | `tests/` | - | `.spec/specs/T-20260206-TEST-T1-test-helper-library.md` | Waiting wave start | 2026-02-06 | Hold until Wave 4 |
@@ -76,4 +76,5 @@ Program-level done definition:
 | 2026-02-06 | Judged O3 implementation (`T-20260206-OPS-O3`) as Accept after local verification rerun (targeted tests + boundary check + csv/typecheck/npm test). |
 | 2026-02-06 | Judged O2 implementation (`T-20260206-OPS-O2`) as Accept after local verification rerun (targeted tests + boundary check + csv/typecheck/npm test). |
 | 2026-02-06 | Wave 1 closed: O1/O2/O3 all accepted and wave-level verification passed. |
+| 2026-02-06 | Reviewed C1/C2 specs; applied conflict-prevention fixes (`scope.allow_edit` overlap removed, branch-local boundary-proof precondition added); both marked Accept for implement handoff. |
 | 2026-02-06 | Prepared Wave 2 consult prompts for C1/C2 plus consult gatekeeper prompt; switched Wave 2 to consult-launch-ready. |
