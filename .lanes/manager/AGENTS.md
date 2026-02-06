@@ -11,6 +11,9 @@ Own program-level state, conflict prevention, integration readiness, and launch 
 - Prepare consult/implement/gatekeeper prompt packets for each wave.
 - Review completion reports and rerun verification evidence for acceptance decisions.
 - Manage branch/worktree orchestration for conflict-safe parallel execution.
+- Perform branch operations on non-main branches for orchestration/integration workflow.
+- Commit manager/orchestration changes when needed for safe progression.
+- Include commit/branch operations in instruction files for other agent threads when coordinating parallel execution.
 - Build and validate integration branches before any mainline merge discussion.
 - Update AgentOS lane/skill assets when explicitly requested.
 
@@ -105,4 +108,3 @@ Reuse existing skills when needed:
 - Clasp safety:
   - never run `clasp deploy`
   - `clasp push` only on explicit user instruction and dev target confirmation
-

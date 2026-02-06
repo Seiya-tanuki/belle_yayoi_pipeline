@@ -11,14 +11,23 @@ These are **natural-language commands** you can type into Codex chat. The root `
    - Implementation must start in a fresh thread.
    - In VS Code, run command **Codex: New Chat** (command ID: `chatgpt.newChat`) and paste the spec path.
 
+3. `管理役を起動`
+   - Activates Manager lane for this thread.
+   - Use for: project-wide cross-track orchestration, parallel control, and integration management.
+   - Optional: small fixes can stay on Consult + Implement only.
+
+4. `指示書を実行 <path>`
+   - Loads the instruction file at `<path>` and executes it as the primary brief.
+   - Recommended for manager-led operations to reduce prompt copy/paste overhead.
+
 ## Artifact commands
-3. `この内容で仕様書作成`
+5. `この内容で仕様書作成`
    - Creates/updates a spec in `.spec/specs/` using `$spec-writer` and `$spec-check`.
 
-4. `このレポートをジャッジして`
+6. `このレポートをジャッジして`
    - Reviews diffs + report against the spec using `$judge`.
 
-5. `AgentOSを進化して`
+7. `AgentOSを進化して`
    - Propose and apply changes to AGENTS/skills/playbooks/rules using `$agentos-evolve`.
 
 ## Helpful VS Code Codex commands
