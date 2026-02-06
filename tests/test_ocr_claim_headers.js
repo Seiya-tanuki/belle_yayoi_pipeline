@@ -1,29 +1,27 @@
-const fs = require('fs');
-const vm = require('vm');
+const { loadFilesInOrder } = require('./helpers/module_loader');
+const { expectTrue } = require('./helpers/assertions');
 
-const code = fs.readFileSync('gas/Config.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry.js', 'utf8') + '\n' + fs.readFileSync('gas/Log.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue.js', 'utf8');
-const sandbox = { console };
-vm.createContext(sandbox);
-vm.runInContext(code, sandbox);
-
-function expect(cond, msg) {
-  if (!cond) throw new Error(msg);
-}
+const sandbox = loadFilesInOrder([
+  'gas/Config.js',
+  'gas/DocTypeRegistry.js',
+  'gas/Log.js',
+  'gas/Sheet.js',
+  'gas/Drive.js',
+  'gas/Pdf.js',
+  'gas/Gemini.js',
+  'gas/Code.js',
+  'gas/Queue.js'
+]);
 
 const header = sandbox.belle_getQueueHeader_();
-expect(Array.isArray(header), 'header should be array');
-expect(header.indexOf('doc_type') >= 0, 'missing doc_type');
-expect(header.indexOf('source_subfolder') >= 0, 'missing source_subfolder');
-expect(header.indexOf('ocr_lock_owner') >= 0, 'missing ocr_lock_owner');
-expect(header.indexOf('ocr_lock_until_iso') >= 0, 'missing ocr_lock_until_iso');
-expect(header.indexOf('ocr_processing_started_at_iso') >= 0, 'missing ocr_processing_started_at_iso');
+expectTrue(Array.isArray(header), 'header should be array');
+expectTrue(header.indexOf('doc_type') >= 0, 'missing doc_type');
+expectTrue(header.indexOf('source_subfolder') >= 0, 'missing source_subfolder');
+expectTrue(header.indexOf('ocr_lock_owner') >= 0, 'missing ocr_lock_owner');
+expectTrue(header.indexOf('ocr_lock_until_iso') >= 0, 'missing ocr_lock_until_iso');
+expectTrue(header.indexOf('ocr_processing_started_at_iso') >= 0, 'missing ocr_processing_started_at_iso');
 
 const unique = new Set(header);
-expect(unique.size === header.length, 'header should not contain duplicates');
+expectTrue(unique.size === header.length, 'header should not contain duplicates');
 
 console.log('OK: test_ocr_claim_headers');
-
-
-
-
-

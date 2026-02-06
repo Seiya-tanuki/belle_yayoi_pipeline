@@ -1,32 +1,34 @@
-const fs = require('fs');
-const vm = require('vm');
+const { loadFilesInOrder } = require('./helpers/module_loader');
+const { MockSheet } = require('./helpers/mock_sheet');
+const { expectTrue, expectEqual } = require('./helpers/assertions');
 
-const code = fs.readFileSync('gas/Config.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry.js', 'utf8') + '\n' + fs.readFileSync('gas/Log.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue.js', 'utf8');
-const sandbox = { console };
-vm.createContext(sandbox);
-vm.runInContext(code, sandbox);
-
-function expect(cond, msg) {
-  if (!cond) throw new Error(msg);
-}
+const sandbox = loadFilesInOrder([
+  'gas/Config.js',
+  'gas/DocTypeRegistry.js',
+  'gas/Log.js',
+  'gas/Sheet.js',
+  'gas/Drive.js',
+  'gas/Pdf.js',
+  'gas/Gemini.js',
+  'gas/Code.js',
+  'gas/Queue.js'
+]);
 
 const appendRows = sandbox.belle_sheet_appendRowsInChunks_;
-expect(typeof appendRows === 'function', 'missing belle_sheet_appendRowsInChunks_');
+expectTrue(typeof appendRows === 'function', 'missing belle_sheet_appendRowsInChunks_');
 
 const calls = [];
-const sheet = {
-  lastRow: 3,
-  getLastRow() {
-    return this.lastRow;
-  },
-  getRange(row, col, numRows, numCols) {
-    return {
-      setValues: (vals) => {
-        calls.push({ row, numRows, numCols, vals });
-        this.lastRow = row + numRows - 1;
-      }
-    };
-  }
+const sheet = new MockSheet('APPEND_TARGET');
+sheet.data = [[0, 0], [0, 0], [0, 0]];
+const baseGetRange = sheet.getRange.bind(sheet);
+sheet.getRange = (row, col, numRows, numCols) => {
+  const range = baseGetRange(row, col, numRows, numCols);
+  const baseSetValues = range.setValues.bind(range);
+  range.setValues = (vals) => {
+    calls.push({ row, numRows, numCols, vals });
+    return baseSetValues(vals);
+  };
+  return range;
 };
 
 const rows = [
@@ -38,15 +40,11 @@ const rows = [
 ];
 
 const written = appendRows(sheet, rows, 2);
-expect(written === 5, 'written rows should be 5');
-expect(calls.length === 3, 'should call setValues 3 times');
-expect(calls[0].row === 4 && calls[0].numRows === 2 && calls[0].numCols === 2, 'first chunk position mismatch');
-expect(calls[1].row === 6 && calls[1].numRows === 2 && calls[1].numCols === 2, 'second chunk position mismatch');
-expect(calls[2].row === 8 && calls[2].numRows === 1 && calls[2].numCols === 2, 'third chunk position mismatch');
+expectEqual(written, 5, 'written rows should be 5');
+expectEqual(calls.length, 3, 'should call setValues 3 times');
+expectTrue(calls[0].row === 4 && calls[0].numRows === 2 && calls[0].numCols === 2, 'first chunk position mismatch');
+expectTrue(calls[1].row === 6 && calls[1].numRows === 2 && calls[1].numCols === 2, 'second chunk position mismatch');
+expectTrue(calls[2].row === 8 && calls[2].numRows === 1 && calls[2].numCols === 2, 'third chunk position mismatch');
+expectEqual(sheet.getLastRow(), 8, 'last row should be updated');
 
 console.log('OK: test_sheet_append_rows');
-
-
-
-
-
