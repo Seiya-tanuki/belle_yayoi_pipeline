@@ -7,6 +7,10 @@
 - max_parallel:
 - shared_freeze_files:
   - 
+- required_prompt_templates:
+  - `.program/manager/templates/consult_track_prompt_template.md`
+  - `.program/manager/templates/consult_gatekeeper_prompt_template.md`
+  - `.program/manager/templates/implement_track_prompt_template.md`
 
 ## A. Consult prompts
 ### Track <ID>
@@ -44,4 +48,17 @@
 ## D. Launch condition
 1.
 2.
+
+## E. Quality gate (must pass before launch)
+1. Every track has both consult and implement prompt files (unless intentionally deferred).
+2. Prompt files include required blocks:
+   - objective
+   - preconditions
+   - ownership boundaries
+   - hard-stop rule
+   - verification set
+3. Gatekeeper prompt exists and uses strict output format:
+   - Accept/Revise
+   - exact required fixes
+   - GO/HOLD recommendation
 

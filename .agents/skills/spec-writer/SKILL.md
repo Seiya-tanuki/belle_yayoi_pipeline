@@ -28,16 +28,27 @@ The spec must minimize interpretation and provide mechanical verification.
    - link relevant ADRs in `decision_refs` if they exist
 4. Write Goal / Non-goals:
    - Non-goals should be explicit exclusions to stop scope creep.
-5. Write Acceptance Criteria (testable):
+5. Write Acceptance Criteria with stable IDs:
+   - Use IDs like `AC-1`, `AC-2`.
    - Every criterion should be verifiable via tests or a deterministic check.
-6. Write Verification:
+6. Write a Traceability Matrix:
+   - Map every AC ID to one or more verification step IDs (`V1`, `V2`, ...).
+   - Define expected evidence artifacts for each mapping.
+7. Write Verification:
    - Exact commands and pass/fail interpretation.
-   - If boundary integrity matters, include `rg`/`grep` proof commands.
-7. Add Safety / Rollback:
+   - Use verification step IDs (`V1`, `V2`, ...).
+   - Include boundary and observability checks where applicable.
+8. For `playbook: tdd-standard`, write a TDD Evidence Plan:
+   - Red command (expected fail) and Green command (expected pass).
+   - If Red is skipped, include an explicit approved waiver and reason.
+9. For runtime behavior changes, write an Observability Plan:
+   - Signals, emission points, correlation keys/dimensions, and verification mapping.
+   - If skipped, include an explicit waiver and reason (only for non-runtime changes).
+10. Add Safety / Rollback:
    - Especially for `risk: medium/high`.
-8. End with Implementation notes only if they reduce ambiguity (file boundaries, invariants).
-9. Run `$spec-check` and address any blocking issues.
-10. In chat, always output the two handoff artifacts below (Japanese):
+11. End with Implementation notes only if they reduce ambiguity (file boundaries, invariants).
+12. Run `$spec-check` and address any blocking issues.
+13. In chat, always output the two handoff artifacts below (Japanese):
    - (1) Spec overview + key points (what to change, what not to change, how to verify)
    - (2) Implement-lane copy/paste block: `実装役を起動` + the spec relative path
 
@@ -61,6 +72,8 @@ After the spec is written and `$spec-check` passes, output exactly:
 ## Quality bar (must pass)
 - The Implement agent should be able to proceed with *zero additional clarifying questions*.
 - The spec should not rely on conversation history.
+- Every AC ID is covered by verification and has expected evidence.
+- TDD and observability requirements are explicit (or explicitly waived with reason).
 
 ## Output rules
 - Specs are written in **English**.

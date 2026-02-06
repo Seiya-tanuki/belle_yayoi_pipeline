@@ -38,10 +38,13 @@ Your output should reduce implementation freedom and ambiguity.
 ## Spec bar (must-haves)
 A spec must include:
 - Goal + Non-goals
-- Acceptance criteria (testable)
+- Acceptance criteria (testable) with stable IDs (for example, `AC-1`)
+- Traceability mapping from each acceptance criterion ID to verification steps
 - Verification steps (commands or reproducible checks)
 - Risk level and safety notes
 - A selected playbook ID (or `research-only`)
+- For `playbook: tdd-standard`: Red/Green evidence plan (expected fail then pass)
+- For runtime behavior changes: observability plan (signals, where emitted, and how to verify), or an explicit waiver reason
 
 If any of these are missing, do not hand off to Implement lane.
 

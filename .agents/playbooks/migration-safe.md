@@ -8,6 +8,7 @@ Use for changes with high blast radius or irreversible effects (schema changes, 
    - rollback plan
    - verification plan
    - safety constraints (no destructive commands without approval)
+   - observability plan with thresholds and abort criteria
 
 ## Steps
 1. Identify what can be made reversible (feature flags, staged migrations, compatibility layers).
@@ -16,9 +17,10 @@ Use for changes with high blast radius or irreversible effects (schema changes, 
    - phase B: backfill / migrate
    - phase C: switch reads
    - phase D: cleanup (only after confirmation)
-3. Add monitoring or checks if feasible (logs, counters, invariants).
-4. Verify with explicit commands and clear pass/fail criteria.
+3. Add and verify monitoring/checks (logs, counters, invariants) before and during each phase.
+4. Verify with explicit commands, clear pass/fail criteria, and abort conditions.
 
 ## Guardrails
 - Stop immediately if rollback is unclear.
+- Stop immediately if observability cannot confirm migration safety.
 - Do not run destructive commands without explicit approval.

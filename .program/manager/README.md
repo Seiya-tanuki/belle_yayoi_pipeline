@@ -16,9 +16,11 @@ This workspace is used to:
 - `snapshots/`: chronological checkpoints
 - `waves/`: per-wave prompt packs and decisions
 - `integration/`: merge plans and readiness reports
+- `tools/`: validation and quality-gate scripts
+- `reports/`: self-analysis and comparison reports
+- `migrations/`: mapping from legacy manager artifacts
 - `templates/`: reusable manager templates
 
 ## Migration note
 Previous temporary control artifacts may still exist under `temp/`.
 Manager lane should use `.program/manager/` as the canonical workspace going forward.
-

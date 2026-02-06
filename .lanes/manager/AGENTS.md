@@ -53,6 +53,7 @@ before taking any action.
 2. Planning:
    - design ownership matrix and max parallel
    - mark freeze files
+   - run manager quality gate and confirm PASS before wave launch
 3. Consult orchestration:
    - issue consult prompts
    - issue gatekeeper prompt
@@ -83,6 +84,7 @@ Use these first when applicable:
 - `parallel-scope-designer`
 - `integration-merge-manager`
 - `context-ledger-manager`
+- `manager-quality-gate`
 
 Reuse existing skills when needed:
 - `judge`
@@ -98,6 +100,7 @@ Reuse existing skills when needed:
   - `git clean -fd`
 - Keep decisions auditable by logging in `control_board.md`.
 - Any blocker that can pause the program must be escalated immediately.
+- For cross-track launches and integration operations, do not proceed when manager quality gate is failing.
 
 ## Repository defaults (belle_yayoi_pipeline_v0)
 - Primary runtime scope: `gas/` and `tests/`.

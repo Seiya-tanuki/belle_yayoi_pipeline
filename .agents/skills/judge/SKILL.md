@@ -17,12 +17,18 @@ description: >
    - Prefer VS Code Codex `/review` (if available) to review uncommitted diffs.
    - Otherwise use `git diff` and inspect modified files.
 3. Verify evidence:
-   - Tests/logs in report match the Verification section.
-4. Check boundaries:
+   - Report evidence matches the Verification section.
+   - Every AC ID in the spec is covered by evidence in the report.
+4. For `playbook: tdd-standard`, verify TDD evidence:
+   - Red evidence exists (expected fail before implementation), unless explicit approved waiver exists.
+   - Green evidence exists (expected pass after implementation).
+5. Verify observability evidence:
+   - Runtime behavior changes include observability evidence, or explicit approved waiver.
+6. Check boundaries:
    - No forbidden edits (spec/AgentOS) were made.
-5. Decision
+7. Decision
    - Accept: criteria met, evidence present, risks acceptable.
-   - Revise: list blocking issues, assign to Implement lane.
+   - Revise: list blocking issues (including missing three-drive evidence), assign to Implement lane.
    - Re-spec: spec is insufficient or changed; propose spec edits.
 
 ## Output
