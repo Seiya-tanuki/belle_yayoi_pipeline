@@ -169,6 +169,9 @@ function testOverviewSuccessContract() {
   expectEqual(res.data.totals.done, 1, 'overview totals done mismatch');
   expectEqual(res.data.totals.total, 5, 'overview totals total mismatch');
   expectEqual(res.data.unknownCount, 1, 'overview totals unknown count mismatch');
+  expectEqual(res.data.corr_action_key, 'overview::dash_1760000000000_apsw', 'overview corr_action_key mismatch');
+  expectEqual(Array.isArray(res.data.sample_corr_keys), true, 'overview sample_corr_keys should be array');
+  expectEqual(res.data.sample_corr_keys.length, 0, 'overview sample_corr_keys should be empty');
 }
 
 function testLogsSuccessContract() {
@@ -232,6 +235,9 @@ function testLogsSuccessContract() {
   expectEqual(res.data.sheets.queueSkip.rows[0].reason, 'QUEUE_NEW', 'queueSkip row order mismatch');
   expectEqual(res.data.sheets.queueSkip.rows[0].doc_type, 'cc_statement', 'queueSkip doc_type mismatch');
   expectEqual(res.data.sheets.queueSkip.rows[0].seen_count, 9, 'queueSkip seen_count mismatch');
+  expectEqual(res.data.corr_action_key, 'logs::dash_1760000000000_apsw', 'logs corr_action_key mismatch');
+  expectEqual(Array.isArray(res.data.sample_corr_keys), true, 'logs sample_corr_keys should be array');
+  expectEqual(res.data.sample_corr_keys.length, 0, 'logs sample_corr_keys should be empty');
 }
 
 function testEnvFailureBranches() {

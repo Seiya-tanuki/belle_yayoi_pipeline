@@ -38,6 +38,45 @@ function belle_ocr_worker_dispatchByPipelineKind_(pipelineKind, handlers) {
   return handlers && handlers.single_stage ? handlers.single_stage() : null;
 }
 
+function belle_ocr_worker_observeCorr_(counters, payload, props) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  if (typeof belle_corr_observeItem_ === "function") {
+    return belle_corr_observeItem_("X1_CORR_WORKER_ITEM", counters, source, { props: props });
+  }
+  const docType = String(source.doc_type || source.docType || "").trim();
+  const fileId = String(source.file_id || source.fileId || "").trim();
+  const corrKey = docType && fileId ? (docType + "::" + fileId) : "";
+  const resolved = {
+    mode: "compatibility",
+    corr_key: corrKey,
+    missing: !corrKey,
+    invalid_format: false,
+    derived_from_legacy: !!corrKey,
+    mismatch: false
+  };
+  if (counters && typeof counters === "object") {
+    if (resolved.missing) counters.missing++;
+    if (resolved.invalid_format) counters.invalid++;
+    if (resolved.derived_from_legacy) counters.derived++;
+    if (resolved.mismatch) counters.mismatch++;
+  }
+  Logger.log({
+    phase: "X1_CORR_WORKER_ITEM",
+    ok: true,
+    doc_type: source.doc_type || source.docType || "",
+    file_id: source.file_id || source.fileId || "",
+    corr_key: resolved.corr_key,
+    queue_sheet_name: source.queue_sheet_name || source.queueSheetName || "",
+    rowIndex: source.rowIndex !== undefined ? source.rowIndex : "",
+    mode: resolved.mode,
+    missing: resolved.missing,
+    invalid: resolved.invalid_format,
+    derived: resolved.derived_from_legacy,
+    mismatch: resolved.mismatch
+  });
+  return resolved;
+}
+
 function belle_ocr_workerOnce_(opts) {
   const totalStart = Date.now();
   const props = belle_cfg_getProps_();
@@ -127,6 +166,15 @@ function belle_ocr_workerOnce_(opts) {
   const ocrErrorCode = String(row[headerMap["ocr_error_code"]] || "");
   const ocrErrorDetail = String(row[headerMap["ocr_error_detail"]] || "");
   const attemptsPrev = Number(row[headerMap["ocr_attempts"]] || 0) || 0;
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
+  const corr = belle_ocr_worker_observeCorr_(corrCounters, {
+    doc_type: docType,
+    file_id: fileId,
+    queue_sheet_name: queueSheetName,
+    rowIndex: rowIndex
+  }, props);
 
   let attempt = attemptsPrev;
   const attemptIso = new Date().toISOString();
@@ -144,6 +192,7 @@ function belle_ocr_workerOnce_(opts) {
         processed: 0,
         reason: "CLAIM_LOST",
         file_id: fileId,
+        corr_key: corr.corr_key,
         rowIndex: rowIndex,
         claimElapsedMs: claimElapsedMs,
         statusBefore: statusBefore,
@@ -153,9 +202,25 @@ function belle_ocr_workerOnce_(opts) {
         httpStatus: 0,
         docType: docType,
         queueSheetName: queueSheetName,
-        processingCount: processingCount
+        processingCount: processingCount,
+        corr_counters: {
+          missing: corrCounters.missing,
+          invalid: corrCounters.invalid,
+          derived: corrCounters.derived,
+          mismatch: corrCounters.mismatch
+        }
       };
-      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex, docType: docType });
+      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, corr_key: corr.corr_key, rowIndex: rowIndex, docType: docType });
+      Logger.log({
+        phase: "X1_CORR_WORKER_COUNTERS",
+        ok: true,
+        doc_type: docType,
+        queue_sheet_name: queueSheetName,
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      });
       return res;
     }
 
@@ -317,6 +382,7 @@ function belle_ocr_workerOnce_(opts) {
         processed: 0,
         reason: "CLAIM_LOST",
         file_id: fileId,
+        corr_key: corr.corr_key,
         rowIndex: rowIndex,
         claimElapsedMs: claimElapsedMs,
         statusBefore: statusBefore,
@@ -326,9 +392,25 @@ function belle_ocr_workerOnce_(opts) {
         httpStatus: httpStatus,
         docType: docType,
         queueSheetName: queueSheetName,
-        processingCount: processingCount
+        processingCount: processingCount,
+        corr_counters: {
+          missing: corrCounters.missing,
+          invalid: corrCounters.invalid,
+          derived: corrCounters.derived,
+          mismatch: corrCounters.mismatch
+        }
       };
-      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, rowIndex: rowIndex, docType: docType });
+      Logger.log({ phase: "OCR_WORKER_ITEM", workerId: workerId, outcome: "CLAIM_LOST", file_id: fileId, corr_key: corr.corr_key, rowIndex: rowIndex, docType: docType });
+      Logger.log({
+        phase: "X1_CORR_WORKER_COUNTERS",
+        ok: true,
+        doc_type: docType,
+        queue_sheet_name: queueSheetName,
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      });
       return res;
     }
 
@@ -368,6 +450,7 @@ function belle_ocr_workerOnce_(opts) {
   Logger.log({
     phase: "OCR_WORKER_ITEM",
     file_id: fileId,
+    corr_key: corr.corr_key,
     rowIndex: rowIndex,
     outcome: outcome,
     attempt: attempt,
@@ -385,12 +468,23 @@ function belle_ocr_workerOnce_(opts) {
     ccErrorCode: errorCode,
     processingCount: processingCount
   });
+  Logger.log({
+    phase: "X1_CORR_WORKER_COUNTERS",
+    ok: true,
+    doc_type: docType,
+    queue_sheet_name: queueSheetName,
+    missing: corrCounters.missing,
+    invalid: corrCounters.invalid,
+    derived: corrCounters.derived,
+    mismatch: corrCounters.mismatch
+  });
 
   return {
     ok: true,
     processed: 1,
     outcome: outcome,
     file_id: fileId,
+    corr_key: corr.corr_key,
     rowIndex: rowIndex,
     claimElapsedMs: claimElapsedMs,
     statusBefore: statusBefore,
@@ -405,7 +499,13 @@ function belle_ocr_workerOnce_(opts) {
     ccGeminiMs: ccGeminiMs,
     ccHttpStatus: httpStatus,
     ccErrorCode: errorCode,
-    processingCount: processingCount
+    processingCount: processingCount,
+    corr_counters: {
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    }
   };
 }
 

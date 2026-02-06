@@ -24,6 +24,78 @@ function belle_dash_result_(ok, reason, message, data) {
   };
 }
 
+function belle_dash_composeActionKey_(action, rid) {
+  if (typeof belle_corr_composeActionKey_ === "function") {
+    return belle_corr_composeActionKey_(action, rid);
+  }
+  var actionText = String(action || "").trim();
+  var ridText = String(rid || "").trim();
+  if (!actionText || !ridText) return "";
+  return actionText + "::" + ridText;
+}
+
+function belle_dash_isItemCorrKey_(value) {
+  if (typeof belle_corr_isItemKeyFormat_ === "function") {
+    return belle_corr_isItemKeyFormat_(value);
+  }
+  var s = String(value || "").trim();
+  if (!s) return false;
+  var sep = s.indexOf("::");
+  if (sep <= 0 || sep >= s.length - 2) return false;
+  return s.indexOf("::", sep + 2) < 0;
+}
+
+function belle_dash_normalizeSampleCorrKeys_(value) {
+  var source = Array.isArray(value) ? value : [];
+  var out = [];
+  var seen = {};
+  for (var i = 0; i < source.length; i++) {
+    var key = String(source[i] || "").trim();
+    if (!key || !belle_dash_isItemCorrKey_(key)) continue;
+    if (seen[key]) continue;
+    seen[key] = true;
+    out.push(key);
+    if (out.length >= 20) break;
+  }
+  return out;
+}
+
+function belle_dash_attachCorrelationMeta_(result) {
+  if (!result || typeof result !== "object") return result;
+  var corrActionKey = belle_dash_composeActionKey_(result.action, result.rid);
+
+  if (result.data && typeof result.data === "object") {
+    var rawSample = result.data.sample_corr_keys;
+    if (rawSample === undefined && result.data.sampleCorrKeys !== undefined) rawSample = result.data.sampleCorrKeys;
+    result.data.corr_action_key = corrActionKey;
+    result.data.sample_corr_keys = belle_dash_normalizeSampleCorrKeys_(rawSample);
+  }
+
+  var sampleCount = 0;
+  if (result.data && typeof result.data === "object" && Array.isArray(result.data.sample_corr_keys)) {
+    sampleCount = result.data.sample_corr_keys.length;
+  }
+  if (typeof belle_corr_emitSignal_ === "function") {
+    belle_corr_emitSignal_("X1_CORR_DASH_ACTION", {
+      rid: String(result.rid || ""),
+      action: String(result.action || ""),
+      corr_action_key: corrActionKey,
+      sample_count: sampleCount,
+      ok: !!result.ok
+    });
+  } else if (typeof Logger !== "undefined" && Logger && typeof Logger.log === "function") {
+    Logger.log({
+      phase: "X1_CORR_DASH_ACTION",
+      ok: true,
+      rid: String(result.rid || ""),
+      action: String(result.action || ""),
+      corr_action_key: corrActionKey,
+      sample_count: sampleCount
+    });
+  }
+  return result;
+}
+
 function belle_dash_wrap_(action, handler) {
   var rid = belle_dash_buildRid_();
   var res;
@@ -34,10 +106,12 @@ function belle_dash_wrap_(action, handler) {
     var message = result && result.message ? String(result.message) : (ok ? "OK" : "Request failed");
     var data = result && result.data !== undefined ? result.data : null;
     res = { ok: ok, rid: rid, action: action, reason: reason, message: message, data: data };
+    res = belle_dash_attachCorrelationMeta_(res);
     return belle_dash_attachAudit_(res);
   } catch (e) {
     var msg = belle_dash_shortText_(e && e.message ? e.message : e, 120);
     res = { ok: false, rid: rid, action: action, reason: "EXCEPTION", message: msg, data: null };
+    res = belle_dash_attachCorrelationMeta_(res);
     return belle_dash_attachAudit_(res);
   }
 }
@@ -328,7 +402,8 @@ function belle_dash_opQueue() {
       queued: queued,
       skipped: skipped,
       totalListed: listed,
-      queuedByDocType: (res && res.queuedByDocType) || {}
+      queuedByDocType: (res && res.queuedByDocType) || {},
+      sample_corr_keys: (res && Array.isArray(res.sample_corr_keys)) ? res.sample_corr_keys : []
     });
   });
 }
