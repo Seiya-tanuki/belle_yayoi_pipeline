@@ -58,6 +58,13 @@
 3. Wave 4 consult gatekeeper session
 - `temp/refactor_control/session_prompts/wave4_consult_gatekeeper.md`
 
+## Wave 4 (Implement)
+1. U1 implement session
+- `temp/refactor_control/session_prompts/wave4_implement_U1.md`
+
+2. T1 implement session
+- `temp/refactor_control/session_prompts/wave4_implement_T1.md`
+
 How to use:
 1. Open a new session for each agent thread.
 2. Paste the full content of the matching prompt file.
