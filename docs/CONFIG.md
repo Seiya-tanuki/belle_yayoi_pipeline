@@ -26,9 +26,6 @@ These are required by the dashboard health check and maintenance workflows.
 - BELLE_EXPORT_BATCH_MAX_ROWS (integer 1..50000)
 
 ## Script Properties (optional)
-- BELLE_QUEUE_SHEET_NAME (legacy receipt queue sheet override; default OCR_RECEIPT)
-  - cc_statement and bank_statement use OCR_CC / OCR_BANK (no override).
-  - Legacy override; normally not needed. Recommended to remove unless you intentionally override the receipt queue sheet name.
 - BELLE_MAINTENANCE_TTL_MINUTES (default: 30)
 - BELLE_ACTIVE_DOC_TYPES (comma-separated; default: receipt)
   - Allowed values: receipt, cc_statement, bank_statement
@@ -46,10 +43,11 @@ These are required by the dashboard health check and maintenance workflows.
 - BELLE_QUEUE_SKIP_LOG_SHEET_NAME (default: QUEUE_SKIP_LOG)
 - BELLE_EXPORT_GUARD_LOG_SHEET_NAME (default: EXPORT_GUARD_LOG)
 - BELLE_CSV_ENCODING (default: SHIFT_JIS)
+  - Docs are UTF-8; this setting only affects CSV export encoding (Shift-JIS/cp932).
 - BELLE_CSV_EOL (default: CRLF)
 - BELLE_GEMINI_SLEEP_MS (default: 500)
 - BELLE_MAX_ITEMS_PER_RUN (default: 1)
-- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象夁E)
+- BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT (default: 対象外)
   - The value must be a plain label (no extra description).
 - BELLE_FALLBACK_APPEND_INVOICE_SUFFIX (default: true)
   - If false, do not append "適格" to tax kubun.
@@ -62,6 +60,7 @@ These are required by the dashboard health check and maintenance workflows.
 - BELLE_CHATWORK_ROOM_ID (required when enabled)
 - BELLE_CHATWORK_WEBHOOK_ENABLED (default: false)
 - BELLE_CHATWORK_WEBHOOK_TOKEN (URL token for webhook; set same value as ?token=...)
+- BELLE_CHATWORK_WEBHOOK_SIGNATURE_SECRET_B64 (optional; base64 secret for signature validation)
 - BELLE_CHATWORK_WEBHOOK_ROUTE (default: chatwork)
 ### Parallel OCR
 - BELLE_OCR_PARALLEL_ENABLED (boolean, default: false): enables parallel tick execution.

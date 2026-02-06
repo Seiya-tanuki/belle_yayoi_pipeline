@@ -69,4 +69,30 @@ expect(payload.generationConfig.maxOutputTokens === 5, 'should include generatio
 expect(payload.generationConfig.responseMimeType === 'application/json', 'should include responseMimeType');
 expect(payload.generationConfig.responseJsonSchema.type === 'object', 'should include responseJsonSchema');
 
+const classifiedTimeout = sandbox.belle_ocr_classifyError('Request timed out.');
+expect(classifiedTimeout.retryable === true, 'classifyError should mark timeout retryable');
+expect(classifiedTimeout.code === 'GEMINI_TIMEOUT', 'classifyError should return GEMINI_TIMEOUT');
+expect(classifiedTimeout.reason === 'timed out', 'classifyError should return matched reason');
+
+const classifiedRateLimit = sandbox.belle_ocr_classifyError('429 too many requests');
+expect(classifiedRateLimit.retryable === true, 'classifyError should mark rate limit retryable');
+expect(classifiedRateLimit.code === 'GEMINI_RATE_LIMIT', 'classifyError should return GEMINI_RATE_LIMIT');
+expect(classifiedRateLimit.reason === 'too many requests', 'classifyError should return matched reason');
+
+const classifiedOther = sandbox.belle_ocr_classifyError('bad request');
+expect(classifiedOther.retryable === false, 'classifyError should mark unknown errors non-retryable');
+expect(classifiedOther.code === 'GEMINI_ERROR', 'classifyError should return GEMINI_ERROR for unknown');
+
+const classifiedNotJson = sandbox.belle_ocr_classifyError('OCR output is not valid JSON: {}');
+expect(classifiedNotJson.retryable === true, 'classifyError should retry invalid JSON output');
+expect(classifiedNotJson.code === 'INVALID_SCHEMA', 'classifyError should return INVALID_SCHEMA for invalid JSON');
+
+const classifiedInvalidSchema = sandbox.belle_ocr_classifyError('INVALID_SCHEMA: CC_STAGE1_PARSE_ERROR');
+expect(classifiedInvalidSchema.retryable === true, 'classifyError should retry invalid schema');
+expect(classifiedInvalidSchema.code === 'INVALID_SCHEMA', 'classifyError should return INVALID_SCHEMA for invalid schema');
+
+const classifiedTooLong = sandbox.belle_ocr_classifyError('OCR JSON too long for single cell: 999999');
+expect(classifiedTooLong.retryable === true, 'classifyError should retry oversized JSON');
+expect(classifiedTooLong.code === 'OCR_JSON_TOO_LONG', 'classifyError should return OCR_JSON_TOO_LONG');
+
 console.log('OK: test_gemini_client_parity_smoke');

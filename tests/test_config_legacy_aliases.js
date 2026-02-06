@@ -28,14 +28,11 @@ function runQueueSheet(props, docType) {
   return sandbox.belle_ocr_getQueueSheetNameForDocType_(null, docType);
 }
 
-const q1 = runQueueSheet({ BELLE_QUEUE_SHEET_NAME: 'QUEUE_CUSTOM' }, 'receipt');
-expect(q1 === 'QUEUE_CUSTOM', 'queue override should win');
+const q1 = runQueueSheet({}, 'receipt');
+expect(q1 === 'OCR_RECEIPT', 'receipt should resolve to OCR_RECEIPT');
 
-const q3 = runQueueSheet({}, 'receipt');
-expect(q3 === 'OCR_RECEIPT', 'receipt should fall back to OCR_RECEIPT');
-
-const q4 = runQueueSheet({ BELLE_QUEUE_SHEET_NAME: 'QUEUE_CUSTOM' }, 'cc_statement');
-expect(q4 === 'OCR_CC', 'cc_statement should ignore receipt override');
+const q2 = runQueueSheet({}, 'cc_statement');
+expect(q2 === 'OCR_CC', 'cc_statement should resolve to OCR_CC');
 
 const cursorKey = sandbox.belle_ocr_buildClaimCursorKey_('receipt');
 const getCursor = sandbox.belle_cfg_getOcrClaimCursorRaw_;

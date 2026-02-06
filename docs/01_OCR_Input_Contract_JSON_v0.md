@@ -31,4 +31,4 @@ line_items.tax_rate を設定する場合は basis を必ず付与する。
 4. unknown：上記に該当せず、tax_rate は unknown
 
 ## 5. プロンプト
-prompts/receipt_ocr_prompt_v0.txt を使用する。
+gas/OcrPrompt.js (BELLE_OCR_PROMPT_V0) を使用する。

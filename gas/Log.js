@@ -1,3 +1,5 @@
+// @ts-check
+
 function belle_log_buildLegacyName_(baseName) {
   const ts = Utilities.formatDate(new Date(), "Asia/Tokyo", "yyyyMMdd_HHmmss");
   return String(baseName || "LOG") + "__legacy__" + ts;

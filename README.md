@@ -24,7 +24,7 @@
 
 ## 4. ディレクトリ構成
 1. docs/ : 実装仕様
-2. prompts/ : Gemini OCRプロンプト（v0）
+2. gas/OcrPrompt.js : Gemini OCR prompt constants (v0)
 3. templates/ : 変換テンプレ（列定義・デフォルト値）
 4. fixtures/ : 回帰テスト用のOCR JSONサンプル
 5. reference/ : 参考（顧客サンプルCSVのコピー、参照URL）

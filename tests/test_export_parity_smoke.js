@@ -118,6 +118,17 @@ function expect(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
+function assertNoReplacementChar(paths) {
+  const bad = [];
+  for (const p of paths) {
+    const content = fs.readFileSync(p, 'utf8');
+    if (content.indexOf('\uFFFD') >= 0) bad.push(p);
+  }
+  expect(bad.length === 0, 'unexpected replacement character in: ' + bad.join(', '));
+}
+
+const capturedLogs = [];
+
 function buildSandbox(spreadsheet, folder, propsMap) {
   const code = fs.readFileSync('gas/Config.js', 'utf8') + '\n'
     + fs.readFileSync('gas/DocTypeRegistry.js', 'utf8') + '\n'
@@ -135,7 +146,7 @@ function buildSandbox(spreadsheet, folder, propsMap) {
 
   const sandbox = {
     console,
-    Logger: { log: () => {} },
+    Logger: { log: (row) => capturedLogs.push(row) },
     PropertiesService: {
       getScriptProperties: () => ({
         getProperty: (key) => propsMap[key] || ''
@@ -209,7 +220,7 @@ function buildStage2Json() {
     transactions: [
       {
         row_no: 1,
-        raw_use_date_text: '7��1��',
+        raw_use_date_text: '7/1',
         use_month: 7,
         use_day: 1,
         merchant: 'SHOP A',
@@ -219,7 +230,7 @@ function buildStage2Json() {
       },
       {
         row_no: 2,
-        raw_use_date_text: '7��2��',
+        raw_use_date_text: '7/2',
         use_month: 7,
         use_day: 2,
         merchant: 'SHOP B',
@@ -230,6 +241,41 @@ function buildStage2Json() {
     ]
   });
 }
+
+function buildStage2JsonWithInvalid() {
+  return JSON.stringify({
+    task: 'transaction_extraction',
+    transactions: [
+      {
+        row_no: 1,
+        raw_use_date_text: '7/1',
+        use_month: 7,
+        use_day: 1,
+        merchant: 'SHOP A',
+        amount_yen: 1000,
+        amount_sign: 'debit',
+        issues: []
+      },
+      {
+        row_no: 2,
+        raw_use_date_text: '7/2',
+        use_month: 7,
+        use_day: 2,
+        merchant: 'SHOP B',
+        amount_yen: 0,
+        amount_sign: 'debit',
+        issues: []
+      }
+    ]
+  });
+}
+
+
+assertNoReplacementChar([
+  'gas/Export.js',
+  'docs/CONFIG.md',
+  'docs/09_Dev_Environment_Clasp.md'
+]);
 
 function setupHeaders(sandbox) {
   const baseHeader = sandbox.belle_getQueueHeaderColumns();
@@ -263,7 +309,7 @@ function runExportWithSkipLog() {
 
   const header = setupHeaders(sandbox);
   seedReceiptSheet(sandbox, spreadsheet, header);
-  seedCcSheet(sandbox, spreadsheet, header, 'cc_skip', buildStage2Json());
+  seedCcSheet(sandbox, spreadsheet, header, 'cc_skip', buildStage2JsonWithInvalid());
 
   const res = sandbox.belle_exportYayoiCsv({});
   expect(res && res.cc_statement, 'cc_statement result should be attached');
@@ -277,7 +323,7 @@ function runExportWithSkipLog() {
   const reasonIdx = headerRow.indexOf('reason');
   expect(reasonIdx >= 0, 'reason column should exist');
   const reasons = skipSheet.data.slice(1).map((r) => String(r[reasonIdx] || ''));
-  expect(reasons.includes('CC_CREDIT_UNSUPPORTED'), 'credit skip reason should be logged');
+  expect(reasons.includes('CC_AMOUNT_INVALID'), 'invalid amount skip reason should be logged');
 }
 
 function runExportWithDedupe() {
@@ -308,5 +354,10 @@ function runExportWithDedupe() {
 runExportWithSchemaMismatch();
 runExportWithSkipLog();
 runExportWithDedupe();
+
+const corrEvents = capturedLogs.filter((row) => row && row.phase === 'X1_CORR_EXPORT_ITEM');
+expect(corrEvents.length >= 1, 'X1_CORR_EXPORT_ITEM should be emitted');
+const hasCcCorr = corrEvents.some((row) => row.corr_key === 'cc_statement::cc_skip' || row.corr_key === 'cc_statement::cc_dedupe');
+expect(hasCcCorr, 'export corr_key should include cc_statement::* sample');
 
 console.log('OK: test_export_parity_smoke');

@@ -11,9 +11,10 @@ const code = fs.readFileSync('gas/Config.js', 'utf8') + '\n'
   + fs.readFileSync('gas/Code.js', 'utf8') + '\n'
   + fs.readFileSync('gas/Queue.js', 'utf8');
 
+const logs = [];
 const sandbox = {
   console,
-  Logger: { log: () => {} }
+  Logger: { log: (row) => logs.push(row) }
 };
 vm.createContext(sandbox);
 vm.runInContext(code, sandbox);
@@ -153,6 +154,9 @@ const res = sandbox.belle_queueFolderFilesToSheet();
 expect(res && res.ok === true, 'queue result should be ok');
 expect(res.queued === 1, 'expected one queued row');
 expect(res.skipped === 1, 'expected one skip');
+expect(Array.isArray(res.sample_corr_keys), 'sample_corr_keys should be array');
+expect(res.sample_corr_keys.length === 1, 'sample_corr_keys should contain one item');
+expect(res.sample_corr_keys[0] === 'receipt::f2', 'sample_corr_keys[0] mismatch');
 
 const queueSheetName = sandbox.belle_ocr_getQueueSheetNameForDocType_(props, 'receipt');
 const queueSheet = ss.getSheetByName(queueSheetName);
@@ -163,5 +167,9 @@ const skipSheet = ss.getSheetByName('QUEUE_SKIP_LOG');
 expect(skipSheet, 'QUEUE_SKIP_LOG should be created');
 expect(skipSheet.data.length === 2, 'QUEUE_SKIP_LOG should have header + 1 row');
 expect(skipSheet.data[1][1] === 'QUEUE_SKIP', 'skip log phase should be QUEUE_SKIP');
+
+const corrEvents = logs.filter((row) => row && row.phase === 'X1_CORR_QUEUE_ITEM');
+expect(corrEvents.length >= 1, 'X1_CORR_QUEUE_ITEM should be emitted');
+expect(corrEvents[0].corr_key === 'receipt::f2', 'queue corr_key mismatch');
 
 console.log('OK: test_queue_parity_smoke');

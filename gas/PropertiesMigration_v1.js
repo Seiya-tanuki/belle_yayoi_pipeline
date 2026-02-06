@@ -17,10 +17,6 @@ function belle_properties_migration_getMappings_() {
       canonicalKey: "BELLE_OCR_GENCFG_JSON__bank_statement__stage1"
     },
     {
-      legacyKey: "BELLE_SHEET_NAME",
-      canonicalKey: "BELLE_QUEUE_SHEET_NAME"
-    },
-    {
       legacyKey: "BELLE_OCR_CLAIM_CURSOR",
       canonicalKey: "BELLE_OCR_CLAIM_CURSOR__receipt"
     }

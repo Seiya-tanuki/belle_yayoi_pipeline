@@ -1,3 +1,5 @@
+// @ts-check
+
 // NOTE: Keep comments ASCII only.
 
 function belle_getQueueHeaderColumns() {
@@ -64,6 +66,66 @@ function belle_queue_loadExistingFileIds_(sh, headerMap) {
   return existing;
 }
 
+function belle_queue_resolveCorr_(payload, props) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  if (typeof belle_corr_resolveItemKey_ === "function") {
+    return belle_corr_resolveItemKey_(source, { props: props });
+  }
+  const docType = String(source.doc_type || source.docType || "").trim();
+  const fileId = String(source.file_id || source.fileId || "").trim();
+  const corrKey = docType && fileId ? (docType + "::" + fileId) : "";
+  return {
+    mode: "compatibility",
+    corr_key: corrKey,
+    doc_type: docType,
+    file_id: fileId,
+    missing: !corrKey,
+    invalid_format: false,
+    derived_from_legacy: !!corrKey,
+    mismatch: false
+  };
+}
+
+function belle_queue_observeCorr_(counters, payload, props) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  if (typeof belle_corr_observeItem_ === "function") {
+    return belle_corr_observeItem_("X1_CORR_QUEUE_ITEM", counters, source, { props: props });
+  }
+  const resolved = belle_queue_resolveCorr_(source, props);
+  if (counters && typeof counters === "object") {
+    if (resolved.missing) counters.missing++;
+    if (resolved.invalid_format) counters.invalid++;
+    if (resolved.derived_from_legacy) counters.derived++;
+    if (resolved.mismatch) counters.mismatch++;
+  }
+  Logger.log({
+    phase: "X1_CORR_QUEUE_ITEM",
+    ok: true,
+    doc_type: source.doc_type || source.docType || "",
+    file_id: source.file_id || source.fileId || "",
+    corr_key: resolved.corr_key,
+    queue_sheet_name: source.queue_sheet_name || source.queueSheetName || "",
+    rowIndex: source.rowIndex !== undefined ? source.rowIndex : "",
+    mode: resolved.mode,
+    missing: resolved.missing,
+    invalid: resolved.invalid_format,
+    derived: resolved.derived_from_legacy,
+    mismatch: resolved.mismatch
+  });
+  return resolved;
+}
+
+function belle_queue_collectSampleCorrKey_(sampleCorrKeys, docType, fileId) {
+  const out = Array.isArray(sampleCorrKeys) ? sampleCorrKeys : [];
+  const resolved = belle_queue_resolveCorr_({ doc_type: docType, file_id: fileId });
+  const corrKey = resolved.corr_key;
+  if (!corrKey) return out;
+  if (out.indexOf(corrKey) >= 0) return out;
+  if (out.length >= 20) return out;
+  out.push(corrKey);
+  return out;
+}
+
 /**
  * Append-only queue writer (doc_type routing by subfolder).
  */
@@ -81,6 +143,10 @@ function belle_queueFolderFilesToSheetInternal_() {
   const extraHeader = belle_getQueueLockHeaderColumns_();
   const nowIso = new Date().toISOString();
   const queuedByDocType = {};
+  const sampleCorrKeys = [];
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
   let queuedTotal = 0;
 
   for (let i = 0; i < activeDocTypes.length; i++) {
@@ -96,9 +162,11 @@ function belle_queueFolderFilesToSheetInternal_() {
     const rows = [];
     for (let j = 0; j < files.length; j++) {
       const f = files[j];
+      const fileId = String(f.id);
+      belle_queue_collectSampleCorrKey_(sampleCorrKeys, docType, fileId);
       const row = belle_queue_buildRow_(baseHeader, {
         status: "QUEUED",
-        file_id: String(f.id),
+        file_id: fileId,
         file_name: String(f.name || ""),
         mime_type: String(f.mimeType || ""),
         drive_url: String(f.url || ""),
@@ -118,6 +186,15 @@ function belle_queueFolderFilesToSheetInternal_() {
     if (rows.length > 0) {
       const startRow = sh.getLastRow() + 1;
       sh.getRange(startRow, 1, rows.length, baseHeader.length).setValues(rows);
+      for (let j = 0; j < rows.length; j++) {
+        const f = files[j];
+        belle_queue_observeCorr_(corrCounters, {
+          doc_type: docType,
+          file_id: String(f && f.id ? f.id : ""),
+          queue_sheet_name: sheetName,
+          rowIndex: startRow + j
+        }, props);
+      }
     }
     queuedByDocType[docType] = rows.length;
     queuedTotal += rows.length;
@@ -132,9 +209,18 @@ function belle_queueFolderFilesToSheetInternal_() {
     queued: queuedTotal,
     queuedByDocType: queuedByDocType,
     totalListed: listed.files ? listed.files.length : 0,
-    skipped: skipped.length
+    skipped: skipped.length,
+    sample_corr_keys: sampleCorrKeys.slice(0, 20)
   };
   Logger.log(result);
+  Logger.log({
+    phase: "X1_CORR_QUEUE_COUNTERS",
+    ok: true,
+    missing: corrCounters.missing,
+    invalid: corrCounters.invalid,
+    derived: corrCounters.derived,
+    mismatch: corrCounters.mismatch
+  });
   return result;
 }
 
@@ -242,6 +328,9 @@ function belle_ocr_claimNextRow_(opts) {
 
   const workerId = opts && opts.workerId ? String(opts.workerId) : Utilities.getUuid();
   const ttlSeconds = Number((opts && opts.ttlSeconds) || "180");
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
   let lock;
   try {
     lock = LockService.getScriptLock();
@@ -338,8 +427,15 @@ function belle_ocr_claimNextRow_(opts) {
       const row = values[index];
       const fileId = String(row[headerMap["file_id"]] || "");
       const fileName = String(row[headerMap["file_name"]] || "");
+      const rowDocType = headerMap["doc_type"] !== undefined ? String(row[headerMap["doc_type"]] || docType || "") : String(docType || "");
       const sheetRow = index + 2;
       const lockUntilIso = new Date(nowMs + ttlSeconds * 1000).toISOString();
+      const corr = belle_queue_observeCorr_(corrCounters, {
+        doc_type: rowDocType,
+        file_id: fileId,
+        queue_sheet_name: queueSheetName,
+        rowIndex: sheetRow
+      }, props);
       sh.getRange(sheetRow, headerMap["status"] + 1).setValue("PROCESSING");
       sh.getRange(sheetRow, headerMap["ocr_lock_owner"] + 1).setValue(workerId);
       sh.getRange(sheetRow, headerMap["ocr_lock_until_iso"] + 1).setValue(lockUntilIso);
@@ -351,6 +447,7 @@ function belle_ocr_claimNextRow_(opts) {
         rowIndex: sheetRow,
         file_id: fileId,
         file_name: fileName,
+        corr_key: corr.corr_key,
         statusBefore: statusBefore,
         workerId: workerId,
         lockUntilIso: lockUntilIso,
@@ -393,6 +490,14 @@ function belle_ocr_claimNextRow_(opts) {
 
     const res = { phase: "OCR_CLAIM", ok: true, claimed: false, reason: "NO_TARGET", processingCount: processingCount };
     Logger.log(res);
+    Logger.log({
+      phase: "X1_CORR_QUEUE_COUNTERS",
+      ok: true,
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    });
     return res;
   } finally {
     if (lock) lock.releaseLock();
@@ -446,6 +551,190 @@ function belle_processQueueOnceInternal_(options) {
   }
 }
 
+function belle_ocr_normalizeLegacyRows_(sh, values, headerMap, backoffSeconds, docType) {
+  const legacyFixed = [];
+  const nowIso = new Date().toISOString();
+  for (let i = 0; i < values.length; i++) {
+    const row = values[i];
+    const status = String(row[headerMap["status"]] || "");
+    const fileId = String(row[headerMap["file_id"]] || "");
+    const ocrJson = String(row[headerMap["ocr_json"]] || "");
+    const ocrError = String(row[headerMap["ocr_error"]] || "");
+    const normalized = status || "QUEUED";
+    if (!fileId) continue;
+    if ((normalized === "ERROR_RETRYABLE" || normalized === "ERROR") && ocrJson && !ocrError) {
+      const sheetRow = i + 2;
+      const detail = String(ocrJson).slice(0, 500);
+      const summary = detail.slice(0, 200);
+      sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue("LEGACY_ERROR_IN_OCR_JSON");
+      sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue(detail);
+      sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue(summary);
+      sh.getRange(sheetRow, headerMap["ocr_json"] + 1).setValue("");
+      const attempt = Number(row[headerMap["ocr_attempts"]] || 0) || 1;
+      const lastAttempt = String(row[headerMap["ocr_last_attempt_at_iso"]] || "");
+      const nextRetry = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
+      if (!row[headerMap["ocr_attempts"]]) {
+        sh.getRange(sheetRow, headerMap["ocr_attempts"] + 1).setValue(attempt);
+      }
+      if (!lastAttempt) {
+        sh.getRange(sheetRow, headerMap["ocr_last_attempt_at_iso"] + 1).setValue(nowIso);
+      }
+      if (!nextRetry) {
+        const backoff = Math.max(1, backoffSeconds) * 1000 * Math.min(attempt, 6);
+        const nextRetryIso = new Date(Date.now() + backoff).toISOString();
+        sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue(nextRetryIso);
+      }
+      values[i][headerMap["ocr_json"]] = "";
+      legacyFixed.push(fileId);
+    }
+  }
+  if (legacyFixed.length > 0) {
+    Logger.log({ phase: "OCR_LEGACY_NORMALIZE", fixed: legacyFixed.length, sampleFileIds: legacyFixed.slice(0, 5), docType: docType });
+  }
+}
+
+function belle_ocr_collectRunOnceTargets_(values, headerMap, nowMs) {
+  const queuedIdx = [];
+  const retryIdx = [];
+  for (let i = 0; i < values.length; i++) {
+    const row = values[i];
+    const status = String(row[headerMap["status"]] || "");
+    const fileId = String(row[headerMap["file_id"]] || "");
+    const nextRetryAt = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
+    if (!fileId) continue;
+    const normalized = status || "QUEUED";
+    if (normalized === "QUEUED") {
+      queuedIdx.push(i);
+      continue;
+    }
+    if (normalized === "ERROR_RETRYABLE" || normalized === "ERROR") {
+      if (!nextRetryAt) {
+        retryIdx.push(i);
+      } else {
+        const t = Date.parse(nextRetryAt);
+        if (isNaN(t) || t <= nowMs) retryIdx.push(i);
+      }
+    }
+  }
+  return {
+    queuedIdx: queuedIdx,
+    retryIdx: retryIdx,
+    targets: queuedIdx.concat(retryIdx)
+  };
+}
+
+function belle_ocr_executeRunOnceTarget_(sh, values, headerMap, targetIndex, runCtx) {
+  const row = values[targetIndex];
+  const status = String(row[headerMap["status"]] || "");
+  const fileId = String(row[headerMap["file_id"]] || "");
+  const fileName = String(row[headerMap["file_name"]] || "");
+  const mimeType = String(row[headerMap["mime_type"]] || "");
+  const ocrJson = String(row[headerMap["ocr_json"]] || "");
+  const nextRetryAt = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
+  const rowDocType = String(row[headerMap["doc_type"]] || runCtx.docType || "");
+  if (!fileId) return { handled: false, processed: 0, errors: 0, sheetRow: 0 };
+
+  const normalized = status || "QUEUED";
+  if (normalized === "DONE") return { handled: false, processed: 0, errors: 0, sheetRow: 0 };
+  if (ocrJson && normalized !== "ERROR_RETRYABLE" && normalized !== "ERROR") {
+    return { handled: false, processed: 0, errors: 0, sheetRow: 0 };
+  }
+
+  const sheetRow = targetIndex + 2;
+  const attempt = Number(row[headerMap["ocr_attempts"]] || 0) + 1;
+  const attemptIso = new Date().toISOString();
+  sh.getRange(sheetRow, headerMap["ocr_attempts"] + 1).setValue(attempt);
+  sh.getRange(sheetRow, headerMap["ocr_last_attempt_at_iso"] + 1).setValue(attemptIso);
+  Logger.log({
+    phase: "OCR_ITEM_START",
+    row: sheetRow,
+    file_id: fileId,
+    file_name: fileName,
+    attempts: attempt,
+    status: status || "QUEUED",
+    isRetryableTarget: runCtx.isRetryableTarget,
+    nowIso: new Date(runCtx.nowMs).toISOString(),
+    nextRetryIso: nextRetryAt,
+    doc_type: rowDocType
+  });
+
+  let jsonStr = "";
+  try {
+    if (mimeType === "application/pdf") {
+      sh.getRange(sheetRow, headerMap["status"] + 1).setValue("ERROR_FINAL");
+      sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue("PDF not supported in v0");
+      sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue("UNSUPPORTED_PDF");
+      sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue("PDF not supported in v0");
+      sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+      Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, status: "ERROR_FINAL", doc_type: rowDocType });
+      return { handled: true, processed: 1, errors: 1, sheetRow: sheetRow };
+    }
+
+    const file = DriveApp.getFileById(fileId);
+    const blob = file.getBlob();
+    jsonStr = belle_callGeminiOcr(blob);
+    const MAX_CELL_CHARS = 45000;
+    if (jsonStr.length > MAX_CELL_CHARS) {
+      throw new Error("OCR JSON too long for single cell: " + jsonStr.length);
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonStr);
+    } catch (e) {
+      throw new Error("INVALID_SCHEMA: PARSE_ERROR");
+    }
+    const validation = belle_ocr_validateSchema(parsed);
+    if (!validation.ok) {
+      throw new Error("INVALID_SCHEMA: " + validation.reason);
+    }
+    sh.getRange(sheetRow, headerMap["ocr_json"] + 1).setValue(jsonStr);
+    sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue("");
+    sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue("");
+    sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue("");
+    sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+    sh.getRange(sheetRow, headerMap["status"] + 1).setValue("DONE");
+    Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, status: "DONE", doc_type: rowDocType });
+    if (runCtx.cfg.sleepMs > 0) Utilities.sleep(runCtx.cfg.sleepMs);
+    return { handled: true, processed: 1, errors: 0, sheetRow: sheetRow };
+  } catch (e) {
+    const msg = String(e && e.message ? e.message : e);
+    let detail = msg.slice(0, 500);
+    const classify = belle_ocr_classifyError(msg);
+    const retryable = classify.retryable === true;
+    let statusOut = retryable ? "ERROR_RETRYABLE" : "ERROR_FINAL";
+    let errorCode = classify.code;
+    if (retryable && attempt >= runCtx.maxAttempts) {
+      statusOut = "ERROR_FINAL";
+      errorCode = "MAX_ATTEMPTS_EXCEEDED";
+    }
+    if (errorCode === "INVALID_SCHEMA" && jsonStr) {
+      detail = belle_ocr_buildInvalidSchemaLogDetail_(jsonStr);
+    }
+    sh.getRange(sheetRow, headerMap["ocr_error"] + 1).setValue(msg.slice(0, 200));
+    sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue(errorCode);
+    sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue(detail);
+    sh.getRange(sheetRow, headerMap["status"] + 1).setValue(statusOut);
+    sh.getRange(sheetRow, headerMap["ocr_json"] + 1).setValue("");
+    if (statusOut === "ERROR_RETRYABLE") {
+      const backoff = Math.max(1, runCtx.backoffSeconds) * 1000 * Math.min(attempt, 6);
+      const nextRetryIso = new Date(Date.now() + backoff).toISOString();
+      sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue(nextRetryIso);
+    } else {
+      sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
+    }
+    Logger.log({
+      phase: "OCR_ITEM_ERROR",
+      row: sheetRow,
+      file_id: fileId,
+      file_name: fileName,
+      error_code: errorCode,
+      message: msg.slice(0, 200),
+      doc_type: rowDocType
+    });
+    return { handled: true, processed: 1, errors: 1, sheetRow: sheetRow };
+  }
+}
+
 function belle_processQueueOnceForDocType_(props, docType, options) {
   const sheetId = belle_cfg_getSheetIdOrThrow_(props);
   const queueSheetName = belle_ocr_getQueueSheetNameForDocType_(props, docType);
@@ -479,6 +768,9 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
   let scanned = 0;
   const processedRows = [];
   let errorsCount = 0;
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
 
   const legacyFixed = [];
   const nowIso = new Date().toISOString();
@@ -561,6 +853,12 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
     const ocrErrDetail = String(row[headerMap["ocr_error_detail"]] || "");
     const nextRetryAt = String(row[headerMap["ocr_next_retry_at_iso"]] || "");
     const rowDocType = String(row[headerMap["doc_type"]] || docType || "");
+    const corr = belle_queue_observeCorr_(corrCounters, {
+      doc_type: rowDocType,
+      file_id: fileId,
+      queue_sheet_name: queueSheetName,
+      rowIndex: i + 2
+    }, props);
 
     if (!fileId) continue;
     const normalized = status || "QUEUED";
@@ -579,6 +877,7 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
       file_name: fileName,
       attempts: attempt,
       status: status || "QUEUED",
+      corr_key: corr.corr_key,
       isRetryableTarget: t >= queuedIdx.length,
       nowIso: new Date(nowMs).toISOString(),
       nextRetryIso: nextRetryAt,
@@ -593,7 +892,7 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
         sh.getRange(sheetRow, headerMap["ocr_error_code"] + 1).setValue("UNSUPPORTED_PDF");
         sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue("PDF not supported in v0");
         sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
-        Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, status: "ERROR_FINAL", doc_type: rowDocType });
+        Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, corr_key: corr.corr_key, status: "ERROR_FINAL", doc_type: rowDocType });
         processedRows.push(sheetRow);
         processed++;
         errorsCount++;
@@ -623,7 +922,7 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
       sh.getRange(sheetRow, headerMap["ocr_error_detail"] + 1).setValue("");
       sh.getRange(sheetRow, headerMap["ocr_next_retry_at_iso"] + 1).setValue("");
       sh.getRange(sheetRow, headerMap["status"] + 1).setValue("DONE");
-      Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, status: "DONE", doc_type: rowDocType });
+      Logger.log({ phase: "OCR_ITEM_DONE", row: sheetRow, file_id: fileId, corr_key: corr.corr_key, status: "DONE", doc_type: rowDocType });
       processedRows.push(sheetRow);
       processed++;
 
@@ -658,6 +957,7 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
         phase: "OCR_ITEM_ERROR",
         row: sheetRow,
         file_id: fileId,
+        corr_key: corr.corr_key,
         file_name: fileName,
         error_code: errorCode,
         message: msg.slice(0, 200),
@@ -679,6 +979,22 @@ function belle_processQueueOnceForDocType_(props, docType, options) {
     docType: docType,
     queueSheetName: queueSheetName
   };
+  result.corr_counters = {
+    missing: corrCounters.missing,
+    invalid: corrCounters.invalid,
+    derived: corrCounters.derived,
+    mismatch: corrCounters.mismatch
+  };
   Logger.log(result);
+  Logger.log({
+    phase: "X1_CORR_QUEUE_COUNTERS",
+    ok: true,
+    doc_type: docType,
+    queue_sheet_name: queueSheetName,
+    missing: corrCounters.missing,
+    invalid: corrCounters.invalid,
+    derived: corrCounters.derived,
+    mismatch: corrCounters.mismatch
+  });
   return result;
 }

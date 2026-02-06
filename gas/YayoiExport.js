@@ -412,18 +412,20 @@ function belle_yayoi_buildRow(params) {
 }
 
 function belle_yayoi_buildCcRow_(params) {
+  const debitAccount = params.debitAccount || "仮払金";
+  const creditAccount = params.creditAccount || "未払金";
   return [
     "2000", // 1
     "", // 2
     "", // 3
     params.date, // 4
-    "仮払金", // 5
+    debitAccount, // 5
     "", // 6
     "", // 7
     params.debitTaxKubun, // 8
     params.gross, // 9
     "", // 10
-    "未払金", // 11
+    creditAccount, // 11
     "", // 12
     "", // 13
     "対象外", // 14
@@ -464,24 +466,24 @@ function belle_yayoi_buildCcRowsFromStage2_(parsed, ctx, fiscal) {
   if (!parsed || !Array.isArray(parsed.transactions)) return result;
   const fileId = ctx && ctx.fileId ? String(ctx.fileId) : "";
   const fileName = ctx && ctx.fileName ? String(ctx.fileName) : "";
-  const debitTaxKubun = "課対仕入込10%適格";
+  const debitTaxKubun = "対象外";
+  const debitAccountDefault = "仮払金";
+  const creditAccountDefault = "未払金";
   for (let i = 0; i < parsed.transactions.length; i++) {
     const row = parsed.transactions[i] || {};
     const rowNo = row.row_no;
     const amountSign = String(row.amount_sign || "");
-    if (amountSign === "credit") {
-      const detail = "row_no=" + rowNo + " amount_sign=credit amount_yen=" + row.amount_yen;
-      result.skipped++;
-      result.skipDetails.push({ reason: "CC_CREDIT_UNSUPPORTED", detail: detail, row_no: rowNo });
-      continue;
-    }
-    const amount = belle_yayoi_isNumber(row.amount_yen);
-    if (amount === null || amount <= 0) {
+    const amountRaw = belle_yayoi_isNumber(row.amount_yen);
+    const amountAbs = amountRaw === null ? null : Math.abs(amountRaw);
+    if (amountAbs === null || amountAbs <= 0) {
       const detail = "row_no=" + rowNo + " amount_sign=" + amountSign + " amount_yen=" + row.amount_yen;
       result.skipped++;
       result.skipDetails.push({ reason: "CC_AMOUNT_INVALID", detail: detail, row_no: rowNo });
       continue;
     }
+    const useCredit = amountSign === "credit";
+    const debitAccount = useCredit ? creditAccountDefault : debitAccountDefault;
+    const creditAccount = useCredit ? debitAccountDefault : creditAccountDefault;
     const dateInfo = belle_yayoi_resolveCcTransactionDate_(row.use_month, row.use_day, fiscal);
     const memo = belle_yayoi_buildCcMemo_({
       fileId: fileId,
@@ -494,9 +496,11 @@ function belle_yayoi_buildCcRowsFromStage2_(parsed, ctx, fiscal) {
     const row25 = belle_yayoi_buildCcRow_({
       date: dateInfo.dateYmdSlash,
       debitTaxKubun: debitTaxKubun,
-      gross: String(amount),
+      gross: String(amountAbs),
       summary: summary,
-      memo: memo
+      memo: memo,
+      debitAccount: debitAccount,
+      creditAccount: creditAccount
     });
     result.rows.push(row25);
   }
@@ -559,7 +563,7 @@ function belle_yayoi_buildBankRowsFromStage2_(parsed, ctx, fiscal) {
   if (!parsed || !Array.isArray(parsed.transactions)) return result;
   const fileId = ctx && ctx.fileId ? String(ctx.fileId) : "";
   const fileName = ctx && ctx.fileName ? String(ctx.fileName) : "";
-  const debitTaxKubun = "課対仕入込10%適格";
+  const debitTaxKubun = "対象外";
   for (let i = 0; i < parsed.transactions.length; i++) {
     const row = parsed.transactions[i] || {};
     const rowNo = row.row_no;
@@ -577,8 +581,8 @@ function belle_yayoi_buildBankRowsFromStage2_(parsed, ctx, fiscal) {
       result.skipDetails.push({ reason: "BANK_AMOUNT_MISSING", detail: detail, row_no: rowNo });
       continue;
     }
-    const debitAccount = amountSign === "debit" ? "現金" : "仮払金";
-    const creditAccount = amountSign === "debit" ? "仮払金" : "現金";
+    const debitAccount = amountSign === "debit" ? "仮払金" : "普通預金";
+    const creditAccount = amountSign === "debit" ? "普通預金" : "仮払金";
     const dateInfo = belle_yayoi_resolveCcTransactionDate_(row.use_month, row.use_day, fiscal);
     const memo = belle_yayoi_buildBankMemo_({
       fileId: fileId,

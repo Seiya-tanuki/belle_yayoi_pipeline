@@ -19,12 +19,9 @@ const propsMulti = { getProperty: (key) => key === 'BELLE_ACTIVE_DOC_TYPES' ? 'r
 const typesMulti = sandbox.belle_ocr_getActiveDocTypes_(propsMulti);
 expect(typesMulti.join(',') === 'receipt,cc_statement,bank_statement', 'active doc types parsing failed');
 
-const propsQueue = { getProperty: (key) => key === 'BELLE_QUEUE_SHEET_NAME' ? 'CUSTOM_QUEUE' : '' };
-expect(sandbox.belle_ocr_getQueueSheetNameForDocType_(propsQueue, 'receipt') === 'CUSTOM_QUEUE', 'receipt sheet override failed');
-expect(sandbox.belle_ocr_getQueueSheetNameForDocType_(propsQueue, 'cc_statement') === 'OCR_CC', 'cc sheet should ignore receipt override');
-
 const propsEmptyQueue = { getProperty: () => '' };
 expect(sandbox.belle_ocr_getQueueSheetNameForDocType_(propsEmptyQueue, 'receipt') === 'OCR_RECEIPT', 'receipt default sheet mismatch');
+expect(sandbox.belle_ocr_getQueueSheetNameForDocType_(propsEmptyQueue, 'cc_statement') === 'OCR_CC', 'cc default sheet mismatch');
 expect(sandbox.belle_ocr_getQueueSheetNameForDocType_(propsEmptyQueue, 'bank_statement') === 'OCR_BANK', 'bank default sheet mismatch');
 
 const keyReceipt = sandbox.belle_ocr_buildClaimCursorKey_('receipt');

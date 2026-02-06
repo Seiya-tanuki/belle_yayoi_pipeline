@@ -1,14 +1,17 @@
-const fs = require('fs');
-const vm = require('vm');
+const { loadFilesInOrder } = require('./helpers/module_loader');
+const { expectTrue } = require('./helpers/assertions');
 
-const code = fs.readFileSync('gas/Config.js', 'utf8') + '\n' + fs.readFileSync('gas/DocTypeRegistry.js', 'utf8') + '\n' + fs.readFileSync('gas/Log.js', 'utf8') + '\n' + fs.readFileSync('gas/Sheet.js', 'utf8') + '\n' + fs.readFileSync('gas/Drive.js', 'utf8') + '\n' + fs.readFileSync('gas/Pdf.js', 'utf8') + '\n' + fs.readFileSync('gas/Gemini.js', 'utf8') + '\n' + fs.readFileSync('gas/Code.js', 'utf8') + '\n' + fs.readFileSync('gas/Queue.js', 'utf8');
-const sandbox = { console };
-vm.createContext(sandbox);
-vm.runInContext(code, sandbox);
-
-function expect(cond, msg) {
-  if (!cond) throw new Error(msg);
-}
+const sandbox = loadFilesInOrder([
+  'gas/Config.js',
+  'gas/DocTypeRegistry.js',
+  'gas/Log.js',
+  'gas/Sheet.js',
+  'gas/Drive.js',
+  'gas/Pdf.js',
+  'gas/Gemini.js',
+  'gas/Code.js',
+  'gas/Queue.js'
+]);
 
 const headerMap = {
   status: 0,
@@ -28,9 +31,9 @@ const staleRow = [
 ];
 
 const res = sandbox.belle_ocr_buildStaleRecovery_(staleRow, headerMap, nowMs);
-expect(res && res.statusOut === 'ERROR_RETRYABLE', 'statusOut should be ERROR_RETRYABLE');
-expect(res && res.errorCode === 'WORKER_STALE_LOCK', 'errorCode should be WORKER_STALE_LOCK');
-expect(res && res.clearLocks === true, 'clearLocks should be true');
+expectTrue(res && res.statusOut === 'ERROR_RETRYABLE', 'statusOut should be ERROR_RETRYABLE');
+expectTrue(res && res.errorCode === 'WORKER_STALE_LOCK', 'errorCode should be WORKER_STALE_LOCK');
+expectTrue(res && res.clearLocks === true, 'clearLocks should be true');
 
 const activeRow = [
   'PROCESSING',
@@ -40,11 +43,6 @@ const activeRow = [
   new Date(nowMs - 1000).toISOString()
 ];
 const res2 = sandbox.belle_ocr_buildStaleRecovery_(activeRow, headerMap, nowMs);
-expect(res2 === null, 'active lock should not be reaped');
+expectTrue(res2 === null, 'active lock should not be reaped');
 
 console.log('OK: test_ocr_reap_stale');
-
-
-
-
-

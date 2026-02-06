@@ -40,6 +40,45 @@ function belle_exportLog_buildSchemaMismatchDetail_(docType, sheetName, expected
   });
 }
 
+function belle_export_observeCorr_(counters, payload, props) {
+  const source = payload && typeof payload === "object" ? payload : {};
+  if (typeof belle_corr_observeItem_ === "function") {
+    return belle_corr_observeItem_("X1_CORR_EXPORT_ITEM", counters, source, { props: props });
+  }
+  const docType = String(source.doc_type || source.docType || "").trim();
+  const fileId = String(source.file_id || source.fileId || "").trim();
+  const corrKey = docType && fileId ? (docType + "::" + fileId) : "";
+  const resolved = {
+    mode: "compatibility",
+    corr_key: corrKey,
+    missing: !corrKey,
+    invalid_format: false,
+    derived_from_legacy: !!corrKey,
+    mismatch: false
+  };
+  if (counters && typeof counters === "object") {
+    if (resolved.missing) counters.missing++;
+    if (resolved.invalid_format) counters.invalid++;
+    if (resolved.derived_from_legacy) counters.derived++;
+    if (resolved.mismatch) counters.mismatch++;
+  }
+  Logger.log({
+    phase: "X1_CORR_EXPORT_ITEM",
+    ok: true,
+    doc_type: source.doc_type || source.docType || "",
+    file_id: source.file_id || source.fileId || "",
+    corr_key: resolved.corr_key,
+    queue_sheet_name: source.queue_sheet_name || source.queueSheetName || "",
+    rowIndex: source.rowIndex !== undefined ? source.rowIndex : "",
+    mode: resolved.mode,
+    missing: resolved.missing,
+    invalid: resolved.invalid_format,
+    derived: resolved.derived_from_legacy,
+    mismatch: resolved.mismatch
+  });
+  return resolved;
+}
+
 
 function belle_export_pickSingleFolder_(folders, folderName, docType, parentFolderId) {
   const list = Array.isArray(folders) ? folders : [];
@@ -157,11 +196,14 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
   const batchMaxRows = Number(props.getProperty("BELLE_EXPORT_BATCH_MAX_ROWS") || "5000");
   const appendInvoiceSuffix = belle_parseBool(props.getProperty("BELLE_FALLBACK_APPEND_INVOICE_SUFFIX"), true);
   // Default label must be a plain value (no extra description).
-  const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "�ΏۊO");
+  const fallbackDebitDefault = String(props.getProperty("BELLE_FALLBACK_DEBIT_TAX_KUBUN_DEFAULT") || "対象外");
   const errorFinalTekiyoLabel = String(props.getProperty("BELLE_ERROR_FINAL_TEKIYO_LABEL") || "BELLE");
   const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
   const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
   const skipLogSheetName = belle_getSkipLogSheetName(props);
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
 
   const ss = SpreadsheetApp.openById(sheetId);
   try {
@@ -364,6 +406,12 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       const errorCode = String(row[headerMap["ocr_error_code"]] || "");
       const errorDetail = String(row[headerMap["ocr_error_detail"]] || "");
       if (!fileId) continue;
+      const corr = belle_export_observeCorr_(corrCounters, {
+        doc_type: docType || BELLE_DOC_TYPE_RECEIPT,
+        file_id: fileId,
+        queue_sheet_name: queueSheetName,
+        rowIndex: i + 2
+      }, props);
       if (processed.has(fileId)) continue;
       processed.add(fileId);
       if (importSet.has(fileId)) {
@@ -423,19 +471,19 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       let dmFlag = false;
       if (status === "ERROR_FINAL") {
         rid = "OCR_ERROR_FINAL";
-        fix = "OCR�G���[�v�m�F";
+        fix = "OCRエラー要確認";
       } else {
         const ridInfo = belle_yayoi_pickRidAndFix(parsed, rateInfo);
         rid = ridInfo.rid;
         fix = ridInfo.fix;
         if ((rid === "OK" || rid === "TAX_INFERRED") && !debit) {
           rid = "TAX_UNKNOWN";
-          if (!fix) fix = "�ŗ�/�ŋ敪�v�m�F";
+          if (!fix) fix = "税率/税区分要確認";
         }
       }
 
       if (status === "ERROR_FINAL") {
-        fix = "�S�f�[�^�m�F";
+        fix = "全データ確認";
         dmFlag = true;
       }
 
@@ -443,7 +491,7 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       if (status === "ERROR_FINAL") {
         summary = belle_yayoi_buildSummaryWithLabel(parsed, errorFinalTekiyoLabel);
       }
-      Logger.log({ phase: "TAX_RATE_METHOD", file_id: fileId, method: rateInfo.method || "UNKNOWN", reason: rateInfo.reason || "" });
+      Logger.log({ phase: "TAX_RATE_METHOD", file_id: fileId, corr_key: corr.corr_key, method: rateInfo.method || "UNKNOWN", reason: rateInfo.reason || "" });
 
       const dateInfo = belle_yayoi_resolveTransactionDate(parsed, fiscalRange);
       let date = dateInfo.dateYmdSlash;
@@ -455,7 +503,7 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       }
       if (dmFlag) {
         rid = "OCR_ERROR_FINAL";
-        fix = "�S�f�[�^�m�F";
+        fix = "全データ確認";
       }
 
       let gross = null;
@@ -467,7 +515,7 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
         gross = 1;
         if (!fix && rid === "OK") {
           rid = "AMOUNT_FALLBACK";
-          fix = "��z�v�m�F";
+          fix = "金額要確認";
         }
       }
 
@@ -492,12 +540,28 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       exportFileIds.push(fileId);
     }
 
-    if (csvRows.length === 0) {
-      if (skippedDetails.length > 0) {
-        belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
-      }
+      if (csvRows.length === 0) {
+        if (skippedDetails.length > 0) {
+          belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+        }
       const res = { phase: "EXPORT_DONE", ok: true, reason: "NO_EXPORT_ROWS", exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, csvFileId: "" };
+      res.corr_counters = {
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      };
       Logger.log(res);
+      Logger.log({
+        phase: "X1_CORR_EXPORT_COUNTERS",
+        ok: true,
+        doc_type: BELLE_DOC_TYPE_RECEIPT,
+        queue_sheet_name: queueSheetName,
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      });
       return res;
     }
 
@@ -553,7 +617,23 @@ function belle_exportYayoiCsvReceiptInternal_(options) {
       errors: errors,
       csvFileId: csvFileId
     };
+    result.corr_counters = {
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    };
     Logger.log(result);
+    Logger.log({
+      phase: "X1_CORR_EXPORT_COUNTERS",
+      ok: true,
+      doc_type: BELLE_DOC_TYPE_RECEIPT,
+      queue_sheet_name: queueSheetName,
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    });
     return result;
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
@@ -574,6 +654,9 @@ function belle_exportYayoiCsvBankStatementInternal_(options) {
   const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
   const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
   const skipLogSheetName = belle_getSkipLogSheetName(props);
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
 
   const ss = SpreadsheetApp.openById(sheetId);
   try {
@@ -776,6 +859,12 @@ function belle_exportYayoiCsvBankStatementInternal_(options) {
       const driveUrl = String(row[headerMap["drive_url"]] || "");
       const ocrJson = String(row[headerMap["ocr_json"]] || "");
       if (!fileId) continue;
+      belle_export_observeCorr_(corrCounters, {
+        doc_type: docType || BELLE_DOC_TYPE_BANK_STATEMENT,
+        file_id: fileId,
+        queue_sheet_name: queueSheetName,
+        rowIndex: i + 2
+      }, props);
       if (processed.has(fileId)) continue;
       processed.add(fileId);
       if (importSet.has(fileId)) {
@@ -855,12 +944,28 @@ function belle_exportYayoiCsvBankStatementInternal_(options) {
       exportFileIds.push(fileId);
     }
 
-    if (csvRows.length === 0) {
-      if (skippedDetails.length > 0) {
-        belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
-      }
+      if (csvRows.length === 0) {
+        if (skippedDetails.length > 0) {
+          belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+        }
       const res = { phase: "EXPORT_DONE", ok: true, reason: "NO_EXPORT_ROWS", doc_type: BELLE_DOC_TYPE_BANK_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, csvFileId: "" };
+      res.corr_counters = {
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      };
       Logger.log(res);
+      Logger.log({
+        phase: "X1_CORR_EXPORT_COUNTERS",
+        ok: true,
+        doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+        queue_sheet_name: queueSheetName,
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      });
       return res;
     }
 
@@ -917,7 +1022,23 @@ function belle_exportYayoiCsvBankStatementInternal_(options) {
       errors: errors,
       csvFileId: csvFileId
     };
+    result.corr_counters = {
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    };
     Logger.log(result);
+    Logger.log({
+      phase: "X1_CORR_EXPORT_COUNTERS",
+      ok: true,
+      doc_type: BELLE_DOC_TYPE_BANK_STATEMENT,
+      queue_sheet_name: queueSheetName,
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    });
     return result;
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);
@@ -938,6 +1059,9 @@ function belle_exportYayoiCsvCcStatementInternal_(options) {
   const fiscalStart = props.getProperty("BELLE_FISCAL_START_DATE");
   const fiscalEnd = props.getProperty("BELLE_FISCAL_END_DATE");
   const skipLogSheetName = belle_getSkipLogSheetName(props);
+  const corrCounters = typeof belle_corr_createCounters_ === "function"
+    ? belle_corr_createCounters_()
+    : { missing: 0, invalid: 0, derived: 0, mismatch: 0 };
 
   const ss = SpreadsheetApp.openById(sheetId);
   try {
@@ -1140,6 +1264,12 @@ function belle_exportYayoiCsvCcStatementInternal_(options) {
       const driveUrl = String(row[headerMap["drive_url"]] || "");
       const ocrJson = String(row[headerMap["ocr_json"]] || "");
       if (!fileId) continue;
+      belle_export_observeCorr_(corrCounters, {
+        doc_type: docType || BELLE_DOC_TYPE_CC_STATEMENT,
+        file_id: fileId,
+        queue_sheet_name: queueSheetName,
+        rowIndex: i + 2
+      }, props);
       if (processed.has(fileId)) continue;
       processed.add(fileId);
       if (importSet.has(fileId)) {
@@ -1219,12 +1349,28 @@ function belle_exportYayoiCsvCcStatementInternal_(options) {
       exportFileIds.push(fileId);
     }
 
-    if (csvRows.length === 0) {
-      if (skippedDetails.length > 0) {
-        belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
-      }
+      if (csvRows.length === 0) {
+        if (skippedDetails.length > 0) {
+          belle_appendSkipLogRows(ss, skipLogSheetName, skippedDetails, nowIso, "EXPORT_SKIP");
+        }
       const res = { phase: "EXPORT_DONE", ok: true, reason: "NO_EXPORT_ROWS", doc_type: BELLE_DOC_TYPE_CC_STATEMENT, exportedRows: 0, exportedFiles: 0, skipped: skipped, errors: errors, csvFileId: "" };
+      res.corr_counters = {
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      };
       Logger.log(res);
+      Logger.log({
+        phase: "X1_CORR_EXPORT_COUNTERS",
+        ok: true,
+        doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+        queue_sheet_name: queueSheetName,
+        missing: corrCounters.missing,
+        invalid: corrCounters.invalid,
+        derived: corrCounters.derived,
+        mismatch: corrCounters.mismatch
+      });
       return res;
     }
 
@@ -1281,7 +1427,23 @@ function belle_exportYayoiCsvCcStatementInternal_(options) {
       errors: errors,
       csvFileId: csvFileId
     };
+    result.corr_counters = {
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    };
     Logger.log(result);
+    Logger.log({
+      phase: "X1_CORR_EXPORT_COUNTERS",
+      ok: true,
+      doc_type: BELLE_DOC_TYPE_CC_STATEMENT,
+      queue_sheet_name: queueSheetName,
+      missing: corrCounters.missing,
+      invalid: corrCounters.invalid,
+      derived: corrCounters.derived,
+      mismatch: corrCounters.mismatch
+    });
     return result;
   } catch (e) {
     const msg = String(e && e.message ? e.message : e);

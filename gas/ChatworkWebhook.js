@@ -192,6 +192,31 @@ function belle_chatwork_webhook_handle_(e) {
     return ContentService.createTextOutput("ok");
   }
 
+  const signatureSecret = props.getProperty("BELLE_CHATWORK_WEBHOOK_SIGNATURE_SECRET_B64") || "";
+  if (signatureSecret) {
+    const signatureParam =
+      e && e.parameter && e.parameter.chatwork_webhook_signature
+        ? String(e.parameter.chatwork_webhook_signature)
+        : "";
+    if (!signatureParam) {
+      belle_chatwork_webhook_log_({
+        phase: "CHATWORK_WEBHOOK_GUARD",
+        ok: true,
+        reason: "SIGNATURE_MISSING"
+      });
+      return ContentService.createTextOutput("ok");
+    }
+    const expectedSignature = belle_chatwork_webhook_computeSignature_(bodyString, signatureSecret);
+    if (signatureParam !== expectedSignature) {
+      belle_chatwork_webhook_log_({
+        phase: "CHATWORK_WEBHOOK_GUARD",
+        ok: true,
+        reason: "SIGNATURE_MISMATCH"
+      });
+      return ContentService.createTextOutput("ok");
+    }
+  }
+
   let payload = null;
   try {
     payload = JSON.parse(bodyString);

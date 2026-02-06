@@ -261,11 +261,17 @@ function belle_env_healthCheck_(opts) {
   }
 
   if (ensure && ss) {
-    var queueNames = [
-      belle_ocr_getFixedQueueSheetNameForDocType_(BELLE_DOC_TYPE_RECEIPT),
-      belle_ocr_getFixedQueueSheetNameForDocType_(BELLE_DOC_TYPE_CC_STATEMENT),
-      belle_ocr_getFixedQueueSheetNameForDocType_(BELLE_DOC_TYPE_BANK_STATEMENT)
-    ];
+    var queueNames = [];
+    var queueSeen = {};
+    var queueDocTypes = belle_ocr_getActiveDocTypes_(props);
+    for (var qd = 0; qd < queueDocTypes.length; qd++) {
+      var queueName = belle_ocr_getQueueSheetNameForDocType_(props, queueDocTypes[qd]);
+      if (!queueName) continue;
+      if (!queueSeen[queueName]) {
+        queueSeen[queueName] = true;
+        queueNames.push(queueName);
+      }
+    }
     for (var q = 0; q < queueNames.length; q++) {
       var queueRes = belle_env_ensureQueueSheet_(ss, queueNames[q], ensured);
       if (!queueRes.ok) {

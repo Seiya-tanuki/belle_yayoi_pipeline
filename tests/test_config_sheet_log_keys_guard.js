@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 
 const keys = [
-  'BELLE_QUEUE_SHEET_NAME',
   'BELLE_SKIP_LOG_SHEET_NAME',
   'BELLE_QUEUE_SKIP_LOG_SHEET_NAME',
   'BELLE_EXPORT_GUARD_LOG_SHEET_NAME',

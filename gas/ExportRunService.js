@@ -12,7 +12,7 @@ function belle_export_run_buildRunId_(when) {
 
 function belle_export_run_extractCsvFiles_(exportRes) {
   var out = [];
-  function add(docType, res) {
+  var add = function (docType, res) {
     if (!res || !res.csvFileId) return;
     var fileId = String(res.csvFileId || "");
     if (!fileId) return;
@@ -23,7 +23,7 @@ function belle_export_run_extractCsvFiles_(exportRes) {
       name = "";
     }
     out.push({ doc_type: docType, file_id: fileId, name: name });
-  }
+  };
   if (exportRes) {
     var docType = exportRes.doc_type ? String(exportRes.doc_type) : "";
     add(docType || BELLE_DOC_TYPE_RECEIPT, exportRes);

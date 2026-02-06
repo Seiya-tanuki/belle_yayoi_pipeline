@@ -55,22 +55,32 @@ const parsed = {
       use_month: 3,
       use_day: 16,
       merchant: 'SHOP C',
-      amount_yen: 500,
+      amount_yen: -500,
       amount_sign: 'credit',
+      issues: []
+    },
+    {
+      row_no: 4,
+      raw_use_date_text: '3月17日',
+      use_month: 3,
+      use_day: 17,
+      merchant: 'SHOP D',
+      amount_yen: 0,
+      amount_sign: 'debit',
       issues: []
     }
   ]
 };
 
 const built = buildRows(parsed, { fileId: 'fid001', fileName: 'cc.pdf', docType: 'cc_statement' }, fiscal);
-expect(built.rows.length === 2, 'credit rows should be skipped');
-expect(built.skipDetails.length === 1, 'one credit row should be logged');
-expect(built.skipDetails[0].reason === 'CC_CREDIT_UNSUPPORTED', 'credit skip reason mismatch');
+expect(built.rows.length === 3, 'credit rows should be exported');
+expect(built.skipDetails.length === 1, 'one invalid row should be logged');
+expect(built.skipDetails[0].reason === 'CC_AMOUNT_INVALID', 'invalid amount skip reason mismatch');
 
 const row1 = built.rows[0];
 expect(row1[0] === '2000', 'A column should be 2000');
 expect(row1[4] === '仮払金', 'E column should be 仮払金');
-expect(row1[7] === '課対仕入込10%適格', 'H column should be fixed tax kubun');
+expect(row1[7] === '対象外', 'H column should be fixed tax kubun');
 expect(row1[10] === '未払金', 'K column should be 未払金');
 expect(row1[13] === '対象外', 'N column should be 対象外');
 expect(row1[19] === '0', 'T column should be 0');
@@ -80,6 +90,12 @@ expect(row1[21].includes('ROW=1'), 'memo should include row number');
 
 const row2 = built.rows[1];
 expect(row2[3] === '2026/03/15', 'date should use fiscal end year');
+
+const row3 = built.rows[2];
+expect(row3[4] === '未払金', 'credit row debit account should be 未払金');
+expect(row3[10] === '仮払金', 'credit row credit account should be 仮払金');
+expect(row3[8] === '500', 'credit row gross should use absolute value');
+expect(row3[3] === '2026/03/16', 'credit row date should use fiscal end year');
 
 console.log('OK: test_cc_statement_export');
 
