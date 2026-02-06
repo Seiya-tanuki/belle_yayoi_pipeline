@@ -48,6 +48,16 @@
 1. C3 implement session
 - `temp/refactor_control/session_prompts/wave3_implement_C3.md`
 
+## Wave 4 (Consult)
+1. U1 consult session
+- `temp/refactor_control/session_prompts/wave4_consult_U1.md`
+
+2. T1 consult session
+- `temp/refactor_control/session_prompts/wave4_consult_T1.md`
+
+3. Wave 4 consult gatekeeper session
+- `temp/refactor_control/session_prompts/wave4_consult_gatekeeper.md`
+
 How to use:
 1. Open a new session for each agent thread.
 2. Paste the full content of the matching prompt file.
